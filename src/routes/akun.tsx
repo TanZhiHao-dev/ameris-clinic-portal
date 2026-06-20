@@ -1,0 +1,109 @@
+import { useEffect } from 'react'
+import { createFileRoute, Link, Outlet, useNavigate } from '@tanstack/react-router'
+import { CalendarDays, Crown, LayoutDashboard, LogOut, UserCog } from 'lucide-react'
+import { PageShell } from '../components/app/PageShell'
+import { SocialLinks } from '../components/app/SocialLinks'
+import { authClient } from '../lib/auth-client'
+
+export const Route = createFileRoute('/akun')({ component: AccountLayout })
+
+const NAV = [
+  { to: '/akun', label: 'Ringkasan', icon: LayoutDashboard, exact: true },
+  { to: '/akun/booking', label: 'Booking saya', icon: CalendarDays, exact: false },
+  { to: '/akun/privilege', label: 'Privilege Club', icon: Crown, exact: false },
+  { to: '/akun/profil', label: 'Profil', icon: UserCog, exact: false },
+]
+
+function AccountLayout() {
+  const navigate = useNavigate()
+  const { data: session, isPending } = authClient.useSession()
+
+  useEffect(() => {
+    if (!isPending && !session) navigate({ to: '/masuk' })
+  }, [isPending, session, navigate])
+
+  const userName = session?.user.name ?? '—'
+  const memberLine = session ? 'Member' : '—'
+
+  // Avoid flashing the dashboard (and firing 401 queries) before auth resolves.
+  if (isPending || !session) {
+    return (
+      <PageShell>
+        <div className="grid min-h-[60vh] place-items-center">
+          <span className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>Memuat…</span>
+        </div>
+      </PageShell>
+    )
+  }
+
+  return (
+    <PageShell>
+      <section className="py-10 sm:py-12" style={{ background: 'var(--color-cream)', minHeight: '70vh' }}>
+        <div className="shell-x grid gap-8 lg:grid-cols-[260px_1fr]">
+          {/* Sidebar */}
+          <aside className="h-fit lg:sticky lg:top-28">
+            <div className="card-soft p-5">
+              <div className="flex items-center gap-3">
+                <div
+                  className="grid h-12 w-12 shrink-0 place-items-center rounded-full text-lg font-extrabold"
+                  style={{ background: 'var(--grad-gold)', color: '#3a2c0f' }}
+                >
+                  {userName.charAt(0)}
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate font-bold">{userName}</div>
+                  <div className="truncate text-[0.78rem]" style={{ color: 'var(--color-ink-muted)' }}>
+                    {memberLine}
+                  </div>
+                </div>
+              </div>
+
+              <nav className="mt-5 flex flex-col gap-1">
+                {NAV.map((n) => {
+                  const Icon = n.icon
+                  return (
+                    <Link
+                      key={n.to}
+                      to={n.to}
+                      activeOptions={{ exact: n.exact }}
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition"
+                      activeProps={{ style: { background: 'var(--color-ink)', color: 'var(--color-cream)' } }}
+                      inactiveProps={{ style: { color: 'var(--color-ink-soft)' } }}
+                    >
+                      <Icon size={18} /> {n.label}
+                    </Link>
+                  )
+                })}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await authClient.signOut()
+                    navigate({ to: '/masuk' })
+                  }}
+                  className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition"
+                  style={{ color: 'var(--color-rose)' }}
+                >
+                  <LogOut size={18} /> Keluar
+                </button>
+              </nav>
+
+              <div className="mt-5 border-t pt-5" style={{ borderColor: 'var(--color-line)' }}>
+                <div className="px-1 text-[0.7rem] font-semibold uppercase tracking-wider" style={{ color: 'var(--color-ink-muted)' }}>
+                  Ikuti kami
+                </div>
+                <div className="mt-3 px-1">
+                  <SocialLinks size={18} />
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          {/* Content */}
+          <div className="min-w-0">
+            <Outlet />
+          </div>
+        </div>
+      </section>
+    </PageShell>
+  )
+}

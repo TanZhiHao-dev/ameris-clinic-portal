@@ -1,0 +1,389 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,500;1,600&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Pinyon+Script&display=swap');
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+@import 'tw-animate-css';
+
+/* ─────────────────────────────────────────────────────────────
+   Ameris Aesthetic Clinic — luxe identity
+   warm ivory · champagne · blush · metallic gold · charcoal
+   ───────────────────────────────────────────────────────────── */
+
+@theme {
+  --font-sans: 'Hanken Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --font-script: 'Pinyon Script', cursive;
+
+  /* Brand palette */
+  --color-cream: #f7f0e6;
+  --color-cream-2: #f1e6d6;
+  --color-shell: #fdfaf4;
+  --color-ink: #2a2520;
+  --color-ink-soft: #4a4138;
+  --color-ink-muted: #8c7c6a;
+  --color-espresso: #211c17;
+  --color-espresso-2: #2c2620;
+  --color-gold: #c39a44;
+  --color-gold-deep: #9a7320;
+  --color-gold-light: #e7d39c;
+  --color-champagne: #e9dcc2;
+  --color-blush: #e7c8b4;
+  --color-blush-soft: #f3ddcf;
+  --color-rose: #c5876c;
+  --color-line: #e7dac4;
+
+  /* shadcn semantic aliases */
+  --color-background: #f7f0e6;
+  --color-foreground: #2a2520;
+  --color-card: #fdfaf4;
+  --color-card-foreground: #2a2520;
+  --color-popover: #fdfaf4;
+  --color-popover-foreground: #2a2520;
+  --color-primary: #2a2520;
+  --color-primary-foreground: #faf4e9;
+  --color-secondary: #fdfaf4;
+  --color-secondary-foreground: #2a2520;
+  --color-muted: #f1e6d6;
+  --color-muted-foreground: #8c7c6a;
+  --color-accent: #c39a44;
+  --color-accent-foreground: #2a2520;
+  --color-destructive: #b3492f;
+  --color-destructive-foreground: #faf4e9;
+  --color-border: #e7dac4;
+  --color-input: #e7dac4;
+  --color-ring: #c39a44;
+}
+
+:root {
+  --radius: 0.95rem;
+  --grad-gold: linear-gradient(135deg, #efdca6 0%, #d4ad55 38%, #b58a32 70%, #9a7320 100%);
+  --grad-gold-soft: linear-gradient(135deg, #f4e6c2, #dcc080);
+  --shadow-soft: 0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 18px 40px rgba(120, 92, 38, 0.1), 0 4px 14px rgba(42, 37, 32, 0.05);
+  --shadow-lift: 0 1px 0 rgba(255, 255, 255, 0.85) inset,
+    0 28px 56px rgba(120, 92, 38, 0.18), 0 8px 24px rgba(42, 37, 32, 0.09);
+  --shadow-gold: 0 10px 28px rgba(176, 132, 44, 0.34);
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 6px);
+}
+
+/* ── Base ─────────────────────────────────────────────────── */
+@layer base {
+  * {
+    border-color: var(--color-line);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 6rem;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100%;
+    background-color: var(--color-cream);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: var(--color-gold-light);
+    color: var(--color-espresso);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  h1, h2 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    line-height: 1.04;
+    letter-spacing: 0;
+    font-variant-numeric: lining-nums;
+    color: var(--color-ink);
+  }
+  h3, h4 {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    line-height: 1.16;
+    letter-spacing: -0.011em;
+    color: var(--color-ink);
+  }
+}
+
+/* ── Reusable pieces ──────────────────────────────────────── */
+@layer components {
+  .shell-x {
+    width: min(1180px, 100% - 2.5rem);
+    margin-inline: auto;
+  }
+
+  .gold-text {
+    background: var(--grad-gold);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .script {
+    font-family: var(--font-script);
+    font-weight: 400;
+  }
+
+  .eyebrow {
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--color-gold-deep);
+  }
+
+  .mono {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+  }
+
+  /* Signature: gold sparkle dot */
+  .glow-dot {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: var(--color-gold);
+    box-shadow: 0 0 0 3px rgba(195, 154, 68, 0.2),
+      0 0 12px 2px rgba(213, 173, 85, 0.6);
+  }
+  .glow-dot.is-muted {
+    background: var(--color-ink-muted);
+    box-shadow: 0 0 0 3px rgba(140, 124, 106, 0.16);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    padding: 0.8rem 1.45rem;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: transform 180ms ease, background-color 180ms ease,
+      color 180ms ease, border-color 180ms ease, box-shadow 180ms ease,
+      opacity 180ms ease;
+  }
+  .btn:active { transform: translateY(1px); }
+
+  .btn-gold {
+    background: var(--grad-gold);
+    color: #3a2c0f;
+    box-shadow: var(--shadow-gold);
+  }
+  .btn-gold:hover {
+    filter: brightness(1.05);
+    box-shadow: 0 14px 34px rgba(176, 132, 44, 0.48);
+  }
+
+  .btn-primary {
+    background: var(--color-ink);
+    color: var(--color-cream);
+  }
+  .btn-primary:hover {
+    background: var(--color-espresso);
+    box-shadow: 0 10px 26px rgba(42, 37, 32, 0.26);
+  }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--color-ink);
+    border-color: var(--color-gold);
+  }
+  .btn-outline:hover {
+    background: rgba(195, 154, 68, 0.1);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--color-ink);
+    border-color: var(--color-line);
+  }
+  .btn-ghost:hover {
+    background: var(--color-shell);
+    border-color: var(--color-gold);
+  }
+
+  .btn-onink {
+    background: rgba(250, 244, 233, 0.1);
+    color: #f6eddc;
+    border-color: rgba(231, 211, 156, 0.4);
+  }
+  .btn-onink:hover {
+    background: rgba(250, 244, 233, 0.18);
+    border-color: rgba(231, 211, 156, 0.7);
+  }
+
+  .card-soft {
+    background: var(--color-shell);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-soft);
+    transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 220ms ease, border-color 220ms ease;
+  }
+  .card-soft:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lift);
+    border-color: rgba(195, 154, 68, 0.5);
+  }
+
+  .nav-link {
+    position: relative;
+    color: var(--color-ink-soft);
+    font-weight: 500;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: color 160ms ease;
+  }
+  .nav-link::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -6px;
+    height: 2px;
+    width: 100%;
+    transform: scaleX(0);
+    transform-origin: left;
+    background: var(--grad-gold);
+    transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .nav-link:hover { color: var(--color-ink); }
+  .nav-link:hover::after { transform: scaleX(1); }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 9999px;
+    padding: 0.28rem 0.72rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+  }
+  .badge-ok {
+    background: rgba(154, 115, 32, 0.12);
+    color: var(--color-gold-deep);
+  }
+  .badge-off {
+    background: rgba(140, 124, 106, 0.12);
+    color: var(--color-ink-muted);
+  }
+  .badge-promo {
+    background: rgba(197, 135, 108, 0.16);
+    color: var(--color-rose);
+  }
+  .badge-best {
+    background: var(--grad-gold);
+    color: #3a2c0f;
+    box-shadow: 0 4px 12px rgba(176, 132, 44, 0.28);
+  }
+
+  .hairline-gold {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
+  }
+}
+
+/* ── Hero / dark-section radiance signature ───────────────── */
+.radiance-light {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(44% 50% at 78% 22%, rgba(231, 200, 180, 0.55), transparent 62%),
+    radial-gradient(42% 48% at 14% 30%, rgba(231, 211, 156, 0.5), transparent 60%),
+    radial-gradient(60% 60% at 50% 108%, rgba(233, 220, 194, 0.6), transparent 66%);
+}
+
+.radiance-gold {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(46% 52% at 74% 26%, rgba(213, 173, 85, 0.34), transparent 62%),
+    radial-gradient(40% 46% at 18% 78%, rgba(197, 135, 108, 0.28), transparent 60%);
+  animation: breathe 9s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+.grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.4;
+  background-image: radial-gradient(rgba(231, 211, 156, 0.18) 1px, transparent 1px);
+  background-size: 4px 4px;
+  mask-image: radial-gradient(circle at 60% 40%, black, transparent 80%);
+}
+
+/* ── Entrance motion ──────────────────────────────────────── */
+.rise {
+  opacity: 0;
+  transform: translateY(16px);
+  animation: rise 800ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.rise-1 { animation-delay: 80ms; }
+.rise-2 { animation-delay: 180ms; }
+.rise-3 { animation-delay: 300ms; }
+.rise-4 { animation-delay: 420ms; }
+@keyframes rise {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 700ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.is-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.marquee {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: marquee 30s linear infinite;
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .rise, .reveal { opacity: 1; transform: none; }
+}
