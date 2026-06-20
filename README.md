@@ -139,7 +139,7 @@ npm run db:studio    # Drizzle Studio (lihat/edit DB)
 **Belum (di luar scope sekarang):**
 - ⬜ Email verifikasi & reset password via provider asli (Resend/Fonnte) — sekarang verifikasi email dimatikan
 - ⬜ Push notification (FCM/OneSignal) + cron promo ulang tahun
-- ⬜ Deploy + `DATABASE_URL` ke Postgres produksi (Neon/Supabase)
+- 🟡 Deploy: **`Dockerfile` + panduan Coolify siap** ([DEPLOY.md](DEPLOY.md)) — tinggal jalankan di VPS Linux + set `DATABASE_URL` ke Postgres produksi
 
 ---
 

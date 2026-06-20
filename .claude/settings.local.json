@@ -133,7 +133,16 @@
       "Bash(curl -s -m 45 http://localhost:3000/api/seed)",
       "Bash(cd /Users/thamara/Documents/Project; grep -rnE \"aspect-\\\\[|TreatmentThumb|getVisual\" src/routes/treatment.index.tsx src/routes/treatment.\\\\$id.tsx 2>/dev/null | head -20; echo \"---updateTreatment validator---\"; sed -n '90,108p' src/server/treatments.ts)",
       "Bash(curl -s -m 10 -o /dev/null -w \"/akun SSR -> HTTP %{http_code}\\\\n\" http://localhost:3000/akun)",
-      "Bash(curl -s -m 10 -o /dev/null -w \"/ SSR -> HTTP %{http_code}\\\\n\" http://localhost:3000/)"
+      "Bash(curl -s -m 10 -o /dev/null -w \"/ SSR -> HTTP %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(git config *)",
+      "Bash(git branch *)",
+      "Bash(git commit -q -m 'Initial commit: Ameris Aesthetic Clinic self-service portal *)",
+      "Bash(gh auth *)",
+      "Bash(gh api *)",
+      "Bash(gh repo *)",
+      "Bash(git add *)",
+      "Bash(git commit -q -m 'Add Coolify/Docker deployment setup *)",
+      "Bash(git push *)"
     ]
   }
 }
