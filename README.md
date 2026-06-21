@@ -161,3 +161,6 @@ Prompt pembuka yang disarankan:
 > Lanjutkan project Ameris Aesthetic Clinic di `~/Documents/Project` (baca README.md & memory).
 > Jalankan `npm run dev`, seed via `/api/seed` kalau perlu, login owner `owner@ameris.local` / password `ameris123`.
 > [lalu jelaskan tugas berikutnya, mis. "pasang payment gateway Midtrans" / "deploy ke Neon"].
+
+<!-- deploy-check: tes auto-deploy Coolify (boleh dihapus) -->
+
