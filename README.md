@@ -162,5 +162,3 @@ Prompt pembuka yang disarankan:
 > Jalankan `npm run dev`, seed via `/api/seed` kalau perlu, login owner `owner@ameris.local` / password `ameris123`.
 > [lalu jelaskan tugas berikutnya, mis. "pasang payment gateway Midtrans" / "deploy ke Neon"].
 
-<!-- deploy-check: tes auto-deploy Coolify (boleh dihapus) -->
-
