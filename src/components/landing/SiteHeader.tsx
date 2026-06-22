@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Menu, X } from 'lucide-react'
+import { LogOut, Menu, X } from 'lucide-react'
 import { Brand } from './Brand'
+import { authClient } from '../../lib/auth-client'
 
 const NAV = [
   { label: 'Treatment', href: '#treatment' },
@@ -20,6 +21,16 @@ const TICKER = [
 export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
+  const { data: session, isPending } = authClient.useSession()
+
+  const role = (session?.user as { role?: string } | undefined)?.role
+  const dashboardTo = role === 'owner' ? '/owner' : role === 'dokter' ? '/dokter' : '/akun'
+  const dashboardLabel = role === 'owner' || role === 'dokter' ? 'Dashboard' : 'Akun saya'
+
+  async function logout() {
+    setOpen(false)
+    await authClient.signOut()
+  }
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12)
@@ -79,12 +90,25 @@ export function SiteHeader() {
           </div>
 
           <div className="hidden items-center gap-3 lg:flex">
-            <Link to="/masuk" className="btn btn-ghost">
-              Masuk
-            </Link>
-            <Link to="/treatment" className="btn btn-primary">
-              Daftar
-            </Link>
+            {isPending ? null : session ? (
+              <>
+                <Link to={dashboardTo} className="btn btn-primary">
+                  {dashboardLabel}
+                </Link>
+                <button type="button" onClick={logout} className="btn btn-ghost">
+                  Keluar
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/masuk" className="btn btn-ghost">
+                  Masuk
+                </Link>
+                <Link to="/treatment" className="btn btn-primary">
+                  Daftar
+                </Link>
+              </>
+            )}
           </div>
 
           <button
@@ -130,12 +154,25 @@ export function SiteHeader() {
               ))}
             </div>
             <div className="mt-4 flex flex-col gap-2">
-              <Link to="/masuk" className="btn btn-ghost" onClick={() => setOpen(false)}>
-                Masuk
-              </Link>
-              <Link to="/treatment" className="btn btn-primary" onClick={() => setOpen(false)}>
-                Daftar
-              </Link>
+              {isPending ? null : session ? (
+                <>
+                  <Link to={dashboardTo} className="btn btn-primary" onClick={() => setOpen(false)}>
+                    {dashboardLabel}
+                  </Link>
+                  <button type="button" onClick={logout} className="btn btn-ghost inline-flex items-center justify-center gap-2">
+                    <LogOut size={18} /> Keluar
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link to="/masuk" className="btn btn-ghost" onClick={() => setOpen(false)}>
+                    Masuk
+                  </Link>
+                  <Link to="/treatment" className="btn btn-primary" onClick={() => setOpen(false)}>
+                    Daftar
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
