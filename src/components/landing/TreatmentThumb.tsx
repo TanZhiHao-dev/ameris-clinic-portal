@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import {
   Atom,
   Crown,
@@ -160,12 +161,26 @@ function Motif({ kind }: { kind: Kind }) {
 
 export function TreatmentThumb({ t, className }: { t: Treatment; className?: string }) {
   const { kind, from, to } = classify(t)
+  const [failed, setFailed] = useState(false)
+  // Reset the failure flag if the image source changes (e.g. owner re-uploads).
+  useEffect(() => setFailed(false), [t.image])
 
-  // Real photo when provided; artful motif otherwise.
-  if (t.image) {
+  // Real photo when provided & loadable; artful motif otherwise (incl. on a
+  // broken/slow image — the gradient backdrop means a card is never blank-white).
+  if (t.image && !failed) {
     return (
-      <div className={`relative overflow-hidden ${className ?? ''}`}>
-        <img src={t.image} alt={t.name} loading="lazy" className="h-full w-full object-cover" />
+      <div
+        className={`relative overflow-hidden ${className ?? ''}`}
+        style={{ background: `linear-gradient(140deg, ${from}, ${to})` }}
+      >
+        <img
+          src={t.image}
+          alt={t.name}
+          loading="lazy"
+          onError={() => setFailed(true)}
+          className="h-full w-full object-cover"
+          style={{ objectPosition: 'center 35%' }}
+        />
       </div>
     )
   }

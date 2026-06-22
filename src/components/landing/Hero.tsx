@@ -1,6 +1,10 @@
 import { Link } from '@tanstack/react-router'
-import { ArrowRight, CalendarCheck, Sparkles, Zap } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { ArrowRight, CalendarCheck, Sparkles } from 'lucide-react'
 import { clinic } from '../../data/clinic'
+import { listTreatments } from '../../server/treatments'
+import { TreatmentThumb } from './TreatmentThumb'
+import { PriceTag } from '../app/PriceTag'
 
 const STATS = [
   { value: '24/7', label: 'Booking mandiri' },
@@ -10,6 +14,19 @@ const STATS = [
 ]
 
 export function Hero() {
+  const { data: treatments = [] } = useQuery({
+    queryKey: ['treatments'],
+    queryFn: () => listTreatments(),
+  })
+  // Feature a real best-seller — prefer one with a photo so the hero shows an
+  // actual treatment image, not a placeholder.
+  const featured =
+    treatments.find((t) => t.bestSeller && t.image && t.available) ??
+    treatments.find((t) => t.bestSeller && t.image) ??
+    treatments.find((t) => t.image) ??
+    treatments.find((t) => t.bestSeller) ??
+    treatments[0]
+
   return (
     <section id="top" className="relative overflow-hidden" style={{ background: 'var(--color-cream)' }}>
       <div className="radiance-light" aria-hidden />
@@ -81,46 +98,51 @@ export function Hero() {
               border: '1px solid var(--color-line)',
             }}
           >
-            {/* visual header */}
-            <div
-              className="relative aspect-[16/9] overflow-hidden"
-              style={{ background: 'linear-gradient(135deg, #edd9a6, #cb9f4f)' }}
-              aria-hidden
-            >
-              <div
-                className="absolute inset-0"
-                style={{ background: 'radial-gradient(120% 90% at 18% 8%, rgba(255,255,255,0.6), transparent 58%)' }}
-              />
-              <Zap className="absolute -bottom-5 -right-4 opacity-[0.18]" size={140} strokeWidth={1} style={{ color: '#3a2c0f' }} />
-              <div className="relative grid h-full place-items-center">
-                <Zap size={46} strokeWidth={1.4} style={{ color: 'rgba(58,44,15,0.72)' }} />
-              </div>
-              <span className="badge badge-best absolute left-3 top-3">
-                <Sparkles size={12} /> BEST SELLER
-              </span>
+            {/* visual header — a real best-seller photo (or motif fallback) */}
+            <div className="relative aspect-[16/10] overflow-hidden">
+              {featured ? (
+                <TreatmentThumb t={featured} className="h-full w-full" />
+              ) : (
+                <div className="h-full w-full" style={{ background: 'linear-gradient(135deg, #edd9a6, #cb9f4f)' }} aria-hidden />
+              )}
+              {(featured?.bestSeller ?? true) && (
+                <span className="badge badge-best absolute left-3 top-3">
+                  <Sparkles size={12} /> BEST SELLER
+                </span>
+              )}
             </div>
 
             <div className="p-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl">Korean Pico Glow</h3>
-                <span className="text-[0.7rem] font-semibold" style={{ color: 'var(--color-ink-muted)' }}>
-                  30 min
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-xl leading-snug">{featured?.name ?? 'Korean Pico Glow'}</h3>
+                <span className="shrink-0 text-[0.7rem] font-semibold" style={{ color: 'var(--color-ink-muted)' }}>
+                  {featured?.duration ?? '30 min'}
                 </span>
               </div>
-              <p className="mt-1 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-                Laser Pico Second Technology — cerahkan kulit & ratakan warna.
+              <p className="mt-1 line-clamp-2 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
+                {featured?.blurb ?? 'Laser Pico Second Technology — cerahkan kulit & ratakan warna.'}
               </p>
 
-              <div className="mt-4 flex items-end justify-between">
-                <div className="mono text-2xl font-extrabold gold-text">Rp550.000</div>
+              <div className="mt-4 flex flex-wrap items-end justify-between gap-2">
+                {featured ? (
+                  <PriceTag t={featured} numClass="text-2xl" />
+                ) : (
+                  <div className="mono text-2xl font-extrabold gold-text">Rp550.000</div>
+                )}
                 <span className="badge badge-ok">
                   <span className="glow-dot" aria-hidden /> Tersedia
                 </span>
               </div>
 
-              <Link to="/treatment" className="btn btn-primary mt-5 w-full">
-                <CalendarCheck size={18} /> Pilih jadwal
-              </Link>
+              {featured ? (
+                <Link to="/treatment/$id" params={{ id: featured.id }} className="btn btn-primary mt-5 w-full">
+                  <CalendarCheck size={18} /> Pilih jadwal
+                </Link>
+              ) : (
+                <Link to="/treatment" className="btn btn-primary mt-5 w-full">
+                  <CalendarCheck size={18} /> Pilih jadwal
+                </Link>
+              )}
             </div>
           </div>
         </div>
