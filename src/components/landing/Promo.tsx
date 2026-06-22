@@ -1,13 +1,10 @@
 import { ArrowRight, Timer } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { formatRp, offPct } from '../../data/clinic'
-import { listPromos } from '../../server/treatments'
+import { promosQuery } from '../../server/queries'
 
 export function Promo() {
-  const { data: weeklyPromos = [] } = useQuery({
-    queryKey: ['promos'],
-    queryFn: () => listPromos(),
-  })
+  const { data: weeklyPromos = [] } = useQuery(promosQuery)
 
   return (
     <section id="promo" className="py-24" style={{ background: 'var(--color-blush-soft)' }}>

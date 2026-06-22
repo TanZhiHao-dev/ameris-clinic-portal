@@ -61,7 +61,7 @@ function PrivilegePage() {
           const can = pts >= t.point
           return (
             <div
-              key={t.point}
+              key={t.treatmentId}
               className="card-soft flex items-center gap-3 p-4"
               style={can ? undefined : { opacity: 0.7 }}
             >

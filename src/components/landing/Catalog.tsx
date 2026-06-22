@@ -3,17 +3,14 @@ import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Star } from 'lucide-react'
 import { categories } from '../../data/clinic'
-import { listTreatments } from '../../server/treatments'
+import { treatmentsQuery } from '../../server/queries'
 import { TreatmentThumb } from './TreatmentThumb'
 import { AddToCartButton } from '../app/AddToCartButton'
 import { PriceTag } from '../app/PriceTag'
 
 export function Catalog() {
   const [active, setActive] = useState<(typeof categories)[number]>('Best Seller')
-  const { data: treatments = [] } = useQuery({
-    queryKey: ['treatments'],
-    queryFn: () => listTreatments(),
-  })
+  const { data: treatments = [] } = useQuery(treatmentsQuery)
 
   const list =
     active === 'Best Seller'

@@ -6,9 +6,12 @@ import { PageShell } from '../components/app/PageShell'
 import { TreatmentThumb } from '../components/landing/TreatmentThumb'
 import { AddToCartButton } from '../components/app/AddToCartButton'
 import { PriceTag } from '../components/app/PriceTag'
-import { listTreatments } from '../server/treatments'
+import { treatmentsQuery } from '../server/queries'
 
-export const Route = createFileRoute('/treatment/')({ component: MenuPage })
+export const Route = createFileRoute('/treatment/')({
+  loader: ({ context: { queryClient } }) => queryClient.ensureQueryData(treatmentsQuery),
+  component: MenuPage,
+})
 
 const FILTERS = [
   'Semua',
@@ -24,10 +27,7 @@ const FILTERS = [
 function MenuPage() {
   const [cat, setCat] = useState<(typeof FILTERS)[number]>('Semua')
   const [q, setQ] = useState('')
-  const { data: treatments = [] } = useQuery({
-    queryKey: ['treatments'],
-    queryFn: () => listTreatments(),
-  })
+  const { data: treatments = [] } = useQuery(treatmentsQuery)
 
   const list = treatments.filter((t) => {
     const matchCat =

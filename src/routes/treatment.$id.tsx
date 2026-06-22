@@ -6,18 +6,19 @@ import { TreatmentThumb } from '../components/landing/TreatmentThumb'
 import { AddToCartButton } from '../components/app/AddToCartButton'
 import { PriceTag } from '../components/app/PriceTag'
 import { useCart } from '../lib/cart'
-import { getTreatment } from '../server/treatments'
+import { treatmentQuery } from '../server/queries'
 
-export const Route = createFileRoute('/treatment/$id')({ component: DetailPage })
+export const Route = createFileRoute('/treatment/$id')({
+  loader: ({ context: { queryClient }, params: { id } }) =>
+    queryClient.ensureQueryData(treatmentQuery(id)),
+  component: DetailPage,
+})
 
 function DetailPage() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
   const { add } = useCart()
-  const { data: t, isPending } = useQuery({
-    queryKey: ['treatment', id],
-    queryFn: () => getTreatment({ data: { id } }),
-  })
+  const { data: t, isPending } = useQuery(treatmentQuery(id))
 
   if (isPending) {
     return <PageShell><div className="shell-x py-24" /></PageShell>

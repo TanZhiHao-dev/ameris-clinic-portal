@@ -1,7 +1,7 @@
 import { Check, Crown, Gift } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { privilegeBenefits } from '../../data/clinic'
-import { redeemTiers } from '../../server/loyalty'
+import { redeemTiersQuery } from '../../server/queries'
 
 function GoldRing({ points = 14, target = 20 }: { points?: number; target?: number }) {
   const r = 82
@@ -46,10 +46,7 @@ function GoldRing({ points = 14, target = 20 }: { points?: number; target?: numb
 }
 
 export function Loyalty() {
-  const { data: tiers = [] } = useQuery({
-    queryKey: ['redeem-tiers'],
-    queryFn: () => redeemTiers(),
-  })
+  const { data: tiers = [] } = useQuery(redeemTiersQuery)
 
   return (
     <section

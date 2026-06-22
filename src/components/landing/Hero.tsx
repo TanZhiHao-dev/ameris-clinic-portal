@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, CalendarCheck, Sparkles } from 'lucide-react'
 import { clinic } from '../../data/clinic'
-import { listTreatments } from '../../server/treatments'
+import { treatmentsQuery } from '../../server/queries'
 import { TreatmentThumb } from './TreatmentThumb'
 import { PriceTag } from '../app/PriceTag'
 
@@ -14,10 +14,7 @@ const STATS = [
 ]
 
 export function Hero() {
-  const { data: treatments = [] } = useQuery({
-    queryKey: ['treatments'],
-    queryFn: () => listTreatments(),
-  })
+  const { data: treatments = [] } = useQuery(treatmentsQuery)
   // Feature a real best-seller — prefer one with a photo so the hero shows an
   // actual treatment image, not a placeholder.
   const featured =
