@@ -130,3 +130,11 @@ export const notifications = pgTable('notifications', {
   isRead: boolean('is_read').notNull().default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
+
+// Simple key-value store for owner-editable settings (e.g. the QRIS payment
+// image as a data-URL). Avoids a one-off table per setting.
+export const appSettings = pgTable('app_settings', {
+  key: text('key').primaryKey(),
+  value: text('value'),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})

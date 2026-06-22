@@ -22,6 +22,13 @@
       "when": 1781945057685,
       "tag": "0002_melted_lyja",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1782127324944,
+      "tag": "0003_rainy_ozymandias",
+      "breakpoints": true
     }
   ]
 }

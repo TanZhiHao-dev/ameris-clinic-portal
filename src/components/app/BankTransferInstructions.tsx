@@ -1,12 +1,20 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Check, Copy, Landmark, MessageCircle, QrCode } from 'lucide-react'
 import { clinic, formatRp } from '../../data/clinic'
+import { getPaymentInfo } from '../../server/settings'
 
 // Manual bank-transfer / QRIS payment instructions. Shown on the checkout
 // confirmation and on a pending Transfer-Bank booking. The owner verifies the
 // incoming transfer and marks it Lunas in /owner/transaksi.
 export function BankTransferInstructions({ amount, bookingId }: { amount: number; bookingId: string }) {
-  const bank = clinic.bank
+  const { data: pay } = useQuery({ queryKey: ['payment-info'], queryFn: () => getPaymentInfo() })
+  const bank = {
+    bankName: pay?.bankName ?? clinic.bank.bankName,
+    accountNumber: pay?.accountNumber ?? clinic.bank.accountNumber,
+    accountHolder: pay?.accountHolder ?? clinic.bank.accountHolder,
+  }
+  const qris = pay?.qrisImage ?? null
   const [copied, setCopied] = useState(false)
 
   const copy = async () => {
@@ -47,7 +55,7 @@ export function BankTransferInstructions({ amount, bookingId }: { amount: number
         <span className="mono text-lg font-extrabold gold-text">{formatRp(amount)}</span>
       </div>
 
-      {bank.qrisImage ? <QrisBlock src={bank.qrisImage} /> : null}
+      {qris ? <QrisBlock src={qris} /> : null}
 
       <p className="mt-3 text-[0.8rem] leading-relaxed" style={{ color: 'var(--color-ink-soft)' }}>
         Transfer sesuai jumlah di atas, lalu kirim bukti transfer via WhatsApp. Booking dikonfirmasi setelah pembayaran
@@ -66,7 +74,7 @@ export function BankTransferInstructions({ amount, bookingId }: { amount: number
   )
 }
 
-// QRIS image — hidden automatically if public/qris.png is not present.
+// QRIS image (owner-uploaded, a data-URL) — hidden if it fails to load.
 function QrisBlock({ src }: { src: string }) {
   const [ok, setOk] = useState(true)
   if (!ok) return null
@@ -75,7 +83,7 @@ function QrisBlock({ src }: { src: string }) {
       <div className="flex items-center gap-1.5 text-[0.72rem] font-semibold uppercase tracking-wider" style={{ color: 'var(--color-ink-muted)' }}>
         <QrCode size={13} /> atau scan QRIS
       </div>
-      <img src={src} alt="QRIS Ameris" className="mt-2 h-44 w-44 object-contain" onError={() => setOk(false)} />
+      <img src={src} alt="QRIS Ameris" className="mt-2 w-full max-w-[280px] rounded-lg object-contain" onError={() => setOk(false)} />
     </div>
   )
 }
