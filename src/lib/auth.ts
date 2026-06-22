@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
 import { db, schema } from '#/db'
+import { resetPasswordEmail, sendEmail } from '#/server/_email'
 
 // Email + password auth. Sessions & roles via additionalFields (role drives
 // Pasien/Owner routing). Email verification is off for this self-service portal.
@@ -14,13 +15,15 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: false,
     minPasswordLength: 6,
-    // Forgot-password delivery. No email provider is wired in this portal, so the
-    // reset link is logged to the server console (same dev pattern the old OTP
-    // flow used). Swap for Resend/Fonnte in prod. The link points at our own
-    // /reset-password page carrying the raw token.
+    // Forgot-password delivery via Resend (src/server/_email.ts). The link points
+    // at our own /reset-password page carrying the raw token. With no RESEND_API_KEY
+    // set, sendEmail falls back to logging the message to the server console, so
+    // the flow still works un-configured.
     sendResetPassword: async ({ user, token }) => {
       const base = process.env.BETTER_AUTH_URL ?? 'http://localhost:3000'
-      console.log(`\n[reset-password] ${user.email} -> ${base}/reset-password?token=${token}\n`)
+      const link = `${base}/reset-password?token=${token}`
+      const { subject, html, text } = resetPasswordEmail({ name: user.name, link })
+      await sendEmail({ to: user.email, subject, html, text })
     },
   },
 
