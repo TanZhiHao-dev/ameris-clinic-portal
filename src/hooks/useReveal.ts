@@ -2,10 +2,16 @@ import { useEffect } from 'react'
 
 /**
  * Adds `.is-in` to any element with `.reveal` once it scrolls into view.
- * Runs after hydration; SSR markup ships hidden then animates in.
+ * Runs after hydration. `.reveal` is only hidden once this effect "arms" it by
+ * adding `.reveal-on` to <html> — so if the client JS never runs (failed
+ * hydration / blocked bundle), the content stays visible instead of being
+ * invisible forever.
  */
 export function useReveal() {
   useEffect(() => {
+    const root = document.documentElement
+    root.classList.add('reveal-on')
+
     const els = Array.from(document.querySelectorAll<HTMLElement>('.reveal'))
     if (!els.length) return
 

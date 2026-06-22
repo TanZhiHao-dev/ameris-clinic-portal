@@ -356,12 +356,16 @@
 }
 
 .reveal {
-  opacity: 0;
-  transform: translateY(22px);
   transition: opacity 700ms cubic-bezier(0.16, 1, 0.3, 1),
     transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.reveal.is-in {
+/* Only hide once JS arms the reveal (adds .reveal-on to <html>). If the client
+   bundle never runs, content stays visible — it fails open, not invisible. */
+html.reveal-on .reveal {
+  opacity: 0;
+  transform: translateY(22px);
+}
+html.reveal-on .reveal.is-in {
   opacity: 1;
   transform: translateY(0);
 }
@@ -385,7 +389,7 @@
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
-  .rise, .reveal { opacity: 1; transform: none; }
+  .rise, .reveal, html.reveal-on .reveal { opacity: 1; transform: none; }
 }
 
 /* Responsive data tables — on phones, collapse each row into a stacked card so

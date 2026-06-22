@@ -21,7 +21,7 @@ const TICKER = [
 export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
-  const { data: session, isPending } = authClient.useSession()
+  const { data: session } = authClient.useSession()
 
   const role = (session?.user as { role?: string } | undefined)?.role
   const dashboardTo = role === 'owner' ? '/owner' : role === 'dokter' ? '/dokter' : '/akun'
@@ -90,7 +90,7 @@ export function SiteHeader() {
           </div>
 
           <div className="hidden items-center gap-3 lg:flex">
-            {isPending ? null : session ? (
+            {session ? (
               <>
                 <Link to={dashboardTo} className="btn btn-primary">
                   {dashboardLabel}
@@ -154,7 +154,7 @@ export function SiteHeader() {
               ))}
             </div>
             <div className="mt-4 flex flex-col gap-2">
-              {isPending ? null : session ? (
+              {session ? (
                 <>
                   <Link to={dashboardTo} className="btn btn-primary" onClick={() => setOpen(false)}>
                     {dashboardLabel}
