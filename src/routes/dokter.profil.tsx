@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { CalendarDays, Coins, Stethoscope, TrendingUp, User } from 'lucide-react'
+import { CalendarDays, Coins, ShieldCheck, Stethoscope, TrendingUp, User } from 'lucide-react'
+import { ChangePasswordCard } from '../components/app/ChangePasswordCard'
 import { formatRp } from '../data/clinic'
 import { fmtDateLong } from '../data/owner'
 import { doctorEarnings } from '#/server/doctors'
@@ -101,6 +102,12 @@ function DoctorProfile() {
           ))}
         </div>
       )}
+
+      {/* Account security */}
+      <h2 className="mt-8 flex items-center gap-2 text-xl"><ShieldCheck size={20} style={{ color: 'var(--color-gold-deep)' }} /> Keamanan akun</h2>
+      <div className="mt-4">
+        <ChangePasswordCard />
+      </div>
     </div>
   )
 }

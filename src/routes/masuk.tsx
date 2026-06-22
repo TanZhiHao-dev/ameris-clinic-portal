@@ -1,15 +1,17 @@
 import { type KeyboardEvent, useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, ArrowRight, Eye, EyeOff, Lock, Mail, User } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Eye, EyeOff, Lock, Mail, MailCheck, User } from 'lucide-react'
 import { Brand } from '../components/landing/Brand'
 import { clinic } from '../data/clinic'
 import { authClient } from '../lib/auth-client'
 
 export const Route = createFileRoute('/masuk')({ component: AuthPage })
 
+type Mode = 'masuk' | 'daftar' | 'lupa'
+
 function AuthPage() {
   const navigate = useNavigate()
-  const [mode, setMode] = useState<'masuk' | 'daftar'>('masuk')
+  const [mode, setMode] = useState<Mode>('masuk')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -17,6 +19,7 @@ function AuthPage() {
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [sent, setSent] = useState(false)
 
   const canSubmit =
     email.trim().length > 3 && password.length >= 6 && (mode === 'masuk' || name.trim().length >= 2)
@@ -55,13 +58,29 @@ function AuthPage() {
     }
   }
 
-  const onEnter = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') submit()
+  async function sendReset() {
+    if (busy || email.trim().length < 4) return
+    setBusy(true)
+    setError('')
+    try {
+      const res = await authClient.requestPasswordReset({ email: email.trim(), redirectTo: '/reset-password' })
+      if (res.error) throw new Error(res.error.message)
+      setSent(true)
+    } catch (e) {
+      setError((e as Error).message || 'Gagal mengirim link reset.')
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const switchMode = (m: 'masuk' | 'daftar') => {
+  const onEnter = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') (mode === 'lupa' ? sendReset() : submit())
+  }
+
+  const switchMode = (m: Mode) => {
     setMode(m)
     setError('')
+    setSent(false)
   }
 
   const fillOwner = () => {
@@ -100,114 +119,219 @@ function AuthPage() {
 
         <div className="flex flex-1 items-center justify-center px-6 pb-16">
           <div className="w-full max-w-md">
-            {/* Mode toggle */}
-            <div className="mb-8 inline-flex rounded-full p-1" style={{ background: 'var(--color-shell)', border: '1px solid var(--color-line)' }}>
-              {(['masuk', 'daftar'] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => switchMode(m)}
-                  className="rounded-full px-5 py-2 text-sm font-semibold capitalize transition"
-                  style={mode === m ? { background: 'var(--color-ink)', color: 'var(--color-cream)' } : { color: 'var(--color-ink-muted)' }}
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
-
-            <h1 className="text-[2.2rem]">{mode === 'masuk' ? 'Selamat datang kembali' : 'Buat akun Ameris'}</h1>
-            <p className="mt-2 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-              {mode === 'masuk'
-                ? 'Masuk dengan email & password akunmu.'
-                : 'Daftar pakai email & password untuk mulai booking.'}
-            </p>
-
-            {mode === 'daftar' && (
+            {mode === 'lupa' ? (
+              <ForgotView
+                email={email}
+                setEmail={setEmail}
+                onSubmit={sendReset}
+                onEnter={onEnter}
+                onBack={() => switchMode('masuk')}
+                busy={busy}
+                sent={sent}
+                error={error}
+              />
+            ) : (
               <>
-                <label className="mt-7 block text-sm font-semibold">Nama lengkap</label>
-                <Field icon={<User size={16} />}>
+                {/* Mode toggle */}
+                <div className="mb-8 inline-flex rounded-full p-1" style={{ background: 'var(--color-shell)', border: '1px solid var(--color-line)' }}>
+                  {(['masuk', 'daftar'] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => switchMode(m)}
+                      className="rounded-full px-5 py-2 text-sm font-semibold capitalize transition"
+                      style={mode === m ? { background: 'var(--color-ink)', color: 'var(--color-cream)' } : { color: 'var(--color-ink-muted)' }}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+
+                <h1 className="text-[2.2rem]">{mode === 'masuk' ? 'Selamat datang kembali' : 'Buat akun Ameris'}</h1>
+                <p className="mt-2 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
+                  {mode === 'masuk'
+                    ? 'Masuk dengan email & password akunmu.'
+                    : 'Daftar pakai email & password untuk mulai booking.'}
+                </p>
+
+                {mode === 'daftar' && (
+                  <>
+                    <label className="mt-7 block text-sm font-semibold">Nama lengkap</label>
+                    <Field icon={<User size={16} />}>
+                      <input
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        onKeyDown={onEnter}
+                        placeholder="Nama kamu"
+                        className="w-full bg-transparent text-sm outline-none"
+                      />
+                    </Field>
+                  </>
+                )}
+
+                <label className="mt-5 block text-sm font-semibold">Alamat email</label>
+                <Field icon={<Mail size={16} />}>
                   <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     onKeyDown={onEnter}
-                    placeholder="Nama kamu"
+                    inputMode="email"
+                    autoComplete="email"
+                    placeholder="nama@email.com"
                     className="w-full bg-transparent text-sm outline-none"
                   />
                 </Field>
+
+                <label className="mt-5 block text-sm font-semibold">Password</label>
+                <Field icon={<Lock size={16} />}>
+                  <input
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={onEnter}
+                    type={showPw ? 'text' : 'password'}
+                    autoComplete={mode === 'masuk' ? 'current-password' : 'new-password'}
+                    placeholder="Minimal 6 karakter"
+                    className="w-full bg-transparent text-sm outline-none"
+                  />
+                  <button type="button" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? 'Sembunyikan password' : 'Tampilkan password'} style={{ color: 'var(--color-ink-muted)' }}>
+                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </Field>
+
+                {mode === 'masuk' && (
+                  <div className="mt-2 text-right">
+                    <button type="button" onClick={() => switchMode('lupa')} className="text-[0.8rem] font-semibold" style={{ color: 'var(--color-gold-deep)' }}>
+                      Lupa password?
+                    </button>
+                  </div>
+                )}
+
+                {mode === 'daftar' && (
+                  <>
+                    <label className="mt-5 block text-sm font-semibold">
+                      Tanggal lahir <span className="font-normal" style={{ color: 'var(--color-ink-muted)' }}>(opsional — untuk promo ulang tahun 🎁)</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={birth}
+                      onChange={(e) => setBirth(e.target.value)}
+                      className="mt-2 w-full rounded-xl px-4 py-3 text-sm outline-none"
+                      style={{ background: 'var(--color-shell)', border: '1px solid var(--color-line)' }}
+                    />
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  disabled={busy || !canSubmit}
+                  onClick={submit}
+                  className="btn btn-gold mt-7 w-full disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {busy ? 'Memproses…' : mode === 'masuk' ? 'Masuk' : 'Daftar & masuk'} <ArrowRight size={18} />
+                </button>
+
+                {error && (
+                  <p className="mt-5 rounded-xl px-4 py-3 text-sm font-medium" style={{ background: 'rgba(179,73,47,0.1)', color: 'var(--color-destructive)' }}>
+                    {error}
+                  </p>
+                )}
+
+                <p className="mt-8 text-center text-[0.78rem]" style={{ color: 'var(--color-ink-muted)' }}>
+                  Dengan melanjutkan, kamu setuju dengan Ketentuan &amp; Kebijakan Privasi Ameris.
+                </p>
+                <div className="mt-4 border-t pt-4 text-center">
+                  <button type="button" onClick={fillOwner} className="text-[0.82rem] font-semibold" style={{ color: 'var(--color-gold-deep)' }}>
+                    Masuk sebagai Owner / Admin →
+                  </button>
+                </div>
               </>
             )}
-
-            <label className="mt-5 block text-sm font-semibold">Alamat email</label>
-            <Field icon={<Mail size={16} />}>
-              <input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onKeyDown={onEnter}
-                inputMode="email"
-                autoComplete="email"
-                placeholder="nama@email.com"
-                className="w-full bg-transparent text-sm outline-none"
-              />
-            </Field>
-
-            <label className="mt-5 block text-sm font-semibold">Password</label>
-            <Field icon={<Lock size={16} />}>
-              <input
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={onEnter}
-                type={showPw ? 'text' : 'password'}
-                autoComplete={mode === 'masuk' ? 'current-password' : 'new-password'}
-                placeholder="Minimal 6 karakter"
-                className="w-full bg-transparent text-sm outline-none"
-              />
-              <button type="button" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? 'Sembunyikan password' : 'Tampilkan password'} style={{ color: 'var(--color-ink-muted)' }}>
-                {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </Field>
-
-            {mode === 'daftar' && (
-              <>
-                <label className="mt-5 block text-sm font-semibold">
-                  Tanggal lahir <span className="font-normal" style={{ color: 'var(--color-ink-muted)' }}>(opsional — untuk promo ulang tahun 🎁)</span>
-                </label>
-                <input
-                  type="date"
-                  value={birth}
-                  onChange={(e) => setBirth(e.target.value)}
-                  className="mt-2 w-full rounded-xl px-4 py-3 text-sm outline-none"
-                  style={{ background: 'var(--color-shell)', border: '1px solid var(--color-line)' }}
-                />
-              </>
-            )}
-
-            <button
-              type="button"
-              disabled={busy || !canSubmit}
-              onClick={submit}
-              className="btn btn-gold mt-7 w-full disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {busy ? 'Memproses…' : mode === 'masuk' ? 'Masuk' : 'Daftar & masuk'} <ArrowRight size={18} />
-            </button>
-
-            {error && (
-              <p className="mt-5 rounded-xl px-4 py-3 text-sm font-medium" style={{ background: 'rgba(179,73,47,0.1)', color: 'var(--color-destructive)' }}>
-                {error}
-              </p>
-            )}
-
-            <p className="mt-8 text-center text-[0.78rem]" style={{ color: 'var(--color-ink-muted)' }}>
-              Dengan melanjutkan, kamu setuju dengan Ketentuan &amp; Kebijakan Privasi Ameris.
-            </p>
-            <div className="mt-4 border-t pt-4 text-center">
-              <button type="button" onClick={fillOwner} className="text-[0.82rem] font-semibold" style={{ color: 'var(--color-gold-deep)' }}>
-                Masuk sebagai Owner / Admin →
-              </button>
-            </div>
           </div>
         </div>
       </div>
     </div>
+  )
+}
+
+function ForgotView({
+  email,
+  setEmail,
+  onSubmit,
+  onEnter,
+  onBack,
+  busy,
+  sent,
+  error,
+}: {
+  email: string
+  setEmail: (v: string) => void
+  onSubmit: () => void
+  onEnter: (e: KeyboardEvent<HTMLInputElement>) => void
+  onBack: () => void
+  busy: boolean
+  sent: boolean
+  error: string
+}) {
+  return (
+    <>
+      <h1 className="text-[2.2rem]">Lupa password</h1>
+      <p className="mt-2 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
+        Masukkan email akunmu — kami kirim link untuk atur ulang password.
+      </p>
+
+      {sent ? (
+        <div className="mt-7">
+          <div className="flex flex-col items-center rounded-2xl px-6 py-8 text-center" style={{ background: 'var(--color-shell)', border: '1px solid var(--color-line)' }}>
+            <div className="grid h-12 w-12 place-items-center rounded-full" style={{ background: 'rgba(154,115,32,0.14)', color: 'var(--color-gold-deep)' }}>
+              <MailCheck size={22} />
+            </div>
+            <p className="mt-4 font-bold">Cek email kamu</p>
+            <p className="mt-1 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
+              Kalau <span className="font-semibold" style={{ color: 'var(--color-ink)' }}>{email}</span> terdaftar, link reset password sudah dikirim.
+            </p>
+            <p className="mt-3 text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>
+              Dev: link reset tampil di konsol server.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <label className="mt-7 block text-sm font-semibold">Alamat email</label>
+          <Field icon={<Mail size={16} />}>
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={onEnter}
+              inputMode="email"
+              autoComplete="email"
+              placeholder="nama@email.com"
+              className="w-full bg-transparent text-sm outline-none"
+            />
+          </Field>
+
+          <button
+            type="button"
+            disabled={busy || email.trim().length < 4}
+            onClick={onSubmit}
+            className="btn btn-gold mt-7 w-full disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {busy ? 'Mengirim…' : 'Kirim link reset'} <ArrowRight size={18} />
+          </button>
+
+          {error && (
+            <p className="mt-5 rounded-xl px-4 py-3 text-sm font-medium" style={{ background: 'rgba(179,73,47,0.1)', color: 'var(--color-destructive)' }}>
+              {error}
+            </p>
+          )}
+        </>
+      )}
+
+      <div className="mt-6 text-center">
+        <button type="button" onClick={onBack} className="inline-flex items-center gap-1.5 text-[0.82rem] font-semibold" style={{ color: 'var(--color-gold-deep)' }}>
+          <ArrowLeft size={15} /> Kembali ke masuk
+        </button>
+      </div>
+    </>
   )
 }
 

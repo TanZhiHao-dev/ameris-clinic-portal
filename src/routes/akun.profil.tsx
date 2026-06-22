@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Check } from 'lucide-react'
+import { ChangePasswordCard } from '../components/app/ChangePasswordCard'
 import { myProfile, updateProfile } from '../server/account'
 
 export const Route = createFileRoute('/akun/profil')({ component: ProfilePage })
@@ -83,6 +84,10 @@ function ProfilePage() {
             </span>
           )}
         </div>
+      </div>
+
+      <div className="mt-6">
+        <ChangePasswordCard />
       </div>
     </div>
   )

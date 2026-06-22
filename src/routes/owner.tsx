@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { createFileRoute, Link, Outlet, useNavigate } from '@tanstack/react-router'
 import {
   CalendarDays,
+  CircleUser,
   CreditCard,
   LayoutDashboard,
   LogOut,
   Menu,
   Sparkles,
   Stethoscope,
+  UserCog,
   Users,
   X,
 } from 'lucide-react'
@@ -22,6 +24,8 @@ const NAV = [
   { to: '/owner/transaksi', label: 'Transaksi', icon: CreditCard, exact: false },
   { to: '/owner/pasien', label: 'Pasien & ERM', icon: Users, exact: false },
   { to: '/owner/dokter', label: 'Dokter', icon: Stethoscope, exact: false },
+  { to: '/owner/akun', label: 'Akun', icon: UserCog, exact: false },
+  { to: '/owner/profil', label: 'Profil', icon: CircleUser, exact: false },
 ]
 
 function SidebarContent({
@@ -64,15 +68,15 @@ function SidebarContent({
       </nav>
 
       <div className="border-t p-4" style={{ borderColor: 'rgba(246,237,220,0.12)' }}>
-        <div className="flex items-center gap-3 px-2 py-2">
+        <Link to="/owner/profil" onClick={onNavigate} className="flex items-center gap-3 rounded-xl px-2 py-2 transition hover:bg-[rgba(246,237,220,0.06)]">
           <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-extrabold" style={{ background: 'var(--grad-gold)', color: '#3a2c0f' }}>
             {userName.charAt(0)}
           </div>
           <div className="min-w-0">
             <div className="truncate text-sm font-semibold" style={{ color: '#f6eddc' }}>{userName}</div>
-            <div className="text-[0.7rem]" style={{ color: 'rgba(246,237,220,0.5)' }}>Owner</div>
+            <div className="text-[0.7rem]" style={{ color: 'rgba(246,237,220,0.5)' }}>Owner · lihat profil</div>
           </div>
-        </div>
+        </Link>
         <button type="button" onClick={onSignOut} className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition" style={{ color: 'rgba(246,237,220,0.7)' }}>
           <LogOut size={18} /> Keluar
         </button>

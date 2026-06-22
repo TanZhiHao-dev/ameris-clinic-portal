@@ -14,6 +14,14 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: false,
     minPasswordLength: 6,
+    // Forgot-password delivery. No email provider is wired in this portal, so the
+    // reset link is logged to the server console (same dev pattern the old OTP
+    // flow used). Swap for Resend/Fonnte in prod. The link points at our own
+    // /reset-password page carrying the raw token.
+    sendResetPassword: async ({ user, token }) => {
+      const base = process.env.BETTER_AUTH_URL ?? 'http://localhost:3000'
+      console.log(`\n[reset-password] ${user.email} -> ${base}/reset-password?token=${token}\n`)
+    },
   },
 
   // App columns on the user table (role drives Pasien/Owner routing).
