@@ -130,7 +130,7 @@ function AccountsAdmin() {
         </div>
       ) : (
         <div className="card-soft mt-5 overflow-x-auto">
-          <table className="w-full min-w-[820px] text-sm">
+          <table className="stack w-full text-sm sm:min-w-[820px]">
             <thead>
               <tr style={{ color: 'var(--color-ink-muted)' }} className="text-left text-[0.72rem] uppercase tracking-wider">
                 <th className="px-5 py-4 font-semibold">Akun</th>
@@ -161,12 +161,12 @@ function AccountsAdmin() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-3 py-4">
+                    <td data-label="Role" className="px-3 py-4">
                       <span className="badge" style={{ background: meta.bg, color: meta.color }}>{meta.label}</span>
                     </td>
-                    <td className="px-3 py-4 whitespace-nowrap" style={{ color: 'var(--color-ink-soft)' }}>{a.phone || '—'}</td>
-                    <td className="px-3 py-4">{a.bookingCount}×</td>
-                    <td className="px-3 py-4 whitespace-nowrap" style={{ color: 'var(--color-ink-soft)' }}>{fmtDate(a.joined)}</td>
+                    <td data-label="Telepon" className="px-3 py-4 whitespace-nowrap" style={{ color: 'var(--color-ink-soft)' }}>{a.phone || '—'}</td>
+                    <td data-label="Booking" className="px-3 py-4">{a.bookingCount}×</td>
+                    <td data-label="Bergabung" className="px-3 py-4 whitespace-nowrap" style={{ color: 'var(--color-ink-soft)' }}>{fmtDate(a.joined)}</td>
                     <td className="px-3 py-4">
                       <div className="flex items-center justify-end gap-1">
                         <button type="button" onClick={() => setEditing(a)} className="grid h-8 w-8 place-items-center rounded-full transition hover:bg-[var(--color-muted)]" style={{ color: 'var(--color-ink-soft)' }} aria-label={`Edit ${a.name}`}>

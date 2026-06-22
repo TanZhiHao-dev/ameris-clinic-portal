@@ -163,7 +163,7 @@ function CatalogAdmin() {
 
       {/* Table */}
       <div className="card-soft mt-5 overflow-x-auto">
-        <table className="w-full min-w-[760px] text-sm">
+        <table className="stack w-full text-sm sm:min-w-[760px]">
           <thead>
             <tr style={{ color: 'var(--color-ink-muted)' }} className="text-left text-[0.72rem] uppercase tracking-wider">
               <th className="px-5 py-4 font-semibold">Treatment</th>
@@ -181,7 +181,7 @@ function CatalogAdmin() {
                   <div className="font-bold">{r.name}</div>
                   <div className="text-[0.76rem]" style={{ color: 'var(--color-ink-muted)' }}>{r.category} · {r.duration}</div>
                 </td>
-                <td className="px-3 py-4">
+                <td data-label="Gambar" className="px-3 py-4">
                   <button
                     type="button"
                     onClick={() => setImgEdit(r)}
@@ -199,7 +199,7 @@ function CatalogAdmin() {
                     </span>
                   </button>
                 </td>
-                <td className="px-3 py-4">
+                <td data-label="Harga" className="px-3 py-4">
                   <div className="flex items-center gap-1 rounded-lg px-2 py-1.5" style={{ border: '1px solid var(--color-line)', background: 'var(--color-cream)' }}>
                     <span className="text-[0.8rem]" style={{ color: 'var(--color-ink-muted)' }}>Rp</span>
                     <input
@@ -213,8 +213,8 @@ function CatalogAdmin() {
                     />
                   </div>
                 </td>
-                <td className="px-3 py-4"><Switch on={r.available} onChange={() => patch(r.id, { available: !r.available })} label={`Tersedia ${r.name}`} /></td>
-                <td className="px-3 py-4"><Switch on={r.promo} onChange={() => patch(r.id, { promo: !r.promo })} label={`Promo ${r.name}`} /></td>
+                <td data-label="Tersedia" className="px-3 py-4"><Switch on={r.available} onChange={() => patch(r.id, { available: !r.available })} label={`Tersedia ${r.name}`} /></td>
+                <td data-label="Promo" className="px-3 py-4"><Switch on={r.promo} onChange={() => patch(r.id, { promo: !r.promo })} label={`Promo ${r.name}`} /></td>
                 <td className="px-3 py-4 text-right">
                   <button type="button" onClick={() => remove(r.id)} className="grid h-8 w-8 place-items-center rounded-full transition hover:bg-[var(--color-muted)]" style={{ color: 'var(--color-rose)' }} aria-label={`Hapus ${r.name}`}>
                     <Trash2 size={16} />

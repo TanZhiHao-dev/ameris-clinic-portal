@@ -101,7 +101,7 @@ function DoctorManage() {
         </div>
       ) : (
         <div className="card-soft mt-4 overflow-x-auto">
-          <table className="w-full min-w-[640px] text-sm">
+          <table className="stack w-full text-sm sm:min-w-[640px]">
             <thead>
               <tr style={{ color: 'var(--color-ink-muted)' }} className="text-left text-[0.72rem] uppercase tracking-wider">
                 <th className="px-5 py-3 font-semibold">Treatment</th>

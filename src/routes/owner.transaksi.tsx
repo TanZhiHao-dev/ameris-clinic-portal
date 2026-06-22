@@ -87,7 +87,7 @@ function TransactionsPage() {
       </div>
 
       <div className="card-soft mt-5 overflow-x-auto">
-        <table className="w-full min-w-[820px] text-sm">
+        <table className="stack w-full text-sm sm:min-w-[820px]">
           <thead>
             <tr style={{ color: 'var(--color-ink-muted)' }} className="text-left text-[0.72rem] uppercase tracking-wider">
               <th className="px-5 py-4 font-semibold">Transaksi</th>
@@ -107,10 +107,10 @@ function TransactionsPage() {
                     <span className="mono">{b.id}</span> · {b.items.map((i) => i.name).join(', ')}
                   </div>
                 </td>
-                <td className="px-3 py-4 whitespace-nowrap" style={{ color: 'var(--color-ink-soft)' }}>{fmtDate(b.date)}</td>
-                <td className="px-3 py-4">{b.payment}</td>
-                <td className="px-3 py-4 mono font-bold gold-text whitespace-nowrap">{formatRp(b.total)}</td>
-                <td className="px-3 py-4">
+                <td data-label="Tanggal" className="px-3 py-4 whitespace-nowrap" style={{ color: 'var(--color-ink-soft)' }}>{fmtDate(b.date)}</td>
+                <td data-label="Metode" className="px-3 py-4">{b.payment}</td>
+                <td data-label="Jumlah" className="px-3 py-4 mono font-bold gold-text whitespace-nowrap">{formatRp(b.total)}</td>
+                <td data-label="Status" className="px-3 py-4">
                   <div className="flex flex-col gap-1">
                     <span className="badge w-fit" style={{ background: payTone[b.payStatus as PayStatus].bg, color: payTone[b.payStatus as PayStatus].color }}>{b.payStatus}</span>
                     <span className="badge w-fit" style={{ background: statusTone[b.status as OwnerStatus].bg, color: statusTone[b.status as OwnerStatus].color }}>{b.status}</span>

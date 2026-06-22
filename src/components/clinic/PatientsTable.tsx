@@ -88,7 +88,7 @@ export function PatientsTable({ basePath }: { basePath: '/owner' | '/dokter' }) 
         </div>
       ) : (
         <div className="card-soft mt-5 overflow-x-auto">
-          <table className="w-full min-w-[720px] text-sm">
+          <table className="stack w-full text-sm sm:min-w-[720px]">
             <thead>
               <tr style={{ color: 'var(--color-ink-muted)' }} className="text-left text-[0.72rem] uppercase tracking-wider">
                 <th className="px-5 py-4 font-semibold">Pasien</th>
@@ -112,9 +112,9 @@ export function PatientsTable({ basePath }: { basePath: '/owner' | '/dokter' }) 
                       </div>
                     </div>
                   </td>
-                  <td className="px-3 py-4 mono font-bold gold-text">{p.points}</td>
-                  <td className="px-3 py-4">{p.visits}×</td>
-                  <td className="px-3 py-4 whitespace-nowrap" style={{ color: 'var(--color-ink-soft)' }}>{fmtDate(p.lastVisit)}</td>
+                  <td data-label="Poin" className="px-3 py-4 mono font-bold gold-text">{p.points}</td>
+                  <td data-label="Kunjungan" className="px-3 py-4">{p.visits}×</td>
+                  <td data-label="Terakhir" className="px-3 py-4 whitespace-nowrap" style={{ color: 'var(--color-ink-soft)' }}>{fmtDate(p.lastVisit)}</td>
                   <td className="px-3 py-4 text-right">
                     <Link to={`${basePath}/pasien/$id`} params={{ id: p.id }} className="btn btn-ghost px-3 py-1.5 text-xs">
                       Detail <ChevronRight size={14} />

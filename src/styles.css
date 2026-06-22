@@ -387,3 +387,39 @@
   }
   .rise, .reveal { opacity: 1; transform: none; }
 }
+
+/* Responsive data tables — on phones, collapse each row into a stacked card so
+   no column or action button is hidden off-screen (tables otherwise force a
+   min-width wider than the viewport). Pair with class="stack" + sm:min-w-[…]. */
+@media (max-width: 639px) {
+  table.stack { display: block; min-width: 0 !important; }
+  table.stack thead { display: none; }
+  table.stack tbody { display: block; }
+  table.stack tr {
+    display: block;
+    padding: 0.9rem 0.25rem;
+    border-top: 1px solid var(--color-line);
+  }
+  table.stack tbody tr:first-child { border-top: none; }
+  table.stack td {
+    display: block;
+    width: 100%;
+    border: none !important;
+    padding: 0.2rem 0.25rem;
+    white-space: normal;
+  }
+  /* small column label above a cell's value (opt-in via data-label) */
+  table.stack td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.1rem;
+    font-size: 0.62rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-ink-muted);
+  }
+  /* action cell: give buttons room and keep them easy to tap */
+  table.stack td:last-child { padding-top: 0.6rem; }
+  table.stack td:last-child .flex { flex-wrap: wrap; }
+}
