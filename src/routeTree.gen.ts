@@ -31,6 +31,7 @@ import { Route as DokterProfilRouteImport } from './routes/dokter.profil'
 import { Route as DokterJadwalRouteImport } from './routes/dokter.jadwal'
 import { Route as ApiSeedRouteImport } from './routes/api/seed'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiBootstrapOwnerRouteImport } from './routes/api/bootstrap-owner'
 import { Route as AkunProfilRouteImport } from './routes/akun.profil'
 import { Route as AkunPrivilegeRouteImport } from './routes/akun.privilege'
 import { Route as OwnerPasienIndexRouteImport } from './routes/owner.pasien.index'
@@ -154,6 +155,11 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBootstrapOwnerRoute = ApiBootstrapOwnerRouteImport.update({
+  id: '/api/bootstrap-owner',
+  path: '/api/bootstrap-owner',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AkunProfilRoute = AkunProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
@@ -226,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/akun/privilege': typeof AkunPrivilegeRoute
   '/akun/profil': typeof AkunProfilRoute
+  '/api/bootstrap-owner': typeof ApiBootstrapOwnerRoute
   '/api/health': typeof ApiHealthRoute
   '/api/seed': typeof ApiSeedRoute
   '/dokter/jadwal': typeof DokterJadwalRoute
@@ -259,6 +266,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/akun/privilege': typeof AkunPrivilegeRoute
   '/akun/profil': typeof AkunProfilRoute
+  '/api/bootstrap-owner': typeof ApiBootstrapOwnerRoute
   '/api/health': typeof ApiHealthRoute
   '/api/seed': typeof ApiSeedRoute
   '/dokter/jadwal': typeof DokterJadwalRoute
@@ -296,6 +304,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/akun/privilege': typeof AkunPrivilegeRoute
   '/akun/profil': typeof AkunProfilRoute
+  '/api/bootstrap-owner': typeof ApiBootstrapOwnerRoute
   '/api/health': typeof ApiHealthRoute
   '/api/seed': typeof ApiSeedRoute
   '/dokter/jadwal': typeof DokterJadwalRoute
@@ -334,6 +343,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/akun/privilege'
     | '/akun/profil'
+    | '/api/bootstrap-owner'
     | '/api/health'
     | '/api/seed'
     | '/dokter/jadwal'
@@ -367,6 +377,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/akun/privilege'
     | '/akun/profil'
+    | '/api/bootstrap-owner'
     | '/api/health'
     | '/api/seed'
     | '/dokter/jadwal'
@@ -403,6 +414,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/akun/privilege'
     | '/akun/profil'
+    | '/api/bootstrap-owner'
     | '/api/health'
     | '/api/seed'
     | '/dokter/jadwal'
@@ -438,6 +450,7 @@ export interface RootRouteChildren {
   MasukRoute: typeof MasukRoute
   OwnerRoute: typeof OwnerRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ApiBootstrapOwnerRoute: typeof ApiBootstrapOwnerRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSeedRoute: typeof ApiSeedRoute
   TreatmentIdRoute: typeof TreatmentIdRoute
@@ -602,6 +615,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/bootstrap-owner': {
+      id: '/api/bootstrap-owner'
+      path: '/api/bootstrap-owner'
+      fullPath: '/api/bootstrap-owner'
+      preLoaderRoute: typeof ApiBootstrapOwnerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/akun/profil': {
       id: '/akun/profil'
       path: '/profil'
@@ -763,6 +783,7 @@ const rootRouteChildren: RootRouteChildren = {
   MasukRoute: MasukRoute,
   OwnerRoute: OwnerRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
+  ApiBootstrapOwnerRoute: ApiBootstrapOwnerRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiSeedRoute: ApiSeedRoute,
   TreatmentIdRoute: TreatmentIdRoute,
