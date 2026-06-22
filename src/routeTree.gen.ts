@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as OwnerRouteImport } from './routes/owner'
 import { Route as MasukRouteImport } from './routes/masuk'
+import { Route as LanjutRouteImport } from './routes/lanjut'
 import { Route as KeranjangRouteImport } from './routes/keranjang'
 import { Route as DokterRouteImport } from './routes/dokter'
 import { Route as BookingRouteImport } from './routes/booking'
@@ -58,6 +59,11 @@ const OwnerRoute = OwnerRouteImport.update({
 const MasukRoute = MasukRouteImport.update({
   id: '/masuk',
   path: '/masuk',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LanjutRoute = LanjutRouteImport.update({
+  id: '/lanjut',
+  path: '/lanjut',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KeranjangRoute = KeranjangRouteImport.update({
@@ -227,6 +233,7 @@ export interface FileRoutesByFullPath {
   '/booking': typeof BookingRoute
   '/dokter': typeof DokterRouteWithChildren
   '/keranjang': typeof KeranjangRoute
+  '/lanjut': typeof LanjutRoute
   '/masuk': typeof MasukRoute
   '/owner': typeof OwnerRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
@@ -262,6 +269,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/booking': typeof BookingRoute
   '/keranjang': typeof KeranjangRoute
+  '/lanjut': typeof LanjutRoute
   '/masuk': typeof MasukRoute
   '/reset-password': typeof ResetPasswordRoute
   '/akun/privilege': typeof AkunPrivilegeRoute
@@ -299,6 +307,7 @@ export interface FileRoutesById {
   '/booking': typeof BookingRoute
   '/dokter': typeof DokterRouteWithChildren
   '/keranjang': typeof KeranjangRoute
+  '/lanjut': typeof LanjutRoute
   '/masuk': typeof MasukRoute
   '/owner': typeof OwnerRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
@@ -338,6 +347,7 @@ export interface FileRouteTypes {
     | '/booking'
     | '/dokter'
     | '/keranjang'
+    | '/lanjut'
     | '/masuk'
     | '/owner'
     | '/reset-password'
@@ -373,6 +383,7 @@ export interface FileRouteTypes {
     | '/'
     | '/booking'
     | '/keranjang'
+    | '/lanjut'
     | '/masuk'
     | '/reset-password'
     | '/akun/privilege'
@@ -409,6 +420,7 @@ export interface FileRouteTypes {
     | '/booking'
     | '/dokter'
     | '/keranjang'
+    | '/lanjut'
     | '/masuk'
     | '/owner'
     | '/reset-password'
@@ -447,6 +459,7 @@ export interface RootRouteChildren {
   BookingRoute: typeof BookingRoute
   DokterRoute: typeof DokterRouteWithChildren
   KeranjangRoute: typeof KeranjangRoute
+  LanjutRoute: typeof LanjutRoute
   MasukRoute: typeof MasukRoute
   OwnerRoute: typeof OwnerRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -480,6 +493,13 @@ declare module '@tanstack/react-router' {
       path: '/masuk'
       fullPath: '/masuk'
       preLoaderRoute: typeof MasukRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lanjut': {
+      id: '/lanjut'
+      path: '/lanjut'
+      fullPath: '/lanjut'
+      preLoaderRoute: typeof LanjutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/keranjang': {
@@ -780,6 +800,7 @@ const rootRouteChildren: RootRouteChildren = {
   BookingRoute: BookingRoute,
   DokterRoute: DokterRouteWithChildren,
   KeranjangRoute: KeranjangRoute,
+  LanjutRoute: LanjutRoute,
   MasukRoute: MasukRoute,
   OwnerRoute: OwnerRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,

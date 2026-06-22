@@ -85,7 +85,7 @@ function AuthPage() {
       // Redirects the browser to Google; on success it returns to callbackURL.
       const res = await authClient.signIn.social({
         provider: 'google',
-        callbackURL: '/akun',
+        callbackURL: '/lanjut',
         errorCallbackURL: '/masuk',
       })
       if (res.error) throw new Error(res.error.message)
