@@ -5,7 +5,7 @@ import { Search, Star } from 'lucide-react'
 import { PageShell } from '../components/app/PageShell'
 import { TreatmentThumb } from '../components/landing/TreatmentThumb'
 import { AddToCartButton } from '../components/app/AddToCartButton'
-import { formatRp } from '../data/clinic'
+import { PriceTag } from '../components/app/PriceTag'
 import { listTreatments } from '../server/treatments'
 
 export const Route = createFileRoute('/treatment/')({ component: MenuPage })
@@ -149,8 +149,8 @@ function MenuPage() {
                     <p className="mt-1.5 flex-1 text-sm leading-relaxed" style={{ color: 'var(--color-ink-muted)' }}>
                       {t.blurb}
                     </p>
-                    <div className="mt-4 flex items-end justify-between border-t pt-4">
-                      <div className="mono text-lg font-extrabold gold-text">{formatRp(t.price)}</div>
+                    <div className="mt-4 flex flex-wrap items-end justify-between gap-2 border-t pt-4">
+                      <PriceTag t={t} />
                       <AddToCartButton t={t} />
                     </div>
                   </div>

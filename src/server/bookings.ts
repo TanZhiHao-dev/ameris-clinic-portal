@@ -31,8 +31,11 @@ export const createBooking = createServerFn({ method: 'POST' })
     const rows = data.items.map((i) => {
       const t = byId.get(i.treatmentId)
       if (!t) throw new Error(`Treatment ${i.treatmentId} tidak ditemukan.`)
-      total += t.price * i.qty
-      return { treatmentId: t.id, name: t.name, price: t.price, qty: i.qty }
+      // Authoritative price: charge the promo price when the treatment is on a
+      // valid promo, regardless of what the client sent.
+      const unit = t.isPromo && t.promoNow != null && t.promoNow < t.price ? t.promoNow : t.price
+      total += unit * i.qty
+      return { treatmentId: t.id, name: t.name, price: unit, qty: i.qty }
     })
 
     const id = 'AMR-' + (2520 + Math.floor(Math.random() * 7000))

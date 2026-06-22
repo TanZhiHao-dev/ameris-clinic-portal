@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Star } from 'lucide-react'
-import { categories, formatRp } from '../../data/clinic'
+import { categories } from '../../data/clinic'
 import { listTreatments } from '../../server/treatments'
 import { TreatmentThumb } from './TreatmentThumb'
 import { AddToCartButton } from '../app/AddToCartButton'
+import { PriceTag } from '../app/PriceTag'
 
 export function Catalog() {
   const [active, setActive] = useState<(typeof categories)[number]>('Best Seller')
@@ -108,8 +109,8 @@ export function Catalog() {
                   {t.blurb}
                 </p>
 
-                <div className="mt-4 flex items-end justify-between border-t pt-4">
-                  <div className="mono text-lg font-extrabold gold-text">{formatRp(t.price)}</div>
+                <div className="mt-4 flex flex-wrap items-end justify-between gap-2 border-t pt-4">
+                  <PriceTag t={t} />
                   <AddToCartButton t={t} />
                 </div>
               </div>

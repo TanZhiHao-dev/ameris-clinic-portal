@@ -124,17 +124,21 @@ export async function seedDatabase() {
   await db.insert(treatmentsTbl).values(
     treatmentData.map((t) => {
       const promo = promoByName.get(t.name)
+      // For a promo item the regular price IS the promo's "was"; the discounted
+      // price goes to promoNow. This keeps the model consistent: price = regular
+      // (the struck-through "was"), promoNow = what the customer pays.
+      const price = promo ? promo.was : t.price
       return {
         id: t.id,
         name: t.name,
         blurb: t.blurb,
         category: t.category,
         duration: t.duration,
-        price: t.price,
+        price,
         isAvailable: t.available,
         isPromo: !!promo,
         isBestSeller: !!t.bestSeller,
-        pointCost: redeemableIds.has(t.id) ? pointOf(t.price) : null,
+        pointCost: redeemableIds.has(t.id) ? pointOf(price) : null,
         promoWas: promo?.was ?? null,
         promoNow: promo?.now ?? null,
       }

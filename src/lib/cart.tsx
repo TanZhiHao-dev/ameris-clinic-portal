@@ -5,7 +5,7 @@ import {
   useEffect,
   useState,
 } from 'react'
-import type { Treatment } from '../data/clinic'
+import { effectivePrice, type Treatment } from '../data/clinic'
 
 export type CartItem = { id: string; name: string; price: number; qty: number }
 
@@ -50,7 +50,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems((cur) => {
       const ex = cur.find((i) => i.id === t.id)
       if (ex) return cur.map((i) => (i.id === t.id ? { ...i, qty: i.qty + 1 } : i))
-      return [...cur, { id: t.id, name: t.name, price: t.price, qty: 1 }]
+      // Store the effective (promo-aware) price so the cart subtotal reflects the discount.
+      return [...cur, { id: t.id, name: t.name, price: effectivePrice(t), qty: 1 }]
     })
 
   const remove = (id: string) => setItems((cur) => cur.filter((i) => i.id !== id))

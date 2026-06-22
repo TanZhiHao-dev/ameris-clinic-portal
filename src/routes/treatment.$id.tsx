@@ -4,8 +4,8 @@ import { ArrowLeft, CalendarCheck, Clock, Star } from 'lucide-react'
 import { PageShell } from '../components/app/PageShell'
 import { TreatmentThumb } from '../components/landing/TreatmentThumb'
 import { AddToCartButton } from '../components/app/AddToCartButton'
+import { PriceTag } from '../components/app/PriceTag'
 import { useCart } from '../lib/cart'
-import { formatRp } from '../data/clinic'
 import { getTreatment } from '../server/treatments'
 
 export const Route = createFileRoute('/treatment/$id')({ component: DetailPage })
@@ -89,10 +89,14 @@ function DetailPage() {
             </p>
 
             <div className="mt-8 rounded-2xl p-6" style={{ background: 'var(--color-shell)', border: '1px solid var(--color-line)' }}>
-              <div className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>Harga mulai</div>
-              <div className="mono mt-1 text-3xl font-extrabold gold-text">{formatRp(t.price)}</div>
+              <div className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>
+                {t.isPromo && t.promoPrice != null && t.promoPrice < t.price ? 'Harga promo' : 'Harga mulai'}
+              </div>
+              <div className="mt-1"><PriceTag t={t} numClass="text-3xl" /></div>
               <div className="mt-1 text-[0.8rem]" style={{ color: 'var(--color-ink-muted)' }}>
-                *Belum termasuk promo/diskon
+                {t.isPromo && t.promoPrice != null && t.promoPrice < t.price
+                  ? 'Harga sudah termasuk diskon promo.'
+                  : '*Belum termasuk promo/diskon'}
               </div>
 
               <div className="mt-5 flex flex-wrap gap-3">
@@ -132,7 +136,7 @@ function DetailPage() {
                   <TreatmentThumb t={r} className="aspect-[16/10] w-full" />
                   <div className="flex flex-1 flex-col p-5">
                     <h3 className="text-base leading-snug">{r.name}</h3>
-                    <div className="mono mt-3 text-base font-extrabold gold-text">{formatRp(r.price)}</div>
+                    <div className="mt-3"><PriceTag t={r} numClass="text-base" /></div>
                   </div>
                 </Link>
               ))}

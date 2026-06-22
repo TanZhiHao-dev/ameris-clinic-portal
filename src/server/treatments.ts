@@ -17,6 +17,7 @@ export type ClientTreatment = {
   bestSeller: boolean
   isPromo: boolean
   pointCost: number | null
+  promoPrice: number | null // owner-set promo price; discount derived vs `price`
   image?: string
 }
 
@@ -33,6 +34,7 @@ const toClient = (t: Row): ClientTreatment => ({
   bestSeller: t.isBestSeller,
   isPromo: t.isPromo,
   pointCost: t.pointCost,
+  promoPrice: t.promoNow ?? null,
   image: t.image ?? undefined,
 })
 
@@ -54,11 +56,14 @@ export const getTreatment = createServerFn({ method: 'GET' })
     return { ...toClient(row), related: related.map(toClient) }
   })
 
+// A treatment is "on promo" when isPromo is on AND the owner set a promo price
+// below the regular price. The strikethrough "was" is always the regular price,
+// so the discount stays correct even if the regular price changes later.
 export const listPromos = createServerFn({ method: 'GET' }).handler(async () => {
   const rows = await db.select().from(treatments).where(eq(treatments.isPromo, true))
   return rows
-    .filter((r) => r.promoWas && r.promoNow)
-    .map((r) => ({ name: r.name, detail: r.blurb, was: r.promoWas!, now: r.promoNow! }))
+    .filter((r) => r.promoNow != null && r.promoNow < r.price)
+    .map((r) => ({ name: r.name, detail: r.blurb, was: r.price, now: r.promoNow! }))
 })
 
 // ── Owner catalog management ──
@@ -97,6 +102,7 @@ export const updateTreatment = createServerFn({ method: 'POST' })
       duration: z.string().optional(),
       isAvailable: z.boolean().optional(),
       isPromo: z.boolean().optional(),
+      promoNow: z.number().int().nonnegative().nullable().optional(), // owner-set promo price (null clears)
       pointCost: z.number().int().nullable().optional(),
       image: z.string().nullable().optional(), // URL or data URL; null clears it
     }),

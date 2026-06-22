@@ -20,6 +20,7 @@ type Row = {
   price: number
   available: boolean
   promo: boolean
+  promoPrice: number | null
   image?: string
 }
 
@@ -55,6 +56,7 @@ function CatalogAdmin() {
     price: t.price,
     available: t.available,
     promo: t.promo,
+    promoPrice: t.promoPrice,
     image: t.image,
   }))
 
@@ -63,6 +65,7 @@ function CatalogAdmin() {
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState({ name: '', category: 'Facial' as Category, duration: '60 min', price: '' })
   const [priceEdits, setPriceEdits] = useState<Record<string, string>>({})
+  const [promoEdits, setPromoEdits] = useState<Record<string, string>>({})
   const [imgEdit, setImgEdit] = useState<Row | null>(null)
 
   // Refresh the owner table AND every public-facing cache the catalog feeds:
@@ -74,7 +77,7 @@ function CatalogAdmin() {
   }
 
   const updateMut = useMutation({
-    mutationFn: (v: { id: string; price?: number; isAvailable?: boolean; isPromo?: boolean; image?: string | null }) =>
+    mutationFn: (v: { id: string; price?: number; isAvailable?: boolean; isPromo?: boolean; promoNow?: number | null; image?: string | null }) =>
       updateTreatment({ data: v }),
     onSuccess: invalidate,
   })
@@ -108,6 +111,18 @@ function CatalogAdmin() {
       return next
     })
     updateMut.mutate({ id, price })
+  }
+  const commitPromo = (id: string) => {
+    const raw = promoEdits[id]
+    if (raw === undefined) return
+    const digits = raw.replace(/\D/g, '')
+    const promoNow = digits === '' ? null : parseInt(digits, 10)
+    setPromoEdits((cur) => {
+      const next = { ...cur }
+      delete next[id]
+      return next
+    })
+    updateMut.mutate({ id, promoNow })
   }
   const remove = (id: string) => deleteMut.mutate(id)
   const add = () => {
@@ -214,7 +229,33 @@ function CatalogAdmin() {
                   </div>
                 </td>
                 <td data-label="Tersedia" className="px-3 py-4"><Switch on={r.available} onChange={() => patch(r.id, { available: !r.available })} label={`Tersedia ${r.name}`} /></td>
-                <td data-label="Promo" className="px-3 py-4"><Switch on={r.promo} onChange={() => patch(r.id, { promo: !r.promo })} label={`Promo ${r.name}`} /></td>
+                <td data-label="Promo" className="px-3 py-4">
+                  <div className="flex flex-col gap-2">
+                    <Switch on={r.promo} onChange={() => patch(r.id, { promo: !r.promo })} label={`Promo ${r.name}`} />
+                    {r.promo && (
+                      <div>
+                        <div className="flex w-fit items-center gap-1 rounded-lg px-2 py-1.5" style={{ border: '1px solid var(--color-line)', background: 'var(--color-cream)' }}>
+                          <span className="text-[0.8rem]" style={{ color: 'var(--color-ink-muted)' }}>Rp</span>
+                          <input
+                            className="mono w-24 bg-transparent text-sm font-bold outline-none"
+                            value={promoEdits[r.id] ?? (r.promoPrice != null ? r.promoPrice.toLocaleString('id-ID') : '')}
+                            onChange={(e) => setPromoEdits((cur) => ({ ...cur, [r.id]: e.target.value }))}
+                            onBlur={() => commitPromo(r.id)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                            inputMode="numeric"
+                            placeholder="harga promo"
+                            aria-label={`Harga promo ${r.name}`}
+                          />
+                        </div>
+                        {r.promoPrice != null && r.promoPrice < r.price && (
+                          <span className="mt-1 inline-block text-[0.68rem] font-semibold" style={{ color: 'var(--color-rose)' }}>
+                            Hemat {Math.round(((r.price - r.promoPrice) / r.price) * 100)}% dari {r.price.toLocaleString('id-ID')}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </td>
                 <td className="px-3 py-4 text-right">
                   <button type="button" onClick={() => remove(r.id)} className="grid h-8 w-8 place-items-center rounded-full transition hover:bg-[var(--color-muted)]" style={{ color: 'var(--color-rose)' }} aria-label={`Hapus ${r.name}`}>
                     <Trash2 size={16} />

@@ -46,6 +46,10 @@ export type Treatment = {
   price: number
   available: boolean
   bestSeller?: boolean
+  /** Promo state from the DB (owner-managed). `promoPrice` < `price` activates
+   *  the discount on the website; the cart/booking then charge `promoPrice`. */
+  isPromo?: boolean
+  promoPrice?: number | null
   /** Optional real photo (e.g. '/treatments/facial.jpg'). Falls back to an
    *  icon thumbnail when omitted. */
   image?: string
@@ -56,6 +60,15 @@ export const formatRp = (value: number) => 'Rp' + value.toLocaleString('id-ID')
 // Ameris Privilege: 1 poin per kelipatan Rp1.000.000 belanja. Sisa di bawah
 // 1 juta tidak terhitung (floor) — mis. 2.5jt → 2 poin, 0.8jt → 0 poin.
 export const loyaltyPointsFor = (total: number) => Math.floor(Math.max(0, total) / 1_000_000)
+
+// What the customer actually pays: the promo price when a treatment is on a
+// valid promo, otherwise the regular price. Single source of truth for cart,
+// price tags, and booking estimates.
+export const effectivePrice = (t: { price: number; isPromo?: boolean; promoPrice?: number | null }) =>
+  t.isPromo && t.promoPrice != null && t.promoPrice < t.price ? t.promoPrice : t.price
+
+export const promoOffPct = (price: number, promoPrice: number) =>
+  Math.round(((price - promoPrice) / price) * 100)
 
 export const categories = [
   'Best Seller',
