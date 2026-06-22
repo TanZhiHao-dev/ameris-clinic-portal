@@ -135,6 +135,7 @@ export async function seedDatabase() {
         category: t.category,
         duration: t.duration,
         price,
+        pricePerUnit: !!t.pricePerUnit,
         isAvailable: t.available,
         isPromo: !!promo,
         isBestSeller: !!t.bestSeller,

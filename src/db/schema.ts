@@ -30,6 +30,9 @@ export const treatments = pgTable('treatments', {
   category: text('category').notNull(),
   duration: text('duration').notNull().default(''),
   price: integer('price').notNull().default(0),
+  // When true the price is charged per unit (e.g. Botox per unit) — the website
+  // renders it as "Rp45.000/unit".
+  pricePerUnit: boolean('price_per_unit').notNull().default(false),
   isAvailable: boolean('is_available').notNull().default(true),
   isPromo: boolean('is_promo').notNull().default(false),
   isBestSeller: boolean('is_best_seller').notNull().default(false),

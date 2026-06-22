@@ -1,0 +1,1 @@
+ALTER TABLE "treatments" ADD COLUMN "price_per_unit" boolean DEFAULT false NOT NULL;

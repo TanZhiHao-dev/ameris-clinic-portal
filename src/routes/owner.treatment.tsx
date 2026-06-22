@@ -18,10 +18,23 @@ type Row = {
   category: Category
   duration: string
   price: number
+  pricePerUnit: boolean
   available: boolean
   promo: boolean
   promoPrice: number | null
   image?: string
+}
+
+// Shape of one row in the ['owner-treatments'] cache (ClientTreatment + `promo`).
+type AdminRow = Awaited<ReturnType<typeof listTreatmentsAdmin>>[number]
+type UpdateVars = {
+  id: string
+  price?: number
+  pricePerUnit?: boolean
+  isAvailable?: boolean
+  isPromo?: boolean
+  promoNow?: number | null
+  image?: string | null
 }
 
 const CATS: Category[] = ['Facial', 'Peeling', 'Laser', 'Skinbooster', 'Injeksi', 'Paket']
@@ -54,6 +67,7 @@ function CatalogAdmin() {
     category: t.category as Category,
     duration: t.duration,
     price: t.price,
+    pricePerUnit: t.pricePerUnit,
     available: t.available,
     promo: t.promo,
     promoPrice: t.promoPrice,
@@ -75,11 +89,48 @@ function CatalogAdmin() {
       qc.invalidateQueries({ queryKey: key })
     }
   }
+  // Only the public-facing caches — used after an edit, since the owner table is
+  // already updated optimistically (no need to refetch it on every toggle).
+  const invalidatePublic = () => {
+    for (const key of [['treatments'], ['promos'], ['redeem-tiers'], ['treatment']]) {
+      qc.invalidateQueries({ queryKey: key })
+    }
+  }
+  // Mirror an edit onto a cached owner row so the toggle/price flips instantly.
+  const applyPatch = (t: AdminRow, v: UpdateVars): AdminRow => ({
+    ...t,
+    ...(v.price !== undefined && { price: v.price }),
+    ...(v.pricePerUnit !== undefined && { pricePerUnit: v.pricePerUnit }),
+    ...(v.isAvailable !== undefined && { available: v.isAvailable }),
+    ...(v.isPromo !== undefined && { isPromo: v.isPromo, promo: v.isPromo }),
+    ...(v.promoNow !== undefined && { promoPrice: v.promoNow }),
+    ...(v.image !== undefined && { image: v.image ?? undefined }),
+  })
 
   const updateMut = useMutation({
-    mutationFn: (v: { id: string; price?: number; isAvailable?: boolean; isPromo?: boolean; promoNow?: number | null; image?: string | null }) =>
-      updateTreatment({ data: v }),
-    onSuccess: invalidate,
+    mutationFn: (v: UpdateVars) => updateTreatment({ data: v }),
+    // Flip the owner table immediately, then reconcile with the server's row.
+    // Previously the switch waited on the POST + a full list refetch, which felt
+    // sluggish (especially toggling Promo on a remote DB).
+    onMutate: async (v) => {
+      await qc.cancelQueries({ queryKey: ['owner-treatments'] })
+      const prev = qc.getQueryData<AdminRow[]>(['owner-treatments'])
+      qc.setQueryData<AdminRow[]>(['owner-treatments'], (old) =>
+        old?.map((t) => (t.id === v.id ? applyPatch(t, v) : t)),
+      )
+      return { prev }
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['owner-treatments'], ctx.prev)
+    },
+    onSuccess: (row) => {
+      if (row) {
+        qc.setQueryData<AdminRow[]>(['owner-treatments'], (old) =>
+          old?.map((t) => (t.id === row.id ? { ...row, promo: row.isPromo } : t)),
+        )
+      }
+      invalidatePublic()
+    },
   })
   const saveImage = (id: string, image: string | null) => {
     updateMut.mutate({ id, image })
@@ -100,6 +151,7 @@ function CatalogAdmin() {
   const patch = (id: string, p: Partial<Row>) => {
     if ('available' in p && p.available !== undefined) updateMut.mutate({ id, isAvailable: p.available })
     if ('promo' in p && p.promo !== undefined) updateMut.mutate({ id, isPromo: p.promo })
+    if ('pricePerUnit' in p && p.pricePerUnit !== undefined) updateMut.mutate({ id, pricePerUnit: p.pricePerUnit })
   }
   const commitPrice = (id: string) => {
     const raw = priceEdits[id]
@@ -215,17 +267,26 @@ function CatalogAdmin() {
                   </button>
                 </td>
                 <td data-label="Harga" className="px-3 py-4">
-                  <div className="flex items-center gap-1 rounded-lg px-2 py-1.5" style={{ border: '1px solid var(--color-line)', background: 'var(--color-cream)' }}>
-                    <span className="text-[0.8rem]" style={{ color: 'var(--color-ink-muted)' }}>Rp</span>
-                    <input
-                      className="mono w-24 bg-transparent text-sm font-bold outline-none"
-                      value={(priceEdits[r.id] ?? r.price.toLocaleString('id-ID'))}
-                      onChange={(e) => setPriceEdits((cur) => ({ ...cur, [r.id]: e.target.value }))}
-                      onBlur={() => commitPrice(r.id)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
-                      inputMode="numeric"
-                      aria-label={`Harga ${r.name}`}
-                    />
+                  <div className="flex flex-col gap-2">
+                    <div className="flex w-fit items-center gap-1 rounded-lg px-2 py-1.5" style={{ border: '1px solid var(--color-line)', background: 'var(--color-cream)' }}>
+                      <span className="text-[0.8rem]" style={{ color: 'var(--color-ink-muted)' }}>Rp</span>
+                      <input
+                        className="mono w-24 bg-transparent text-sm font-bold outline-none"
+                        value={(priceEdits[r.id] ?? r.price.toLocaleString('id-ID'))}
+                        onChange={(e) => setPriceEdits((cur) => ({ ...cur, [r.id]: e.target.value }))}
+                        onBlur={() => commitPrice(r.id)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                        inputMode="numeric"
+                        aria-label={`Harga ${r.name}`}
+                      />
+                      {r.pricePerUnit && (
+                        <span className="text-[0.78rem] font-semibold" style={{ color: 'var(--color-ink-muted)' }}>/unit</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-[0.72rem] font-semibold" style={{ color: 'var(--color-ink-muted)' }}>
+                      <Switch on={r.pricePerUnit} onChange={() => patch(r.id, { pricePerUnit: !r.pricePerUnit })} label={`Harga per unit ${r.name}`} />
+                      <span>Harga per unit</span>
+                    </div>
                   </div>
                 </td>
                 <td data-label="Tersedia" className="px-3 py-4"><Switch on={r.available} onChange={() => patch(r.id, { available: !r.available })} label={`Tersedia ${r.name}`} /></td>

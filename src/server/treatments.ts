@@ -13,6 +13,7 @@ export type ClientTreatment = {
   category: Category
   duration: string
   price: number
+  pricePerUnit: boolean // when true, price is shown as "Rp.../unit"
   available: boolean
   bestSeller: boolean
   isPromo: boolean
@@ -30,6 +31,7 @@ const toClient = (t: Row): ClientTreatment => ({
   category: t.category as Category,
   duration: t.duration,
   price: t.price,
+  pricePerUnit: t.pricePerUnit,
   available: t.isAvailable,
   bestSeller: t.isBestSeller,
   isPromo: t.isPromo,
@@ -100,6 +102,7 @@ export const updateTreatment = createServerFn({ method: 'POST' })
       name: z.string().optional(),
       category: z.string().optional(),
       duration: z.string().optional(),
+      pricePerUnit: z.boolean().optional(),
       isAvailable: z.boolean().optional(),
       isPromo: z.boolean().optional(),
       promoNow: z.number().int().nonnegative().nullable().optional(), // owner-set promo price (null clears)

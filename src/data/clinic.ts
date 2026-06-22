@@ -44,6 +44,8 @@ export type Treatment = {
   category: Category
   duration: string
   price: number
+  /** When true, `price` is per unit (e.g. Botox) and shows as "Rp.../unit". */
+  pricePerUnit?: boolean
   available: boolean
   bestSeller?: boolean
   /** Promo state from the DB (owner-managed). `promoPrice` < `price` activates
@@ -136,8 +138,8 @@ export const treatments: Treatment[] = [
   { id: 'exo-biocell', name: 'Exosome Biocell Rejuvenation', blurb: 'Exosome premium untuk peremajaan kulit tingkat lanjut.', category: 'Skinbooster', duration: '60 min', price: 2_550_000, available: false },
 
   // ── Injectables Rejuvenation & Correction ──
-  { id: 'botox-korea', name: 'Botox Korea', blurb: 'Kurangi kerutan dinamis & garis ekspresi. Harga per unit.', category: 'Injeksi', duration: '60 min', price: 45_000, available: true, bestSeller: true },
-  { id: 'botox-us', name: 'Botox US/Europe', blurb: 'Kurangi kerutan dinamis & garis ekspresi. Harga per unit.', category: 'Injeksi', duration: '60 min', price: 80_000, available: true },
+  { id: 'botox-korea', name: 'Botox Korea', blurb: 'Kurangi kerutan dinamis & garis ekspresi. Harga per unit.', category: 'Injeksi', duration: '60 min', price: 45_000, pricePerUnit: true, available: true, bestSeller: true },
+  { id: 'botox-us', name: 'Botox US/Europe', blurb: 'Kurangi kerutan dinamis & garis ekspresi. Harga per unit.', category: 'Injeksi', duration: '60 min', price: 80_000, pricePerUnit: true, available: true },
   { id: 'microbotox-korea', name: 'Microbotox Korea', blurb: 'Segarkan kulit, kecilkan pori, atur minyak. Mulai dari.', category: 'Injeksi', duration: '60 min', price: 800_000, available: true },
   { id: 'microbotox-us', name: 'Microbotox US/Europe', blurb: 'Segarkan kulit & kerutan tampak natural. Mulai dari.', category: 'Injeksi', duration: '60 min', price: 1_000_000, available: true },
   { id: 'filler', name: 'Filler', blurb: 'Isi & pertegas kontur wajah: pipi, bibir, dagu, bawah mata. Mulai dari.', category: 'Injeksi', duration: '60 min', price: 2_000_000, available: true, bestSeller: true },
