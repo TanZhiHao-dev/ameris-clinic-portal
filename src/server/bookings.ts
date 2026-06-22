@@ -17,7 +17,7 @@ export const createBooking = createServerFn({ method: 'POST' })
       items: z.array(z.object({ treatmentId: z.string(), qty: z.number().int().positive() })).min(1),
       bookingDate: z.string(),
       bookingTime: z.string(),
-      paymentMethod: z.enum(['Online', 'Offline']),
+      paymentMethod: z.enum(['Online', 'Offline', 'Transfer']),
       paymentPlan: z.enum(['full', 'dp']).optional(),
     }),
   )

@@ -7,7 +7,7 @@ import { bookingItems, bookings, transactions } from '#/db/schema'
 import { user } from '#/db/auth-schema'
 
 type ItemRow = typeof bookingItems.$inferSelect
-const payLabel = (m: string) => (m === 'Offline' ? 'Klinik' : 'Online')
+const payLabel = (m: string) => (m === 'Offline' ? 'Klinik' : m === 'Transfer' ? 'Transfer Bank' : 'Online')
 
 // Assemble UI-shaped appointments for a set of booking rows.
 export async function assemble(bks: (typeof bookings.$inferSelect)[]) {

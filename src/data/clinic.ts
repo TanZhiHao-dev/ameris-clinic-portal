@@ -19,6 +19,14 @@ export const clinic = {
   instagramUrl: 'https://www.instagram.com/amerisclinic/',
   tiktok: '@amerisclinic_serpong',
   tiktokUrl: 'https://www.tiktok.com/@amerisclinic_serpong',
+  // Manual bank-transfer payment. qrisImage: drop the clinic's QRIS PNG at
+  // public/qris.png (it auto-hides if the file is absent).
+  bank: {
+    bankName: 'BCA',
+    accountNumber: '8833992188',
+    accountHolder: 'AMERIS SUKSES ABADI PT',
+    qrisImage: '/qris.png',
+  },
 }
 
 export type Category =

@@ -5,6 +5,7 @@ import { formatDateId, statusTone, type BookingStatus } from '../data/account'
 import { clinic, formatRp } from '../data/clinic'
 import { getMyBooking } from '../server/bookings'
 import { useMidtransPay } from '../lib/useMidtransPay'
+import { BankTransferInstructions } from '../components/app/BankTransferInstructions'
 
 export const Route = createFileRoute('/akun/booking/$id')({ component: TicketPage })
 
@@ -80,6 +81,7 @@ function TicketPage() {
   const onlinePending = appt.payment === 'Online' && appt.payStatus === 'Pending'
   const dpPaid = onlinePending && appt.paidAt != null
   const needsPay = onlinePending && !appt.paidAt && appt.status !== 'Batal'
+  const transferPending = appt.payment === 'Transfer Bank' && appt.payStatus === 'Pending' && appt.status !== 'Batal'
 
   return (
     <div>
@@ -164,6 +166,11 @@ function TicketPage() {
             {dpPaid && (
               <div className="mt-5 flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold" style={{ background: 'rgba(154,115,32,0.12)', color: 'var(--color-gold-deep)' }}>
                 <CheckCircle2 size={15} /> DP terbayar online · sisa dilunasi di klinik
+              </div>
+            )}
+            {transferPending && (
+              <div className="mt-5">
+                <BankTransferInstructions amount={appt.total} bookingId={appt.id} />
               </div>
             )}
 

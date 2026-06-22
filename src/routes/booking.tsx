@@ -8,11 +8,13 @@ import {
   ChevronLeft,
   ChevronRight,
   CreditCard,
+  Landmark,
   MapPin,
   ShieldCheck,
   ShoppingBag,
 } from 'lucide-react'
 import { PageShell } from '../components/app/PageShell'
+import { BankTransferInstructions } from '../components/app/BankTransferInstructions'
 import { useCart, type CartItem } from '../lib/cart'
 import { clinic, formatRp, loyaltyPointsFor, treatments } from '../data/clinic'
 import { createBooking } from '../server/bookings'
@@ -43,8 +45,8 @@ type Confirmation = {
   total: number
   date: string
   time: string
-  payment: 'online' | 'klinik'
-  payOutcome: PayOutcome | null // null = bayar di klinik (tidak ada gateway)
+  payment: 'online' | 'klinik' | 'transfer'
+  payOutcome: PayOutcome | null // null = transfer bank / bayar di klinik (tidak ada gateway)
 }
 
 function BookingPage() {
@@ -57,7 +59,7 @@ function BookingPage() {
   const [week, setWeek] = useState(0)
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
-  const [payment, setPayment] = useState<'online' | 'klinik'>('online')
+  const [payment, setPayment] = useState<'online' | 'klinik' | 'transfer'>('transfer')
   const [plan, setPlan] = useState<'full' | 'dp'>('full')
   const [done, setDone] = useState<Confirmation | null>(null)
 
@@ -82,7 +84,8 @@ function BookingPage() {
   }, [monday, week, today])
 
   const ready = date && time && items.length > 0
-  const payNow = payment === 'klinik' ? 0 : plan === 'dp' ? Math.round(subtotal / 2) : subtotal
+  const payNow =
+    payment === 'klinik' ? 0 : payment === 'transfer' ? subtotal : plan === 'dp' ? Math.round(subtotal / 2) : subtotal
 
   const createMut = useMutation({
     mutationFn: (v: Parameters<typeof createBooking>[0]['data']) =>
@@ -96,10 +99,11 @@ function BookingPage() {
       items: items.map((i) => ({ treatmentId: i.id, qty: i.qty })),
       bookingDate: date,
       bookingTime: time,
-      paymentMethod: payment === 'online' ? 'Online' : 'Offline',
-      paymentPlan: plan,
+      paymentMethod: payment === 'online' ? 'Online' : payment === 'transfer' ? 'Transfer' : 'Offline',
+      paymentPlan: payment === 'online' ? plan : 'full',
     })
-    // Online → open Midtrans Snap (or the sandbox dialog). Offline pays at the clinic.
+    // Online → open Midtrans Snap (or the sandbox dialog). Transfer Bank shows
+    // manual instructions; Offline pays at the clinic — neither hits a gateway.
     const outcome = payment === 'online' ? await pay(res.id) : null
     setDone({ id: res.id, items: [...items], total: subtotal, date, time, payment, payOutcome: outcome })
     clear()
@@ -118,22 +122,27 @@ function BookingPage() {
   // ── Success ──
   if (done) {
     const online = done.payment === 'online'
+    const transfer = done.payment === 'transfer'
     const paid = done.payOutcome === 'success'
     const pendingPay = done.payOutcome === 'pending'
-    const head = paid
-      ? { title: 'Pembayaran berhasil!', sub: `Bukti janji temu sudah terbit. Sampai jumpa di ${clinic.location} ✦` }
-      : pendingPay
-        ? { title: 'Menunggu pembayaran', sub: 'Selesaikan pembayaran agar booking-mu dikonfirmasi.' }
-        : online
-          ? { title: 'Booking dibuat ✦', sub: 'Pembayaran belum selesai — bisa dilanjutkan kapan saja.' }
-          : { title: 'Booking berhasil!', sub: `Bukti janji temu sudah terbit. Sampai jumpa di ${clinic.location} ✦` }
-    const payValue = !online
-      ? 'Bayar di klinik'
+    const head = transfer
+      ? { title: 'Booking dibuat ✦', sub: 'Selesaikan transfer agar booking-mu dikonfirmasi.' }
       : paid
-        ? 'Online · Lunas'
+        ? { title: 'Pembayaran berhasil!', sub: `Bukti janji temu sudah terbit. Sampai jumpa di ${clinic.location} ✦` }
         : pendingPay
-          ? 'Online · Menunggu'
-          : 'Online · Belum dibayar'
+          ? { title: 'Menunggu pembayaran', sub: 'Selesaikan pembayaran agar booking-mu dikonfirmasi.' }
+          : online
+            ? { title: 'Booking dibuat ✦', sub: 'Pembayaran belum selesai — bisa dilanjutkan kapan saja.' }
+            : { title: 'Booking berhasil!', sub: `Bukti janji temu sudah terbit. Sampai jumpa di ${clinic.location} ✦` }
+    const payValue = transfer
+      ? 'Transfer Bank · Menunggu'
+      : !online
+        ? 'Bayar di klinik'
+        : paid
+          ? 'Online · Lunas'
+          : pendingPay
+            ? 'Online · Menunggu'
+            : 'Online · Belum dibayar'
     return (
       <PageShell>
         {dialog}
@@ -141,7 +150,7 @@ function BookingPage() {
           <div className="shell-x max-w-2xl">
             <div className="card-soft overflow-hidden">
               <div className="px-8 py-10 text-center" style={{ background: 'var(--color-espresso)', color: '#f6eddc' }}>
-                {paid || !online ? (
+                {paid || done.payment === 'klinik' ? (
                   <CheckCircle2 size={48} className="mx-auto" style={{ color: 'var(--color-gold)' }} />
                 ) : (
                   <CreditCard size={48} className="mx-auto" style={{ color: 'var(--color-gold)' }} />
@@ -176,6 +185,11 @@ function BookingPage() {
                   <button type="button" onClick={retryPay} disabled={busy} className="btn btn-gold mt-7 w-full disabled:cursor-not-allowed disabled:opacity-60">
                     <CreditCard size={17} /> {busy ? 'Memproses…' : pendingPay ? 'Cek / lanjutkan pembayaran' : 'Bayar sekarang'}
                   </button>
+                )}
+                {transfer && (
+                  <div className="mt-6">
+                    <BankTransferInstructions amount={done.total} bookingId={done.id} />
+                  </div>
                 )}
                 <div className="mt-3 flex flex-col gap-3 sm:flex-row">
                   <Link to="/akun/booking" className="btn btn-primary flex-1">Lihat di akun saya</Link>
@@ -314,9 +328,10 @@ function BookingPage() {
               {/* Step 2 — Payment */}
               <div className="card-soft p-6 sm:p-7">
                 <StepHead n="2" title="Metode pembayaran" icon={<CreditCard size={17} />} />
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  <PayOption active={payment === 'online'} onClick={() => setPayment('online')} icon={<CreditCard size={20} />} title="Bayar online" sub="QRIS / Transfer / VA" />
-                  <PayOption active={payment === 'klinik'} onClick={() => setPayment('klinik')} icon={<MapPin size={20} />} title="Bayar di klinik" sub="Lunasi saat datang" />
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <PayOption active={payment === 'transfer'} onClick={() => setPayment('transfer')} icon={<Landmark size={20} />} title="Transfer Bank" sub="BCA / QRIS" />
+                  <PayOption active={payment === 'online'} onClick={() => setPayment('online')} icon={<CreditCard size={20} />} title="Bayar online" sub="Kartu / e-wallet" />
+                  <PayOption active={payment === 'klinik'} onClick={() => setPayment('klinik')} icon={<MapPin size={20} />} title="Bayar di klinik" sub="Saat datang" />
                 </div>
                 {payment === 'online' && (
                   <div className="mt-3 flex gap-2">
