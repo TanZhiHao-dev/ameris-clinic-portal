@@ -30,6 +30,7 @@ import { Route as OwnerJadwalRouteImport } from './routes/owner.jadwal'
 import { Route as OwnerAkunRouteImport } from './routes/owner.akun'
 import { Route as DokterProfilRouteImport } from './routes/dokter.profil'
 import { Route as DokterJadwalRouteImport } from './routes/dokter.jadwal'
+import { Route as ApiTreatmentImageRouteImport } from './routes/api/treatment-image'
 import { Route as ApiSeedRouteImport } from './routes/api/seed'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiBootstrapOwnerRouteImport } from './routes/api/bootstrap-owner'
@@ -151,6 +152,11 @@ const DokterJadwalRoute = DokterJadwalRouteImport.update({
   path: '/jadwal',
   getParentRoute: () => DokterRoute,
 } as any)
+const ApiTreatmentImageRoute = ApiTreatmentImageRouteImport.update({
+  id: '/api/treatment-image',
+  path: '/api/treatment-image',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSeedRoute = ApiSeedRouteImport.update({
   id: '/api/seed',
   path: '/api/seed',
@@ -242,6 +248,7 @@ export interface FileRoutesByFullPath {
   '/api/bootstrap-owner': typeof ApiBootstrapOwnerRoute
   '/api/health': typeof ApiHealthRoute
   '/api/seed': typeof ApiSeedRoute
+  '/api/treatment-image': typeof ApiTreatmentImageRoute
   '/dokter/jadwal': typeof DokterJadwalRoute
   '/dokter/profil': typeof DokterProfilRoute
   '/owner/akun': typeof OwnerAkunRoute
@@ -277,6 +284,7 @@ export interface FileRoutesByTo {
   '/api/bootstrap-owner': typeof ApiBootstrapOwnerRoute
   '/api/health': typeof ApiHealthRoute
   '/api/seed': typeof ApiSeedRoute
+  '/api/treatment-image': typeof ApiTreatmentImageRoute
   '/dokter/jadwal': typeof DokterJadwalRoute
   '/dokter/profil': typeof DokterProfilRoute
   '/owner/akun': typeof OwnerAkunRoute
@@ -316,6 +324,7 @@ export interface FileRoutesById {
   '/api/bootstrap-owner': typeof ApiBootstrapOwnerRoute
   '/api/health': typeof ApiHealthRoute
   '/api/seed': typeof ApiSeedRoute
+  '/api/treatment-image': typeof ApiTreatmentImageRoute
   '/dokter/jadwal': typeof DokterJadwalRoute
   '/dokter/profil': typeof DokterProfilRoute
   '/owner/akun': typeof OwnerAkunRoute
@@ -356,6 +365,7 @@ export interface FileRouteTypes {
     | '/api/bootstrap-owner'
     | '/api/health'
     | '/api/seed'
+    | '/api/treatment-image'
     | '/dokter/jadwal'
     | '/dokter/profil'
     | '/owner/akun'
@@ -391,6 +401,7 @@ export interface FileRouteTypes {
     | '/api/bootstrap-owner'
     | '/api/health'
     | '/api/seed'
+    | '/api/treatment-image'
     | '/dokter/jadwal'
     | '/dokter/profil'
     | '/owner/akun'
@@ -429,6 +440,7 @@ export interface FileRouteTypes {
     | '/api/bootstrap-owner'
     | '/api/health'
     | '/api/seed'
+    | '/api/treatment-image'
     | '/dokter/jadwal'
     | '/dokter/profil'
     | '/owner/akun'
@@ -466,6 +478,7 @@ export interface RootRouteChildren {
   ApiBootstrapOwnerRoute: typeof ApiBootstrapOwnerRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSeedRoute: typeof ApiSeedRoute
+  ApiTreatmentImageRoute: typeof ApiTreatmentImageRoute
   TreatmentIdRoute: typeof TreatmentIdRoute
   TreatmentIndexRoute: typeof TreatmentIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -620,6 +633,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dokter/jadwal'
       preLoaderRoute: typeof DokterJadwalRouteImport
       parentRoute: typeof DokterRoute
+    }
+    '/api/treatment-image': {
+      id: '/api/treatment-image'
+      path: '/api/treatment-image'
+      fullPath: '/api/treatment-image'
+      preLoaderRoute: typeof ApiTreatmentImageRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/seed': {
       id: '/api/seed'
@@ -807,6 +827,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBootstrapOwnerRoute: ApiBootstrapOwnerRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiSeedRoute: ApiSeedRoute,
+  ApiTreatmentImageRoute: ApiTreatmentImageRoute,
   TreatmentIdRoute: TreatmentIdRoute,
   TreatmentIndexRoute: TreatmentIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

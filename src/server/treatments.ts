@@ -40,9 +40,19 @@ const toClient = (t: Row): ClientTreatment => ({
   image: t.image ?? undefined,
 })
 
+// Public variant: swap the (possibly huge data-URL) image for a lightweight URL
+// to the image endpoint so list/detail payloads stay small. `v` (image length)
+// busts the browser cache when the owner uploads a different image.
+const toPublic = (t: Row): ClientTreatment => ({
+  ...toClient(t),
+  image: t.image
+    ? `/api/treatment-image?id=${encodeURIComponent(t.id)}&v=${t.image.length}`
+    : undefined,
+})
+
 export const listTreatments = createServerFn({ method: 'GET' }).handler(async () => {
   const rows = await db.select().from(treatments).orderBy(asc(treatments.name))
-  return rows.map(toClient)
+  return rows.map(toPublic)
 })
 
 export const getTreatment = createServerFn({ method: 'GET' })
@@ -55,7 +65,7 @@ export const getTreatment = createServerFn({ method: 'GET' })
       .from(treatments)
       .where(and(eq(treatments.category, row.category), ne(treatments.id, row.id)))
       .limit(3)
-    return { ...toClient(row), related: related.map(toClient) }
+    return { ...toPublic(row), related: related.map(toPublic) }
   })
 
 // A treatment is "on promo" when isPromo is on AND the owner set a promo price
