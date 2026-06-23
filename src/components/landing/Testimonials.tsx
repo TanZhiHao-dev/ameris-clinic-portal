@@ -44,6 +44,7 @@ export function Testimonials() {
         <div className="mt-10 flex items-center justify-center gap-3 sm:gap-4">
           {testimonials.map((item, i) => {
             const isActive = i === active
+            const size = isActive ? 78 : 54
             return (
               <button
                 key={item.name + i}
@@ -51,18 +52,32 @@ export function Testimonials() {
                 onClick={() => go(i)}
                 aria-label={`Lihat testimoni dari ${item.name}`}
                 aria-pressed={isActive}
-                className="grid shrink-0 place-items-center rounded-full font-bold transition-all duration-300"
+                className="shrink-0 overflow-hidden rounded-full transition-all duration-300"
                 style={{
-                  height: isActive ? 78 : 54,
-                  width: isActive ? 78 : 54,
-                  background: 'var(--grad-gold)',
-                  color: '#3a2c0f',
-                  opacity: isActive ? 1 : 0.55,
-                  boxShadow: isActive ? '0 0 0 4px var(--color-shell), 0 0 0 6px var(--color-gold), var(--shadow-gold)' : 'none',
-                  fontSize: isActive ? '1.6rem' : '1.1rem',
+                  height: size,
+                  width: size,
+                  opacity: isActive ? 1 : 0.6,
+                  boxShadow: isActive ? '0 0 0 3px var(--color-shell), 0 0 0 5px var(--color-gold), var(--shadow-gold)' : 'none',
                 }}
               >
-                {initials(item.name)}
+                <img
+                  src={`https://api.dicebear.com/9.x/lorelei/svg?seed=${encodeURIComponent(item.name)}&backgroundColor=f0e6d3&radius=50`}
+                  alt={item.name}
+                  width={size}
+                  height={size}
+                  style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    const btn = e.currentTarget.parentElement
+                    if (btn) {
+                      btn.style.background = 'var(--grad-gold)'
+                      btn.style.display = 'grid'
+                      btn.style.placeItems = 'center'
+                      btn.style.color = '#3a2c0f'
+                      btn.style.fontWeight = 'bold'
+                      e.currentTarget.replaceWith(document.createTextNode(initials(item.name)))
+                    }
+                  }}
+                />
               </button>
             )
           })}
