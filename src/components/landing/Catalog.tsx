@@ -12,10 +12,13 @@ export function Catalog() {
   const [active, setActive] = useState<(typeof categories)[number]>('Best Seller')
   const { data: treatments = [] } = useQuery(treatmentsQuery)
 
+  // Guard against malformed rows (e.g. a treatment with no name) so they don't
+  // render as an empty card in the grid.
+  const named = treatments.filter((t) => t.name?.trim())
   const list =
     active === 'Best Seller'
-      ? treatments.filter((t) => t.bestSeller)
-      : treatments.filter((t) => t.category === active)
+      ? named.filter((t) => t.bestSeller)
+      : named.filter((t) => t.category === active)
 
   return (
     <section id="treatment" className="py-24">
@@ -55,11 +58,11 @@ export function Catalog() {
           </div>
         </div>
 
-        <div className="reveal mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="reveal mt-12 grid items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {list.map((t) => (
             <article
               key={t.id}
-              className="card-soft flex flex-col overflow-hidden"
+              className="card-soft flex h-full flex-col overflow-hidden"
               style={!t.available ? { opacity: 0.82 } : undefined}
             >
               {/* Visual */}

@@ -30,6 +30,7 @@ function MenuPage() {
   const { data: treatments = [] } = useQuery(treatmentsQuery)
 
   const list = treatments.filter((t) => {
+    if (!t.name?.trim()) return false // skip malformed rows so they don't render as empty cards
     const matchCat =
       cat === 'Semua'
         ? true
@@ -107,11 +108,11 @@ function MenuPage() {
               </p>
             </div>
           ) : (
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {list.map((t) => (
                 <article
                   key={t.id}
-                  className="card-soft flex flex-col overflow-hidden"
+                  className="card-soft flex h-full flex-col overflow-hidden"
                   style={!t.available ? { opacity: 0.82 } : undefined}
                 >
                   <Link to="/treatment/$id" params={{ id: t.id }} className="relative block aspect-[16/10]">
