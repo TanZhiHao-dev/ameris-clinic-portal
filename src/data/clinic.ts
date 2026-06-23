@@ -248,36 +248,25 @@ export type Testimonial = {
   rating: number // 1..5
   title: string
   body: string
+  photo?: string // path ke file di public/, misal '/testimonials/virgilia.jpg'
 }
 
 export const testimonials: Testimonial[] = [
+  {
+    name: 'Fitri E.',
+    role: 'Local Guide · 12 ulasan',
+    rating: 5,
+    title: 'Lokasi mudah, dokter ramah & cantik!',
+    body: 'Lokasi kliniknya gampang dicari, ruangan nyaman dan bersih, dokternya ramah plus cantik. Pasti jadi pasien tetap nih!',
+    photo: '/testimonials/fitri.jpg',
+  },
   {
     name: 'Virgilia S.',
     role: 'Pasien Juvelook Cannula',
     rating: 5,
     title: 'Dokter sangat berpengalaman & ramah!',
     body: 'Pertama kali dateng, dokter nya super ramah, penjelasan sangat bermanfaat dan rinci. Treatment juvelook dengan teknik cannula — amaze banget sama hasilnya. Tempatnya bersih, wangi, rapih dan nyaman sekali.',
-  },
-  {
-    name: 'Sasa H.',
-    role: 'Pasien Setia dr. Meriana',
-    rating: 5,
-    title: 'Ikut pindah klinik demi dr. Meriana!',
-    body: 'Sy pasien dr. Meriana dari dy buka praktek di Cibinong, walaupun jauh dari Tangerang tetap datang. Seneng banget sekarang ada klinik di Gading Serpong — lebih mudah perawatannya. Kliniknya bersih sekali dan nyaman.',
-  },
-  {
-    name: 'Susan A.',
-    role: 'Pasien Rejuner Gold + Laser DPL',
-    rating: 5,
-    title: 'Hasil bagus, dokter & suster ramah!',
-    body: 'Perawatan rejuner gold collagen stimulator untuk bawah mata dan facial plus laser DPL — hasilnya bagus banget. Suka banget sama dokter Mery dan susternya yang sangat ramah. Will be back!',
-  },
-  {
-    name: 'Dellyn W.',
-    role: 'Pasien Facial',
-    rating: 5,
-    title: 'Tempat facial ternyaman!',
-    body: 'Konsultasi dengan dokter yang sangat informatif dan berpengalaman. Staff-nya sangat ramah, disambut dan dilayani dengan baik. Tempat & peralatan treatment higenis, rapi, nyaman. Betah banget treatment di sini!',
+    photo: '/testimonials/virgilia.jpg',
   },
   {
     name: 'Voranica C.',
@@ -285,5 +274,22 @@ export const testimonials: Testimonial[] = [
     rating: 5,
     title: 'Komunikatif, bersih, harga oke!',
     body: 'Dokternya komunikatif banget, tempatnya bersih dan nyaman, pelayanannya juga ok bangett! Harganya jugaaa ok banget!',
+    photo: '/testimonials/voranica.jpg',
+  },
+  {
+    name: 'Mega',
+    role: 'Pasien Setia Ameris',
+    rating: 5,
+    title: 'Pelayanan terbaik & harga affordable!',
+    body: 'Klinik kecantikan dengan pelayanan terbaik yang pernah aku kunjungi. Pelayanannya memang oke banget, harga affordable, konsultasi dokter gratis. Pokoknya bakal langganan treatment disini!',
+    photo: '/testimonials/mega.jpg',
+  },
+  {
+    name: 'Annisa K.',
+    role: 'Pasien Facial',
+    rating: 5,
+    title: 'Facial gak sakit, semua ramah!',
+    body: 'Good service! Facial nya gak sakit, dokternya ramah, receptionnya ramah, tempatnya bersih. Oke banget!',
+    photo: '/testimonials/annisa.jpg',
   },
 ] as const

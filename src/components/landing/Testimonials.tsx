@@ -45,6 +45,8 @@ export function Testimonials() {
           {testimonials.map((item, i) => {
             const isActive = i === active
             const size = isActive ? 78 : 54
+            const src = item.photo
+              ?? `https://api.dicebear.com/9.x/lorelei/svg?seed=${encodeURIComponent(item.name)}&backgroundColor=f0e6d3&radius=50`
             return (
               <button
                 key={item.name + i}
@@ -61,21 +63,14 @@ export function Testimonials() {
                 }}
               >
                 <img
-                  src={`https://api.dicebear.com/9.x/lorelei/svg?seed=${encodeURIComponent(item.name)}&backgroundColor=f0e6d3&radius=50`}
+                  src={src}
                   alt={item.name}
                   width={size}
                   height={size}
                   style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }}
                   onError={(e) => {
-                    const btn = e.currentTarget.parentElement
-                    if (btn) {
-                      btn.style.background = 'var(--grad-gold)'
-                      btn.style.display = 'grid'
-                      btn.style.placeItems = 'center'
-                      btn.style.color = '#3a2c0f'
-                      btn.style.fontWeight = 'bold'
-                      e.currentTarget.replaceWith(document.createTextNode(initials(item.name)))
-                    }
+                    const fallback = `https://api.dicebear.com/9.x/lorelei/svg?seed=${encodeURIComponent(item.name)}&backgroundColor=f0e6d3&radius=50`
+                    if (e.currentTarget.src !== fallback) e.currentTarget.src = fallback
                   }}
                 />
               </button>
