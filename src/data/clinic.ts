@@ -19,6 +19,24 @@ export const clinic = {
   instagramUrl: 'https://www.instagram.com/amerisclinic/',
   tiktok: '@amerisclinic_serpong',
   tiktokUrl: 'https://www.tiktok.com/@amerisclinic_serpong',
+  // Lokasi klinik — Bolsena Square, kawasan Gading Serpong.
+  address: {
+    line1: 'Bolsena Square, Gading Serpong',
+    line2: 'Curug Sangereng, Kec. Kelapa Dua',
+    line3: 'Kabupaten Tangerang, Banten 15810',
+    plusCode: 'PJP9+59W',
+    full: 'Bolsena Square, Curug Sangereng, Kec. Kelapa Dua, Kabupaten Tangerang, Banten 15810',
+    lat: -6.2645028,
+    lng: 106.6184492,
+    // Tautan share resmi Google Maps (buka di app / browser).
+    mapsUrl: 'https://maps.app.goo.gl/g4WcQsZiihxaFdkEA',
+    // Embed peta tanpa API key — endpoint /maps/embed resmi (frame-safe; URL
+    // `?output=embed` lama kini redirect 301 + X-Frame-Options jadi diblokir
+    // iframe). `pb` lengkap dgn Place ID klinik → pin berlabel "AMERIS
+    // Aesthetic Clinic".
+    mapsEmbed:
+      'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3965.6!2d106.6184492!3d-6.2645028!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69fd0017816381%3A0xd0e161bafe5fd2a5!2sAMERIS%20Aesthetic%20Clinic!5e0!3m2!1sid!2sid!4v1700000000000!5m2!1sid!2sid',
+  },
   // Manual bank-transfer payment. qrisImage: drop the clinic's QRIS PNG at
   // public/qris.png (it auto-hides if the file is absent).
   bank: {

@@ -221,6 +221,9 @@ const dict = {
   'footer.link.hours': { id: 'Jam operasional', en: 'Opening hours' },
   'footer.link.location': { id: 'Lokasi Gading Serpong', en: 'Gading Serpong location' },
   'footer.link.privacy': { id: 'Kebijakan privasi', en: 'Privacy policy' },
+  'footer.address.title': { id: 'Kunjungi klinik', en: 'Visit our clinic' },
+  'footer.address.directions': { id: 'Buka di Google Maps', en: 'Open in Google Maps' },
+  'footer.address.mapTitle': { id: 'Peta lokasi Ameris Aesthetic Clinic', en: 'Map of Ameris Aesthetic Clinic' },
 
   // ── Treatments page (/treatment) ──────────────────────────────────
   'cart.addLong': { id: 'Tambah ke keranjang', en: 'Add to cart' },
