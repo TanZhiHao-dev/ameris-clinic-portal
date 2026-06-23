@@ -231,3 +231,59 @@ export const valueProps = [
   { title: 'Rekam medis digital', body: 'Riwayat treatment & catatan dokter tersimpan rapi tiap kunjungan.', icon: 'file' },
   { title: 'Pengingat otomatis', body: 'Notifikasi jadwal & promo spesial langsung ke ponselmu.', icon: 'bell' },
 ] as const
+
+// ── Testimoni / ulasan Google ───────────────────────────────────────────────
+// `googleReview` = ringkasan listing Google (owner update angka rating & jumlah
+// ulasan sesuai Google Business). `url` membuka halaman ulasan klinik di Google
+// Maps. `testimonials` = ulasan asli dari Google Maps, salin dari screenshot.
+export const googleReview = {
+  url: 'https://www.google.com/maps/place/AMERIS+Aesthetic+Clinic/@-6.2645028,106.6184492,17z/data=!4m8!3m7!1s0x2e69fd0017816381:0xd0e161bafe5fd2a5!8m2!3d-6.2645028!4d106.6184492!9m1!1b1',
+  rating: 5.0,
+  count: 5, // jumlah ulasan di Google — update sesuai listing
+}
+
+export type Testimonial = {
+  name: string
+  role: string
+  rating: number // 1..5
+  title: string
+  body: string
+}
+
+export const testimonials: Testimonial[] = [
+  {
+    name: 'Virgilia S.',
+    role: 'Pasien Juvelook Cannula',
+    rating: 5,
+    title: 'Dokter sangat berpengalaman & ramah!',
+    body: 'Pertama kali dateng, dokter nya super ramah, penjelasan sangat bermanfaat dan rinci. Treatment juvelook dengan teknik cannula — amaze banget sama hasilnya. Tempatnya bersih, wangi, rapih dan nyaman sekali.',
+  },
+  {
+    name: 'Sasa H.',
+    role: 'Pasien Setia dr. Meriana',
+    rating: 5,
+    title: 'Ikut pindah klinik demi dr. Meriana!',
+    body: 'Sy pasien dr. Meriana dari dy buka praktek di Cibinong, walaupun jauh dari Tangerang tetap datang. Seneng banget sekarang ada klinik di Gading Serpong — lebih mudah perawatannya. Kliniknya bersih sekali dan nyaman.',
+  },
+  {
+    name: 'Susan A.',
+    role: 'Pasien Rejuner Gold + Laser DPL',
+    rating: 5,
+    title: 'Hasil bagus, dokter & suster ramah!',
+    body: 'Perawatan rejuner gold collagen stimulator untuk bawah mata dan facial plus laser DPL — hasilnya bagus banget. Suka banget sama dokter Mery dan susternya yang sangat ramah. Will be back!',
+  },
+  {
+    name: 'Dellyn W.',
+    role: 'Pasien Facial',
+    rating: 5,
+    title: 'Tempat facial ternyaman!',
+    body: 'Konsultasi dengan dokter yang sangat informatif dan berpengalaman. Staff-nya sangat ramah, disambut dan dilayani dengan baik. Tempat & peralatan treatment higenis, rapi, nyaman. Betah banget treatment di sini!',
+  },
+  {
+    name: 'Voranica C.',
+    role: 'Pasien Ameris',
+    rating: 5,
+    title: 'Komunikatif, bersih, harga oke!',
+    body: 'Dokternya komunikatif banget, tempatnya bersih dan nyaman, pelayanannya juga ok bangett! Harganya jugaaa ok banget!',
+  },
+] as const

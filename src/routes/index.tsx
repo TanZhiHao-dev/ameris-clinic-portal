@@ -7,6 +7,7 @@ import { Promo } from '../components/landing/Promo'
 import { HowItWorks } from '../components/landing/HowItWorks'
 import { Loyalty } from '../components/landing/Loyalty'
 import { ValueProps } from '../components/landing/ValueProps'
+import { Testimonials } from '../components/landing/Testimonials'
 import { FinalCta } from '../components/landing/FinalCta'
 import { SiteFooter } from '../components/landing/SiteFooter'
 
@@ -32,6 +33,7 @@ function Home() {
         <HowItWorks />
         <Loyalty />
         <ValueProps />
+        <Testimonials />
         <FinalCta />
       </main>
       <SiteFooter />
