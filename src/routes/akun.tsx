@@ -17,16 +17,24 @@ const NAV = [
 function AccountLayout() {
   const navigate = useNavigate()
   const { data: session, isPending } = authClient.useSession()
+  const role = (session?.user as { role?: string } | undefined)?.role
 
+  // Patient area. Send staff (owner/dokter) to their own console instead of
+  // stranding them here — otherwise a freshly promoted doctor still sees the
+  // patient dashboard. Mirrors the role guard in dokter.tsx / owner.tsx.
   useEffect(() => {
-    if (!isPending && !session) navigate({ to: '/masuk' })
-  }, [isPending, session, navigate])
+    if (isPending) return
+    if (!session) navigate({ to: '/masuk' })
+    else if (role === 'owner') navigate({ to: '/owner' })
+    else if (role === 'dokter') navigate({ to: '/dokter' })
+  }, [isPending, session, role, navigate])
 
   const userName = session?.user.name ?? '—'
   const memberLine = session ? 'Member' : '—'
 
-  // Avoid flashing the dashboard (and firing 401 queries) before auth resolves.
-  if (isPending || !session) {
+  // Avoid flashing the patient dashboard (and firing 401 queries) before auth
+  // resolves, or while a non-patient is being redirected to their console.
+  if (isPending || !session || role === 'owner' || role === 'dokter') {
     return (
       <PageShell>
         <div className="grid min-h-[60vh] place-items-center">

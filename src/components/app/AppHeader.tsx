@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { Menu, ShoppingBag, User, X } from 'lucide-react'
 import { Brand } from '../landing/Brand'
 import { useCart } from '../../lib/cart'
+import { authClient } from '../../lib/auth-client'
 
 const NAV = [
   { label: 'Beranda', to: '/' },
@@ -13,6 +14,13 @@ const NAV = [
 export function AppHeader() {
   const { count, hydrated } = useCart()
   const [open, setOpen] = useState(false)
+  const { data: session } = authClient.useSession()
+
+  // Route the account button to the role's own console — a doctor/owner who
+  // taps "Akun" should land in their dashboard, not the patient area.
+  const role = (session?.user as { role?: string } | undefined)?.role
+  const accountTo = role === 'owner' ? '/owner' : role === 'dokter' ? '/dokter' : '/akun'
+  const accountLabel = role === 'owner' || role === 'dokter' ? 'Dashboard' : 'Akun'
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
@@ -66,8 +74,8 @@ export function AppHeader() {
             )}
           </Link>
 
-          <Link to="/akun" className="btn btn-primary hidden sm:inline-flex">
-            <User size={17} /> Akun
+          <Link to={accountTo} className="btn btn-primary hidden sm:inline-flex">
+            <User size={17} /> {accountLabel}
           </Link>
 
           <button
@@ -99,11 +107,11 @@ export function AppHeader() {
               </Link>
             ))}
             <Link
-              to="/akun"
+              to={accountTo}
               className="btn btn-primary mt-2"
               onClick={() => setOpen(false)}
             >
-              <User size={17} /> Akun saya
+              <User size={17} /> {accountLabel === 'Dashboard' ? 'Dashboard' : 'Akun saya'}
             </Link>
           </div>
         </div>
