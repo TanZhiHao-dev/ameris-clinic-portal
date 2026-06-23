@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { ArrowLeft, ArrowRight, Star } from 'lucide-react'
 import { googleReview, testimonials } from '../../data/clinic'
+import { useI18n } from '../../lib/i18n'
 
 // Social-proof carousel of customer reviews, tied to the clinic's Google
 // listing. Content lives in data/clinic.ts (testimonials + googleReview) so the
 // owner can swap in real Google reviews without touching this component.
 export function Testimonials() {
+  // Aliased to `tr` — the active testimonial is named `t` below.
+  const { t: tr } = useI18n()
   const [active, setActive] = useState(0)
   const count = testimonials.length
   if (count === 0) return null
@@ -18,10 +21,10 @@ export function Testimonials() {
       <div className="shell-x">
         {/* Header */}
         <div className="reveal mx-auto max-w-2xl text-center">
-          <span className="eyebrow">Testimoni</span>
+          <span className="eyebrow">{tr('testi.eyebrow')}</span>
           <h2 className="mt-3 text-[2.4rem] sm:text-[3rem]">
-            Apa kata <br className="hidden sm:block" />
-            <span className="gold-text">pelanggan setia kami</span>
+            {tr('testi.title1')} <br className="hidden sm:block" />
+            <span className="gold-text">{tr('testi.titleAccent')}</span>
           </h2>
 
           <a
@@ -35,7 +38,9 @@ export function Testimonials() {
             <Stars value={Math.round(googleReview.rating)} size={14} />
             <span className="mono">{googleReview.rating.toFixed(1)}</span>
             <span style={{ color: 'var(--color-ink-muted)' }}>
-              {googleReview.count > 0 ? `· ${googleReview.count} ulasan Google` : '· ulasan di Google'}
+              {googleReview.count > 0
+                ? tr('testi.googleCount', { count: googleReview.count })
+                : tr('testi.googleFallback')}
             </span>
           </a>
         </div>
@@ -168,11 +173,4 @@ function GoogleG() {
       <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
     </svg>
   )
-}
-
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/)
-  const first = parts[0]?.[0] ?? ''
-  const last = parts.length > 1 ? parts[parts.length - 1][0] : ''
-  return (first + last).toUpperCase()
 }

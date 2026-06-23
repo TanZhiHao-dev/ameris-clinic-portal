@@ -1,8 +1,10 @@
 import { Link } from '@tanstack/react-router'
 import { ArrowRight, MessageCircle } from 'lucide-react'
 import { clinic } from '../../data/clinic'
+import { useI18n } from '../../lib/i18n'
 
 export function FinalCta() {
+  const { t } = useI18n()
   return (
     <section id="daftar" className="py-24">
       <div className="shell-x">
@@ -16,18 +18,17 @@ export function FinalCta() {
               {clinic.motto}
             </span>
             <h2 className="mt-4 text-[2.6rem] sm:text-[3.4rem]" style={{ color: '#faf3e6' }}>
-              Kamu adalah mahakarya.
+              {t('cta.title1')}
               <br />
-              <span className="gold-text">Saatnya bersinar.</span>
+              <span className="gold-text">{t('cta.titleAccent')}</span>
             </h2>
             <p className="mt-5 text-[1.05rem]" style={{ color: 'rgba(246,237,220,0.78)' }}>
-              Daftar pakai WhatsApp atau email — verifikasi OTP, langsung bisa
-              pesan jadwal di {clinic.location}. {clinic.hashtag}
+              {t('cta.desc', { location: clinic.location, hashtag: clinic.hashtag })}
             </p>
 
             <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
               <Link to="/masuk" className="btn btn-gold">
-                Daftar gratis <ArrowRight size={18} />
+                {t('cta.registerFree')} <ArrowRight size={18} />
               </Link>
               <a
                 href={`https://wa.me/${clinic.whatsappRaw}`}

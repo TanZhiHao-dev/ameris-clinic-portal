@@ -4,10 +4,12 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { Check } from 'lucide-react'
 import { ChangePasswordCard } from '../components/app/ChangePasswordCard'
 import { myProfile, updateProfile } from '../server/account'
+import { useI18n } from '../lib/i18n'
 
 export const Route = createFileRoute('/akun/profil')({ component: ProfilePage })
 
 function ProfilePage() {
+  const { t } = useI18n()
   const [form, setForm] = useState({
     name: '',
     phone: '',
@@ -44,29 +46,29 @@ function ProfilePage() {
 
   return (
     <div>
-      <h1 className="text-[2rem]">Profil</h1>
+      <h1 className="text-[2rem]">{t('pf.title')}</h1>
       <p className="mt-1 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-        Kelola data akunmu di Ameris.
+        {t('pf.sub')}
       </p>
 
       <div className="card-soft mt-6 p-6 sm:p-8">
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Nama lengkap">
+          <Field label={t('pf.name')}>
             <input className={inputCls} value={form.name} onChange={(e) => set('name', e.target.value)} />
           </Field>
-          <Field label="Tanggal lahir">
+          <Field label={t('pf.birth')}>
             <input type="date" className={inputCls} value={form.birth} onChange={(e) => set('birth', e.target.value)} />
           </Field>
-          <Field label="Nomor WhatsApp">
+          <Field label={t('pf.whatsapp')}>
             <input className={inputCls} value={form.phone} onChange={(e) => set('phone', e.target.value)} inputMode="tel" />
           </Field>
-          <Field label="Email">
+          <Field label={t('pf.email')}>
             <input className={inputCls} value={form.email} onChange={(e) => set('email', e.target.value)} inputMode="email" />
           </Field>
         </div>
 
         <p className="mt-5 text-[0.8rem]" style={{ color: 'var(--color-ink-muted)' }}>
-          🎁 Tanggal lahir dipakai untuk kejutan promo ulang tahun dari Ameris.
+          {t('pf.birthNote')}
         </p>
 
         <div className="mt-6 flex items-center gap-3">
@@ -76,11 +78,11 @@ function ProfilePage() {
             disabled={save.isPending || form.name.trim().length < 2}
             onClick={() => save.mutate({ name: form.name.trim(), phone: form.phone, birthDate: form.birth })}
           >
-            {save.isPending ? 'Menyimpan…' : 'Simpan perubahan'}
+            {save.isPending ? t('common.saving') : t('pf.save')}
           </button>
           {saved && (
             <span className="inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: 'var(--color-gold-deep)' }}>
-              <Check size={16} /> Tersimpan
+              <Check size={16} /> {t('pf.saved')}
             </span>
           )}
         </div>

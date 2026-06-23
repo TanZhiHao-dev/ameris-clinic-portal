@@ -2,11 +2,14 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, Crown, Gift } from 'lucide-react'
 import { loyaltyHistory, loyaltySummary, redeemPoints, redeemTiers } from '../server/loyalty'
+import { useI18n } from '../lib/i18n'
 
 export const Route = createFileRoute('/akun/privilege')({ component: PrivilegePage })
 
 function PrivilegePage() {
   const qc = useQueryClient()
+  // Aliased to `tr` — a tier is named `t` in the redeem map below.
+  const { t: tr } = useI18n()
   const { data: summary } = useQuery({
     queryKey: ['loyalty-summary'],
     queryFn: () => loyaltySummary(),
@@ -35,18 +38,18 @@ function PrivilegePage() {
     <div>
       <h1 className="text-[2rem]">Ameris Privilege Club</h1>
       <p className="mt-1 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-        Setiap transaksi Rp1.000.000 = 1 poin. Tukar dengan treatment gratis.
+        {tr('pv.sub')}
       </p>
 
       {/* Balance */}
       <div className="card-soft mt-6 overflow-hidden p-6" style={{ background: 'var(--color-espresso)', color: '#f6eddc' }}>
         <div className="flex items-center gap-2 text-[0.72rem] font-semibold uppercase tracking-wider" style={{ color: 'var(--color-gold-light)' }}>
-          <Crown size={14} /> Saldo poin kamu
+          <Crown size={14} /> {tr('pv.balance')}
         </div>
         <div className="mono mt-2 text-5xl font-extrabold" style={{ color: '#faf3e6' }}>{pts}</div>
         {nextTier && (
           <p className="mt-2 text-sm" style={{ color: 'rgba(246,237,220,0.72)' }}>
-            {nextTier.point - pts} poin lagi untuk menukar{' '}
+            {tr('pv.toNext1', { n: nextTier.point - pts })}
             <span className="font-semibold" style={{ color: '#faf3e6' }}>{nextTier.name}</span>.
           </p>
         )}
@@ -54,7 +57,7 @@ function PrivilegePage() {
 
       {/* Redeem ladder */}
       <div className="mt-8 flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--color-gold-deep)' }}>
-        <Gift size={16} /> Tukarkan poin
+        <Gift size={16} /> {tr('pv.redeemTitle')}
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {tiers.map((t) => {
@@ -78,7 +81,7 @@ function PrivilegePage() {
                 onClick={() => redeem.mutate(t.treatmentId)}
                 className="btn btn-primary px-3.5 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {can ? 'Tukar' : 'Terkunci'}
+                {can ? tr('pv.redeem') : tr('pv.locked')}
               </button>
             </div>
           )
@@ -86,7 +89,7 @@ function PrivilegePage() {
       </div>
 
       {/* History */}
-      <h2 className="mt-10 text-xl">Riwayat poin</h2>
+      <h2 className="mt-10 text-xl">{tr('pv.history')}</h2>
       <div className="card-soft mt-4 divide-y" style={{ borderColor: 'var(--color-line)' }}>
         {history.map((h, i) => (
           <div key={i} className="flex items-center justify-between p-4" style={{ borderColor: 'var(--color-line)' }}>
@@ -99,7 +102,7 @@ function PrivilegePage() {
               style={{ color: h.delta >= 0 ? 'var(--color-gold-deep)' : 'var(--color-rose)' }}
             >
               {h.delta >= 0 ? <Check size={14} /> : null}
-              {h.delta >= 0 ? `+${h.delta}` : h.delta} poin
+              {h.delta >= 0 ? `+${h.delta}` : h.delta} {tr('pv.pointsWord')}
             </div>
           </div>
         ))}

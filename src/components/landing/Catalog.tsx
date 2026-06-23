@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 import { Star } from 'lucide-react'
 import { categories } from '../../data/clinic'
 import { treatmentsQuery } from '../../server/queries'
+import { useI18n } from '../../lib/i18n'
+import type { DictKey } from '../../lib/i18n-dict'
 import { TreatmentThumb } from './TreatmentThumb'
 import { AddToCartButton } from '../app/AddToCartButton'
 import { PriceTag } from '../app/PriceTag'
@@ -11,6 +13,8 @@ import { PriceTag } from '../app/PriceTag'
 export function Catalog() {
   const [active, setActive] = useState<(typeof categories)[number]>('Best Seller')
   const { data: treatments = [] } = useQuery(treatmentsQuery)
+  // Aliased to `tr` — the treatment map variable below is named `t`.
+  const { t: tr } = useI18n()
 
   // Guard against malformed rows (e.g. a treatment with no name) so they don't
   // render as an empty card in the grid.
@@ -25,13 +29,12 @@ export function Catalog() {
       <div className="shell-x">
         <div className="reveal flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div className="max-w-xl">
-            <span className="eyebrow">Menu Treatment</span>
+            <span className="eyebrow">{tr('catalog.eyebrow')}</span>
             <h2 className="mt-3 text-[2.4rem] sm:text-[3rem]">
-              Semua perawatan, <span className="gold-text">harga &amp; durasinya</span> — transparan.
+              {tr('catalog.title1')} <span className="gold-text">{tr('catalog.titleAccent')}</span> {tr('catalog.title3')}
             </h2>
             <p className="mt-4 text-[1.02rem]" style={{ color: 'var(--color-ink-soft)' }}>
-              Dari facial hingga laser, skinbooster, dan paket signature. Label
-              status diperbarui langsung oleh klinik.
+              {tr('catalog.desc')}
             </p>
           </div>
 
@@ -52,7 +55,7 @@ export function Catalog() {
                       }
                 }
               >
-                {c}
+                {tr(`cat.${c}` as DictKey)}
               </button>
             ))}
           </div>
@@ -89,14 +92,14 @@ export function Catalog() {
                     className={`glow-dot ${t.available ? '' : 'is-muted'}`}
                     style={{ width: '0.42rem', height: '0.42rem' }}
                   />
-                  {t.available ? 'Tersedia' : 'Tidak tersedia'}
+                  {t.available ? tr('common.available') : tr('common.unavailable')}
                 </span>
 
                 <span
                   className="absolute bottom-3 left-3 rounded-full px-2.5 py-1 text-[0.62rem] font-semibold uppercase tracking-wide"
                   style={{ background: 'rgba(42,37,32,0.62)', color: '#f6eddc', backdropFilter: 'blur(2px)' }}
                 >
-                  {t.category} · {t.duration}
+                  {tr(`cat.${t.category}` as DictKey)} · {t.duration}
                 </span>
               </div>
 
@@ -119,7 +122,7 @@ export function Catalog() {
         </div>
 
         <p className="reveal mt-8 text-center text-[0.8rem]" style={{ color: 'var(--color-ink-muted)' }}>
-          *Harga belum termasuk promo/diskon · berlaku sesuai ketersediaan di klinik.
+          {tr('catalog.note')}
         </p>
       </div>
     </section>

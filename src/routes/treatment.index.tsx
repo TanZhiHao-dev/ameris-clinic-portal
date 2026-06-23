@@ -7,6 +7,8 @@ import { TreatmentThumb } from '../components/landing/TreatmentThumb'
 import { AddToCartButton } from '../components/app/AddToCartButton'
 import { PriceTag } from '../components/app/PriceTag'
 import { treatmentsQuery } from '../server/queries'
+import { useI18n } from '../lib/i18n'
+import type { DictKey } from '../lib/i18n-dict'
 
 export const Route = createFileRoute('/treatment/')({
   loader: ({ context: { queryClient } }) => queryClient.ensureQueryData(treatmentsQuery),
@@ -28,6 +30,8 @@ function MenuPage() {
   const [cat, setCat] = useState<(typeof FILTERS)[number]>('Semua')
   const [q, setQ] = useState('')
   const { data: treatments = [] } = useQuery(treatmentsQuery)
+  // Aliased to `tr` — the treatment map variable below is named `t`.
+  const { t: tr } = useI18n()
 
   const list = treatments.filter((t) => {
     if (!t.name?.trim()) return false // skip malformed rows so they don't render as empty cards
@@ -46,13 +50,12 @@ function MenuPage() {
     <PageShell>
       <section className="py-12 sm:py-16" style={{ background: 'var(--color-cream)' }}>
         <div className="shell-x">
-          <span className="eyebrow">Menu Treatment</span>
+          <span className="eyebrow">{tr('catalog.eyebrow')}</span>
           <h1 className="mt-3 text-[2.4rem] sm:text-[3.2rem]">
-            Pilih perawatan <span className="gold-text italic">terbaikmu</span>.
+            {tr('tm.title1')} <span className="gold-text italic">{tr('tm.titleAccent')}</span>.
           </h1>
           <p className="mt-3 max-w-xl text-[1.02rem]" style={{ color: 'var(--color-ink-soft)' }}>
-            Semua treatment Ameris lengkap dengan harga, durasi, dan status
-            ketersediaan.
+            {tr('tm.desc')}
           </p>
 
           {/* Search */}
@@ -63,7 +66,7 @@ function MenuPage() {
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Cari treatment…"
+              placeholder={tr('tm.searchPlaceholder')}
               className="w-full bg-transparent text-sm outline-none"
               style={{ color: 'var(--color-ink)' }}
             />
@@ -87,7 +90,7 @@ function MenuPage() {
                       }
                 }
               >
-                {c}
+                {tr(`cat.${c}` as DictKey)}
               </button>
             ))}
           </div>
@@ -97,14 +100,14 @@ function MenuPage() {
       <section className="pb-24" style={{ background: 'var(--color-cream)' }}>
         <div className="shell-x">
           <p className="mb-6 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-            {list.length} treatment ditemukan
+            {tr('tm.found', { count: list.length })}
           </p>
 
           {list.length === 0 ? (
             <div className="card-soft p-12 text-center">
-              <p className="text-lg font-bold">Treatment tidak ditemukan</p>
+              <p className="text-lg font-bold">{tr('tm.noneTitle')}</p>
               <p className="mt-2 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-                Coba kata kunci atau kategori lain.
+                {tr('tm.noneBody')}
               </p>
             </div>
           ) : (
@@ -133,13 +136,13 @@ function MenuPage() {
                       }}
                     >
                       <span className={`glow-dot ${t.available ? '' : 'is-muted'}`} style={{ width: '0.42rem', height: '0.42rem' }} />
-                      {t.available ? 'Tersedia' : 'Tidak tersedia'}
+                      {t.available ? tr('common.available') : tr('common.unavailable')}
                     </span>
                     <span
                       className="absolute bottom-3 left-3 rounded-full px-2.5 py-1 text-[0.62rem] font-semibold uppercase tracking-wide"
                       style={{ background: 'rgba(42,37,32,0.62)', color: '#f6eddc' }}
                     >
-                      {t.category} · {t.duration}
+                      {tr(`cat.${t.category}` as DictKey)} · {t.duration}
                     </span>
                   </Link>
 
@@ -161,7 +164,7 @@ function MenuPage() {
           )}
 
           <p className="mt-8 text-center text-[0.8rem]" style={{ color: 'var(--color-ink-muted)' }}>
-            *Harga belum termasuk promo/diskon · berlaku sesuai ketersediaan di klinik.
+            {tr('catalog.note')}
           </p>
         </div>
       </section>

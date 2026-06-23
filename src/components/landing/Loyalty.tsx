@@ -1,9 +1,19 @@
 import { Check, Crown, Gift } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { privilegeBenefits } from '../../data/clinic'
 import { redeemTiersQuery } from '../../server/queries'
+import { useI18n } from '../../lib/i18n'
+import type { DictKey } from '../../lib/i18n-dict'
+
+const BENEFIT_KEYS: DictKey[] = [
+  'privilege.benefit.1',
+  'privilege.benefit.2',
+  'privilege.benefit.3',
+  'privilege.benefit.4',
+  'privilege.benefit.5',
+]
 
 function GoldRing({ points = 14, target = 20 }: { points?: number; target?: number }) {
+  const { t } = useI18n()
   const r = 82
   const c = 2 * Math.PI * r
   const pct = Math.min(points / target, 1)
@@ -38,7 +48,7 @@ function GoldRing({ points = 14, target = 20 }: { points?: number; target?: numb
           {points}
         </div>
         <div className="text-[0.62rem] font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--color-gold-light)' }}>
-          Poin Privilege
+          {t('loyalty.pointsLabel')}
         </div>
       </div>
     </div>
@@ -47,6 +57,7 @@ function GoldRing({ points = 14, target = 20 }: { points?: number; target?: numb
 
 export function Loyalty() {
   const { data: tiers = [] } = useQuery(redeemTiersQuery)
+  const { t } = useI18n()
 
   return (
     <section
@@ -65,8 +76,7 @@ export function Loyalty() {
             Every treatment, <span className="gold-text">every reward</span>.
           </h2>
           <p className="mt-4 max-w-xl text-[1.02rem]" style={{ color: 'rgba(246,237,220,0.72)' }}>
-            Setiap transaksi <strong style={{ color: '#faf3e6' }}>Rp1.000.000 = 1 poin</strong>.
-            Kumpulkan dan tukarkan dengan treatment favoritmu secara gratis.
+            {t('loyalty.desc1')}<strong style={{ color: '#faf3e6' }}>{t('loyalty.descStrong')}</strong>{t('loyalty.desc2')}
           </p>
         </div>
 
@@ -75,9 +85,9 @@ export function Loyalty() {
           <div className="reveal flex flex-col items-center gap-8">
             <GoldRing points={14} target={20} />
             <ul className="flex w-full max-w-xs flex-col gap-2.5">
-              {privilegeBenefits.map((b) => (
-                <li key={b} className="flex items-center gap-2.5 text-sm" style={{ color: 'rgba(246,237,220,0.86)' }}>
-                  <Check size={15} style={{ color: 'var(--color-gold)' }} className="shrink-0" /> {b}
+              {BENEFIT_KEYS.map((key) => (
+                <li key={key} className="flex items-center gap-2.5 text-sm" style={{ color: 'rgba(246,237,220,0.86)' }}>
+                  <Check size={15} style={{ color: 'var(--color-gold)' }} className="shrink-0" /> {t(key)}
                 </li>
               ))}
             </ul>
@@ -86,7 +96,7 @@ export function Loyalty() {
           {/* Redemption ladder */}
           <div className="reveal">
             <div className="mb-4 flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--color-gold-light)' }}>
-              <Gift size={16} /> Tukarkan poin dengan treatment gratis
+              <Gift size={16} /> {t('loyalty.redeemTitle')}
             </div>
             <ul className="grid gap-2.5 sm:grid-cols-2">
               {tiers.map((t) => (
@@ -108,7 +118,7 @@ export function Loyalty() {
               ))}
             </ul>
             <p className="mt-4 text-[0.78rem]" style={{ color: 'rgba(246,237,220,0.5)' }}>
-              Penukaran mengikuti nilai poin masing-masing treatment, tanpa batas akumulasi poin.
+              {t('loyalty.note')}
             </p>
           </div>
         </div>

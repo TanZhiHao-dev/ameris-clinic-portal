@@ -3,18 +3,21 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, CalendarCheck, Sparkles } from 'lucide-react'
 import { clinic } from '../../data/clinic'
 import { treatmentsQuery } from '../../server/queries'
+import { useI18n } from '../../lib/i18n'
+import type { DictKey } from '../../lib/i18n-dict'
 import { TreatmentThumb } from './TreatmentThumb'
 import { PriceTag } from '../app/PriceTag'
 
-const STATS = [
-  { value: '24/7', label: 'Booking mandiri' },
-  { value: '50+', label: 'Pilihan treatment' },
-  { value: '4.9', label: 'Rating pasien' },
-  { value: 'Pico', label: 'Korean technology' },
+const STATS: { value: string; label: DictKey }[] = [
+  { value: '24/7', label: 'hero.stat.booking' },
+  { value: '50+', label: 'hero.stat.treatment' },
+  { value: '4.9', label: 'hero.stat.rating' },
+  { value: 'Pico', label: 'hero.stat.tech' },
 ]
 
 export function Hero() {
   const { data: treatments = [] } = useQuery(treatmentsQuery)
+  const { t } = useI18n()
   // The owner's hero pick wins; otherwise fall back to a real best-seller —
   // preferring one with a photo so the hero shows an actual treatment image.
   const featured =
@@ -38,28 +41,26 @@ export function Hero() {
           </span>
 
           <h1 className="rise rise-2 mt-6 text-[3rem] leading-[1.02] sm:text-[3.8rem] lg:text-[4.4rem]">
-            Refine your beauty,
+            {t('hero.titleLine1')}
             <br />
-            <span className="gold-text italic">tampil percaya diri</span>
+            <span className="gold-text italic">{t('hero.titleAccent')}</span>
             <br />
-            mulai hari ini.
+            {t('hero.titleLine3')}
           </h1>
 
           <p
             className="rise rise-2 mt-6 max-w-xl text-[1.05rem] leading-relaxed"
             style={{ color: 'var(--color-ink-soft)' }}
           >
-            Portal mandiri Ameris — lihat menu treatment, cek slot kosong, dan
-            booking sendiri tanpa antre chat. Bayar online atau di klinik, dan
-            kumpulkan poin Privilege di tiap perawatan.
+            {t('hero.desc')}
           </p>
 
           <div className="rise rise-3 mt-9 flex flex-wrap items-center gap-3">
             <Link to="/treatment" className="btn btn-gold">
-              Booking sekarang <ArrowRight size={18} />
+              {t('common.bookNow')} <ArrowRight size={18} />
             </Link>
             <Link to="/treatment" className="btn btn-outline">
-              Lihat treatment
+              {t('common.viewTreatments')}
             </Link>
           </div>
 
@@ -71,7 +72,7 @@ export function Hero() {
                   className="mt-1 text-[0.66rem] font-semibold uppercase tracking-[0.12em]"
                   style={{ color: 'var(--color-ink-muted)' }}
                 >
-                  {s.label}
+                  {t(s.label)}
                 </div>
               </div>
             ))}
@@ -128,17 +129,17 @@ export function Hero() {
                   <div className="mono text-2xl font-extrabold gold-text">Rp550.000</div>
                 )}
                 <span className="badge badge-ok">
-                  <span className="glow-dot" aria-hidden /> Tersedia
+                  <span className="glow-dot" aria-hidden /> {t('common.available')}
                 </span>
               </div>
 
               {featured ? (
                 <Link to="/treatment/$id" params={{ id: featured.id }} className="btn btn-primary mt-5 w-full">
-                  <CalendarCheck size={18} /> Pilih jadwal
+                  <CalendarCheck size={18} /> {t('common.selectSchedule')}
                 </Link>
               ) : (
                 <Link to="/treatment" className="btn btn-primary mt-5 w-full">
-                  <CalendarCheck size={18} /> Pilih jadwal
+                  <CalendarCheck size={18} /> {t('common.selectSchedule')}
                 </Link>
               )}
             </div>

@@ -4,23 +4,28 @@ import { Menu, ShoppingBag, User, X } from 'lucide-react'
 import { Brand } from '../landing/Brand'
 import { useCart } from '../../lib/cart'
 import { authClient } from '../../lib/auth-client'
+import { useI18n } from '../../lib/i18n'
+import type { DictKey } from '../../lib/i18n-dict'
+import { LanguageToggle } from './LanguageToggle'
 
-const NAV = [
-  { label: 'Beranda', to: '/' },
-  { label: 'Treatment', to: '/treatment' },
-  { label: 'Privilege', to: '/akun/privilege' },
+const NAV: { key: DictKey; to: string }[] = [
+  { key: 'nav.home', to: '/' },
+  { key: 'nav.treatment', to: '/treatment' },
+  { key: 'nav.privilege', to: '/akun/privilege' },
 ]
 
 export function AppHeader() {
   const { count, hydrated } = useCart()
   const [open, setOpen] = useState(false)
   const { data: session } = authClient.useSession()
+  const { t } = useI18n()
 
   // Route the account button to the role's own console — a doctor/owner who
   // taps "Akun" should land in their dashboard, not the patient area.
   const role = (session?.user as { role?: string } | undefined)?.role
   const accountTo = role === 'owner' ? '/owner' : role === 'dokter' ? '/dokter' : '/akun'
-  const accountLabel = role === 'owner' || role === 'dokter' ? 'Dashboard' : 'Akun'
+  const isStaff = role === 'owner' || role === 'dokter'
+  const accountLabel = isStaff ? t('header.dashboard') : t('header.account')
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
@@ -51,17 +56,18 @@ export function AppHeader() {
               className="nav-link"
               activeProps={{ style: { color: 'var(--color-ink)' } }}
             >
-              {item.label}
+              {t(item.key)}
             </Link>
           ))}
         </div>
 
         <div className="flex items-center gap-2">
+          <LanguageToggle className="hidden sm:inline-flex" />
           <Link
             to="/keranjang"
             className="relative grid h-11 w-11 place-items-center rounded-full"
             style={{ border: '1px solid var(--color-line)', background: 'var(--color-shell)' }}
-            aria-label="Keranjang"
+            aria-label={t('header.cartAria')}
           >
             <ShoppingBag size={18} />
             {hydrated && count > 0 && (
@@ -81,7 +87,7 @@ export function AppHeader() {
           <button
             type="button"
             className="btn btn-ghost p-2 md:hidden"
-            aria-label={open ? 'Tutup menu' : 'Buka menu'}
+            aria-label={open ? t('header.closeMenu') : t('header.openMenu')}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
           >
@@ -103,16 +109,19 @@ export function AppHeader() {
                 className="rounded-xl px-3 py-3 text-base font-medium"
                 onClick={() => setOpen(false)}
               >
-                {item.label}
+                {t(item.key)}
               </Link>
             ))}
-            <Link
-              to={accountTo}
-              className="btn btn-primary mt-2"
-              onClick={() => setOpen(false)}
-            >
-              <User size={17} /> {accountLabel === 'Dashboard' ? 'Dashboard' : 'Akun saya'}
-            </Link>
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <Link
+                to={accountTo}
+                className="btn btn-primary flex-1"
+                onClick={() => setOpen(false)}
+              >
+                <User size={17} /> {isStaff ? t('header.dashboard') : t('header.myAccount')}
+              </Link>
+              <LanguageToggle />
+            </div>
           </div>
         </div>
       )}

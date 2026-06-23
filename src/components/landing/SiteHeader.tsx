@@ -3,29 +3,28 @@ import { Link } from '@tanstack/react-router'
 import { LogOut, Menu, X } from 'lucide-react'
 import { Brand } from './Brand'
 import { authClient } from '../../lib/auth-client'
+import { useI18n } from '../../lib/i18n'
+import type { DictKey } from '../../lib/i18n-dict'
+import { LanguageToggle } from '../app/LanguageToggle'
 
-const NAV = [
-  { label: 'Treatment', href: '#treatment' },
-  { label: 'Promo', href: '#promo' },
-  { label: 'Cara Kerja', href: '#cara-kerja' },
-  { label: 'Privilege Club', href: '#privilege' },
+const NAV: { key: DictKey; href: string }[] = [
+  { key: 'nav.treatment', href: '#treatment' },
+  { key: 'nav.promo', href: '#promo' },
+  { key: 'nav.howItWorks', href: '#cara-kerja' },
+  { key: 'nav.privilege', href: '#privilege' },
 ]
 
-const TICKER = [
-  'Promo Hydra Renewal Premium — hemat Rp1.200.000',
-  'Setiap transaksi Rp1.000.000 = 1 poin Privilege',
-  'Best Seller: Korean Pico Glow Therapy',
-  'Gratis konsultasi kulit untuk pasien baru',
-]
+const TICKER: DictKey[] = ['ticker.1', 'ticker.2', 'ticker.3', 'ticker.4']
 
 export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
   const { data: session } = authClient.useSession()
+  const { t } = useI18n()
 
   const role = (session?.user as { role?: string } | undefined)?.role
   const dashboardTo = role === 'owner' ? '/owner' : role === 'dokter' ? '/dokter' : '/akun'
-  const dashboardLabel = role === 'owner' || role === 'dokter' ? 'Dashboard' : 'Akun saya'
+  const dashboardLabel = role === 'owner' || role === 'dokter' ? t('header.dashboard') : t('header.myAccount')
 
   async function logout() {
     setOpen(false)
@@ -59,7 +58,7 @@ export function SiteHeader() {
               {TICKER.map((item) => (
                 <span key={item} className="mx-6 inline-flex items-center gap-2">
                   <span className="glow-dot" aria-hidden />
-                  {item}
+                  {t(item)}
                 </span>
               ))}
             </span>
@@ -84,42 +83,46 @@ export function SiteHeader() {
           <div className="hidden items-center gap-8 lg:flex">
             {NAV.map((item) => (
               <a key={item.href} href={item.href} className="nav-link">
-                {item.label}
+                {t(item.key)}
               </a>
             ))}
           </div>
 
           <div className="hidden items-center gap-3 lg:flex">
+            <LanguageToggle />
             {session ? (
               <>
                 <Link to={dashboardTo} className="btn btn-primary">
                   {dashboardLabel}
                 </Link>
                 <button type="button" onClick={logout} className="btn btn-ghost">
-                  Keluar
+                  {t('header.logout')}
                 </button>
               </>
             ) : (
               <>
                 <Link to="/masuk" className="btn btn-ghost">
-                  Masuk
+                  {t('header.login')}
                 </Link>
                 <Link to="/treatment" className="btn btn-primary">
-                  Daftar
+                  {t('header.register')}
                 </Link>
               </>
             )}
           </div>
 
-          <button
-            type="button"
-            className="btn btn-ghost p-2 lg:hidden"
-            aria-label={open ? 'Tutup menu' : 'Buka menu'}
-            aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
-          >
-            {open ? <X size={20} /> : <Menu size={20} />}
-          </button>
+          <div className="flex items-center gap-2 lg:hidden">
+            <LanguageToggle />
+            <button
+              type="button"
+              className="btn btn-ghost p-2"
+              aria-label={open ? t('header.closeMenu') : t('header.openMenu')}
+              aria-expanded={open}
+              onClick={() => setOpen((v) => !v)}
+            >
+              {open ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
         </nav>
       </header>
 
@@ -128,7 +131,7 @@ export function SiteHeader() {
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true">
           <button
             type="button"
-            aria-label="Tutup menu"
+            aria-label={t('header.closeMenu')}
             className="absolute inset-0"
             style={{ background: 'rgba(33, 28, 23, 0.45)' }}
             onClick={() => setOpen(false)}
@@ -149,7 +152,7 @@ export function SiteHeader() {
                   className="rounded-xl px-3 py-3 text-base font-medium"
                   onClick={() => setOpen(false)}
                 >
-                  {item.label}
+                  {t(item.key)}
                 </a>
               ))}
             </div>
@@ -160,16 +163,16 @@ export function SiteHeader() {
                     {dashboardLabel}
                   </Link>
                   <button type="button" onClick={logout} className="btn btn-ghost inline-flex items-center justify-center gap-2">
-                    <LogOut size={18} /> Keluar
+                    <LogOut size={18} /> {t('header.logout')}
                   </button>
                 </>
               ) : (
                 <>
                   <Link to="/masuk" className="btn btn-ghost" onClick={() => setOpen(false)}>
-                    Masuk
+                    {t('header.login')}
                   </Link>
                   <Link to="/treatment" className="btn btn-primary" onClick={() => setOpen(false)}>
-                    Daftar
+                    {t('header.register')}
                   </Link>
                 </>
               )}

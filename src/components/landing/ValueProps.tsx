@@ -1,16 +1,19 @@
 import { Bell, Clock, FileText, Wallet } from 'lucide-react'
 import { valueProps } from '../../data/clinic'
+import { useI18n } from '../../lib/i18n'
+import type { DictKey } from '../../lib/i18n-dict'
 
 const ICONS = { clock: Clock, wallet: Wallet, file: FileText, bell: Bell }
 
 export function ValueProps() {
+  const { t } = useI18n()
   return (
     <section className="py-24">
       <div className="shell-x">
         <div className="reveal max-w-xl">
-          <span className="eyebrow">Kenapa Ameris</span>
+          <span className="eyebrow">{t('value.eyebrow')}</span>
           <h2 className="mt-3 text-[2.4rem] sm:text-[3rem]">
-            Portal mandiri yang <span className="gold-text">mengurus detailnya</span> untukmu.
+            {t('value.title1')} <span className="gold-text">{t('value.titleAccent')}</span> {t('value.title3')}
           </h2>
         </div>
 
@@ -18,16 +21,16 @@ export function ValueProps() {
           {valueProps.map((v) => {
             const Icon = ICONS[v.icon]
             return (
-              <div key={v.title} className="card-soft p-6">
+              <div key={v.icon} className="card-soft p-6">
                 <div
                   className="grid h-11 w-11 place-items-center rounded-xl"
                   style={{ background: 'rgba(195,154,68,0.14)', color: 'var(--color-gold-deep)' }}
                 >
                   <Icon size={20} />
                 </div>
-                <h3 className="mt-5 text-lg font-bold">{v.title}</h3>
+                <h3 className="mt-5 text-lg font-bold">{t(`value.${v.icon}.title` as DictKey)}</h3>
                 <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--color-ink-muted)' }}>
-                  {v.body}
+                  {t(`value.${v.icon}.body` as DictKey)}
                 </p>
               </div>
             )

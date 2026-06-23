@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Lock, ShieldAlert } from 'lucide-react'
 import { Brand } from '../components/landing/Brand'
 import { authClient } from '../lib/auth-client'
+import { useI18n } from '../lib/i18n'
 
 export const Route = createFileRoute('/reset-password')({
   component: ResetPasswordPage,
@@ -14,6 +15,7 @@ export const Route = createFileRoute('/reset-password')({
 function ResetPasswordPage() {
   const { token } = Route.useSearch()
   const navigate = useNavigate()
+  const { t } = useI18n()
   const [pw, setPw] = useState('')
   const [confirm, setConfirm] = useState('')
   const [show, setShow] = useState(false)
@@ -33,7 +35,7 @@ function ResetPasswordPage() {
       if (res.error) throw new Error(res.error.message)
       setDone(true)
     } catch (e) {
-      setError((e as Error).message || 'Gagal mengubah password. Link mungkin sudah kedaluwarsa.')
+      setError((e as Error).message || t('rp.errGeneric'))
     } finally {
       setBusy(false)
     }
@@ -54,28 +56,28 @@ function ResetPasswordPage() {
           {!token ? (
             <Notice
               icon={<ShieldAlert size={22} />}
-              title="Link tidak valid"
-              body="Link reset password tidak lengkap atau sudah dipakai. Minta link baru dari halaman lupa password."
+              title={t('rp.invalidTitle')}
+              body={t('rp.invalidBody')}
             />
           ) : done ? (
             <Notice
               icon={<Check size={22} />}
-              title="Password berhasil diubah"
-              body="Silakan masuk dengan password barumu."
+              title={t('rp.doneTitle')}
+              body={t('rp.doneBody')}
               action={
                 <button type="button" onClick={() => navigate({ to: '/masuk' })} className="btn btn-gold mt-6 w-full">
-                  Masuk sekarang <ArrowRight size={18} />
+                  {t('rp.signinNow')} <ArrowRight size={18} />
                 </button>
               }
             />
           ) : (
             <>
-              <h1 className="text-[1.9rem]">Atur ulang password</h1>
+              <h1 className="text-[1.9rem]">{t('rp.title')}</h1>
               <p className="mt-2 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-                Buat password baru minimal 6 karakter untuk akunmu.
+                {t('rp.sub')}
               </p>
 
-              <label className="mt-7 block text-sm font-semibold">Password baru</label>
+              <label className="mt-7 block text-sm font-semibold">{t('rp.newPw')}</label>
               <Field>
                 <Lock size={16} style={{ color: 'var(--color-ink-muted)' }} />
                 <input
@@ -84,15 +86,15 @@ function ResetPasswordPage() {
                   onKeyDown={onEnter}
                   type={show ? 'text' : 'password'}
                   autoComplete="new-password"
-                  placeholder="Minimal 6 karakter"
+                  placeholder={t('au.passwordPlaceholder')}
                   className="w-full bg-transparent text-sm outline-none"
                 />
-                <button type="button" onClick={() => setShow((v) => !v)} aria-label={show ? 'Sembunyikan password' : 'Tampilkan password'} style={{ color: 'var(--color-ink-muted)' }}>
+                <button type="button" onClick={() => setShow((v) => !v)} aria-label={show ? t('au.hidePw') : t('au.showPw')} style={{ color: 'var(--color-ink-muted)' }}>
                   {show ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </Field>
 
-              <label className="mt-5 block text-sm font-semibold">Konfirmasi password baru</label>
+              <label className="mt-5 block text-sm font-semibold">{t('rp.confirmPw')}</label>
               <Field>
                 <Lock size={16} style={{ color: 'var(--color-ink-muted)' }} />
                 <input
@@ -101,12 +103,12 @@ function ResetPasswordPage() {
                   onKeyDown={onEnter}
                   type={show ? 'text' : 'password'}
                   autoComplete="new-password"
-                  placeholder="Ulangi password baru"
+                  placeholder={t('rp.confirmPlaceholder')}
                   className="w-full bg-transparent text-sm outline-none"
                 />
               </Field>
 
-              {mismatch && <p className="mt-3 text-sm font-medium" style={{ color: 'var(--color-destructive)' }}>Konfirmasi password tidak cocok.</p>}
+              {mismatch && <p className="mt-3 text-sm font-medium" style={{ color: 'var(--color-destructive)' }}>{t('rp.mismatch')}</p>}
               {error && <p className="mt-4 rounded-xl px-4 py-3 text-sm font-medium" style={{ background: 'rgba(179,73,47,0.1)', color: 'var(--color-destructive)' }}>{error}</p>}
 
               <button
@@ -115,14 +117,14 @@ function ResetPasswordPage() {
                 onClick={submit}
                 className="btn btn-gold mt-7 w-full disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {busy ? 'Menyimpan…' : 'Simpan password baru'} <ArrowRight size={18} />
+                {busy ? t('common.saving') : t('rp.save')} <ArrowRight size={18} />
               </button>
             </>
           )}
 
           <div className="mt-6 text-center">
             <Link to="/masuk" className="inline-flex items-center gap-1.5 text-[0.82rem] font-semibold" style={{ color: 'var(--color-gold-deep)' }}>
-              <ArrowLeft size={15} /> Kembali ke masuk
+              <ArrowLeft size={15} /> {t('au.backToSignin')}
             </Link>
           </div>
         </div>

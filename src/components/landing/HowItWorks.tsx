@@ -1,13 +1,16 @@
 import { bookingSteps } from '../../data/clinic'
+import { useI18n } from '../../lib/i18n'
+import type { DictKey } from '../../lib/i18n-dict'
 
 export function HowItWorks() {
+  const { t } = useI18n()
   return (
     <section id="cara-kerja" className="py-24">
       <div className="shell-x">
         <div className="reveal max-w-xl">
-          <span className="eyebrow">Cara Kerja</span>
+          <span className="eyebrow">{t('how.eyebrow')}</span>
           <h2 className="mt-3 text-[2.4rem] sm:text-[3rem]">
-            Dari pilih treatment sampai <span className="gold-text">bersinar</span> — empat langkah.
+            {t('how.title1')} <span className="gold-text">{t('how.titleAccent')}</span> {t('how.title3')}
           </h2>
         </div>
 
@@ -23,9 +26,9 @@ export function HowItWorks() {
               >
                 {step.n}
               </span>
-              <h3 className="mt-4 text-lg font-bold">{step.title}</h3>
+              <h3 className="mt-4 text-lg font-bold">{t(`step.${step.n}.title` as DictKey)}</h3>
               <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--color-ink-muted)' }}>
-                {step.body}
+                {t(`step.${step.n}.body` as DictKey)}
               </p>
             </li>
           ))}

@@ -4,6 +4,7 @@ import { TanStackDevtools } from '@tanstack/react-devtools'
 import type { QueryClient } from '@tanstack/react-query'
 
 import { CartProvider } from '../lib/cart'
+import { I18nProvider } from '../lib/i18n'
 import appCss from '../styles.css?url'
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -64,7 +65,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <CartProvider>{children}</CartProvider>
+        <I18nProvider>
+          <CartProvider>{children}</CartProvider>
+        </I18nProvider>
         <TanStackDevtools
           config={{
             position: 'bottom-right',

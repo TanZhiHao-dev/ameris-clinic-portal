@@ -2,14 +2,26 @@ import { MapPin } from 'lucide-react'
 import { Brand } from './Brand'
 import { clinic } from '../../data/clinic'
 import { SocialLinks } from '../app/SocialLinks'
+import { useI18n } from '../../lib/i18n'
+import type { DictKey } from '../../lib/i18n-dict'
 
-const COLS = [
-  { title: 'Treatment', links: ['Facial & Peeling', 'Korean Pico Laser', 'Skinbooster', 'Injeksi & Botox', 'Paket Signature'] },
-  { title: 'Akun', links: ['Masuk / Daftar', 'Keranjang', 'Privilege Club', 'Riwayat booking'] },
-  { title: 'Klinik', links: ['Tentang Ameris', 'Jam operasional', 'Lokasi Gading Serpong', 'Kebijakan privasi'] },
+const COLS: { title: DictKey; links: DictKey[] }[] = [
+  {
+    title: 'footer.col.treatment',
+    links: ['footer.link.facialPeeling', 'footer.link.picoLaser', 'footer.link.skinbooster', 'footer.link.injeksiBotox', 'footer.link.paketSignature'],
+  },
+  {
+    title: 'footer.col.account',
+    links: ['footer.link.loginRegister', 'footer.link.cart', 'footer.link.privilege', 'footer.link.bookingHistory'],
+  },
+  {
+    title: 'footer.col.clinic',
+    links: ['footer.link.about', 'footer.link.hours', 'footer.link.location', 'footer.link.privacy'],
+  },
 ]
 
 export function SiteFooter() {
+  const { t } = useI18n()
   return (
     <footer className="pt-16" style={{ background: 'var(--color-shell)', borderTop: '1px solid var(--color-line)' }}>
       <div className="shell-x">
@@ -19,8 +31,7 @@ export function SiteFooter() {
               <Brand withTagline />
             </a>
             <p className="mt-5 max-w-xs text-sm leading-relaxed" style={{ color: 'var(--color-ink-muted)' }}>
-              {clinic.by}. Estetika yang terarah, presisi, dan berorientasi pada
-              hasil — di {clinic.location}.
+              {clinic.by}. {t('footer.tagline', { location: clinic.location })}
             </p>
             <div className="mt-5">
               <SocialLinks showContact />
@@ -30,13 +41,13 @@ export function SiteFooter() {
           {COLS.map((col) => (
             <div key={col.title}>
               <div className="text-[0.7rem] font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--color-ink-muted)' }}>
-                {col.title}
+                {t(col.title)}
               </div>
               <ul className="mt-4 flex flex-col gap-2.5">
                 {col.links.map((l) => (
                   <li key={l}>
                     <a href="#" className="text-sm transition" style={{ color: 'var(--color-ink-soft)' }}>
-                      {l}
+                      {t(l)}
                     </a>
                   </li>
                 ))}

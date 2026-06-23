@@ -25,6 +25,8 @@ import { listMyBookings, upcomingMyBooking } from '../server/bookings'
 import { listPromos } from '../server/treatments'
 import { loyaltySummary } from '../server/loyalty'
 import { myNotifications } from '../server/account'
+import { useI18n } from '../lib/i18n'
+import type { DictKey } from '../lib/i18n-dict'
 
 export const Route = createFileRoute('/akun/')({ component: Overview })
 
@@ -54,6 +56,7 @@ const NOTIF_ICON: Record<NotifType, typeof Bell> = {
 }
 
 function Overview() {
+  const { t } = useI18n()
   const { data: session } = authClient.useSession()
   const user = session?.user
 
@@ -101,10 +104,10 @@ function Overview() {
   return (
     <div>
       <h1 className="text-[2rem]">
-        Halo, <span className="gold-text italic">{userName.split(' ')[0]}</span> ✦
+        {t('ov.hi')} <span className="gold-text italic">{userName.split(' ')[0]}</span> ✦
       </h1>
       <p className="mt-1 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-        Selamat datang kembali di portal Ameris.
+        {t('ov.welcome')}
       </p>
 
       {/* Birthday promo (PRD: Promo Ulang Tahun) */}
@@ -119,15 +122,15 @@ function Overview() {
             </div>
             <div>
               <div className="font-bold" style={{ color: '#faf3e6' }}>
-                {bday.isToday ? 'Selamat ulang tahun! 🎉' : `Ulang tahunmu ${bday.days} hari lagi 🎁`}
+                {bday.isToday ? t('ov.bdayToday') : t('ov.bdaySoon', { days: bday.days })}
               </div>
               <div className="text-sm" style={{ color: 'rgba(246,237,220,0.72)' }}>
-                Nikmati promo & freebies spesial menyambut {user?.birthDate ? birthdayLabel(user.birthDate) : ''}.
+                {t('ov.bdayBody', { date: user?.birthDate ? birthdayLabel(user.birthDate) : '' })}
               </div>
             </div>
           </div>
           <Link to="/treatment" className="btn btn-gold shrink-0">
-            Klaim promo ultah
+            {t('ov.bdayClaim')}
           </Link>
         </div>
       )}
@@ -141,26 +144,26 @@ function Overview() {
           </div>
           <div>
             <div className="flex items-center gap-1.5 text-[0.72rem] font-semibold uppercase tracking-wider" style={{ color: 'var(--color-gold-light)' }}>
-              <Crown size={13} /> Poin Privilege
+              <Crown size={13} /> {t('ov.points')}
             </div>
             <Link to="/akun/privilege" className="mt-1 inline-flex items-center gap-1 text-[0.82rem] font-semibold" style={{ color: 'var(--color-gold-light)' }}>
-              Tukar poin <ArrowRight size={13} />
+              {t('ov.redeem')} <ArrowRight size={13} />
             </Link>
           </div>
         </div>
 
         <div className="card-soft p-5">
-          <div className="text-[0.72rem] font-semibold uppercase tracking-wider" style={{ color: 'var(--color-ink-muted)' }}>Booking aktif</div>
+          <div className="text-[0.72rem] font-semibold uppercase tracking-wider" style={{ color: 'var(--color-ink-muted)' }}>{t('ov.activeBookings')}</div>
           <div className="mono mt-2 text-4xl font-extrabold gold-text">{active}</div>
           <Link to="/akun/booking" className="mt-2 inline-flex items-center gap-1 text-[0.8rem] font-semibold" style={{ color: 'var(--color-gold-deep)' }}>
-            Lihat semua <ArrowRight size={13} />
+            {t('ov.viewAll')} <ArrowRight size={13} />
           </Link>
         </div>
 
         <div className="card-soft p-5">
-          <div className="text-[0.72rem] font-semibold uppercase tracking-wider" style={{ color: 'var(--color-ink-muted)' }}>Treatment selesai</div>
+          <div className="text-[0.72rem] font-semibold uppercase tracking-wider" style={{ color: 'var(--color-ink-muted)' }}>{t('ov.doneTreatments')}</div>
           <div className="mono mt-2 text-4xl font-extrabold gold-text">{done}</div>
-          <div className="mt-2 text-[0.8rem]" style={{ color: 'var(--color-ink-muted)' }}>Total kunjungan selesai</div>
+          <div className="mt-2 text-[0.8rem]" style={{ color: 'var(--color-ink-muted)' }}>{t('ov.totalVisits')}</div>
         </div>
       </div>
 
@@ -168,7 +171,7 @@ function Overview() {
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
         {/* Upcoming appointment */}
         <div>
-          <h2 className="text-xl">Jadwal terdekat</h2>
+          <h2 className="text-xl">{t('ov.upcoming')}</h2>
           {upcoming ? (
             <div className="card-soft mt-4 p-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -178,11 +181,11 @@ function Overview() {
                     {formatDateId(upcoming.date)}
                   </div>
                   <div className="mt-1 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-                    Pukul {upcoming.time} WIB · No. {upcoming.id}
+                    {t('ov.atTime', { time: upcoming.time, id: upcoming.id })}
                   </div>
                 </div>
                 <span className="badge" style={{ background: statusTone[upcoming.status as BookingStatus].bg, color: statusTone[upcoming.status as BookingStatus].color }}>
-                  {upcoming.status}
+                  {t(`status.${upcoming.status}` as DictKey)}
                 </span>
               </div>
               <div className="my-4 hairline-gold" />
@@ -195,14 +198,14 @@ function Overview() {
               <div className="mt-4 flex items-center justify-between">
                 <span className="mono text-lg font-extrabold gold-text">{formatRp(upcoming.total)}</span>
                 <Link to="/akun/booking/$id" params={{ id: upcoming.id }} className="btn btn-primary px-4 py-2 text-sm">
-                  <Ticket size={16} /> Bukti janji temu
+                  <Ticket size={16} /> {t('ov.ticket')}
                 </Link>
               </div>
             </div>
           ) : (
             <div className="card-soft mt-4 p-8 text-center">
-              <p className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>Belum ada jadwal mendatang.</p>
-              <Link to="/treatment" className="btn btn-gold mt-5">Booking sekarang</Link>
+              <p className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>{t('ov.noUpcoming')}</p>
+              <Link to="/treatment" className="btn btn-gold mt-5">{t('common.bookNow')}</Link>
             </div>
           )}
 
@@ -213,13 +216,13 @@ function Overview() {
                 <Tag size={20} />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="font-bold leading-tight">Promo: {promo.name}</div>
+                <div className="font-bold leading-tight">{t('ov.promoPrefix', { name: promo.name })}</div>
                 <div className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>
                   <span className="mono font-semibold gold-text">{formatRp(promo.now)}</span>{' '}
                   <span className="mono line-through">{formatRp(promo.was)}</span>
                 </div>
               </div>
-              <Link to="/treatment" className="btn btn-ghost shrink-0 px-4 py-2 text-sm">Ambil</Link>
+              <Link to="/treatment" className="btn btn-ghost shrink-0 px-4 py-2 text-sm">{t('ov.take')}</Link>
             </div>
           )}
         </div>
@@ -227,8 +230,8 @@ function Overview() {
         {/* Notifications (PRD: Sistem Notifikasi / Push) */}
         <div>
           <div className="flex items-center justify-between">
-            <h2 className="text-xl">Notifikasi</h2>
-            <span className="badge badge-promo">{unreadCount} baru</span>
+            <h2 className="text-xl">{t('ov.notifications')}</h2>
+            <span className="badge badge-promo">{t('ov.newCount', { count: unreadCount })}</span>
           </div>
           <div className="card-soft mt-4 divide-y" style={{ borderColor: 'var(--color-line)' }}>
             {notifications.map((n) => {
@@ -258,12 +261,12 @@ function Overview() {
         <div className="flex items-center gap-3">
           <Sparkles size={22} style={{ color: 'var(--color-gold-deep)' }} />
           <div>
-            <div className="font-bold">Siap untuk glow up berikutnya?</div>
-            <div className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>Pesan treatment favoritmu sekarang.</div>
+            <div className="font-bold">{t('ov.glowTitle')}</div>
+            <div className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>{t('ov.glowBody')}</div>
           </div>
         </div>
         <Link to="/treatment" className="btn btn-gold shrink-0">
-          Booking treatment <ArrowRight size={17} />
+          {t('ov.bookTreatment')} <ArrowRight size={17} />
         </Link>
       </div>
     </div>

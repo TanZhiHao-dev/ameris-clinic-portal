@@ -7,6 +7,8 @@ import { AddToCartButton } from '../components/app/AddToCartButton'
 import { PriceTag } from '../components/app/PriceTag'
 import { useCart } from '../lib/cart'
 import { treatmentQuery } from '../server/queries'
+import { useI18n } from '../lib/i18n'
+import type { DictKey } from '../lib/i18n-dict'
 
 export const Route = createFileRoute('/treatment/$id')({
   loader: ({ context: { queryClient }, params: { id } }) =>
@@ -19,6 +21,8 @@ function DetailPage() {
   const navigate = useNavigate()
   const { add } = useCart()
   const { data: t, isPending } = useQuery(treatmentQuery(id))
+  // Aliased to `tr` — the treatment data is named `t`.
+  const { t: tr } = useI18n()
 
   if (isPending) {
     return <PageShell><div className="shell-x py-24" /></PageShell>
@@ -28,9 +32,9 @@ function DetailPage() {
     return (
       <PageShell>
         <div className="shell-x py-24 text-center">
-          <h1 className="text-3xl">Treatment tidak ditemukan</h1>
+          <h1 className="text-3xl">{tr('tm.noneTitle')}</h1>
           <Link to="/treatment" className="btn btn-primary mt-6">
-            <ArrowLeft size={18} /> Kembali ke menu
+            <ArrowLeft size={18} /> {tr('td.backToMenu')}
           </Link>
         </div>
       </PageShell>
@@ -48,7 +52,7 @@ function DetailPage() {
     <PageShell>
       <div className="shell-x py-10 sm:py-14">
         <Link to="/treatment" className="nav-link inline-flex items-center gap-1.5 text-sm">
-          <ArrowLeft size={16} /> Kembali ke menu
+          <ArrowLeft size={16} /> {tr('td.backToMenu')}
         </Link>
 
         <div className="mt-6 grid gap-10 lg:grid-cols-2">
@@ -67,7 +71,7 @@ function DetailPage() {
 
           {/* Info */}
           <div>
-            <span className="eyebrow">{t.category}</span>
+            <span className="eyebrow">{tr(`cat.${t.category}` as DictKey)}</span>
             <h1 className="mt-3 text-[2.4rem] leading-tight sm:text-[3rem]">{t.name}</h1>
 
             <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -76,11 +80,11 @@ function DetailPage() {
               </span>
               {t.available ? (
                 <span className="badge badge-ok">
-                  <span className="glow-dot" aria-hidden /> Tersedia
+                  <span className="glow-dot" aria-hidden /> {tr('common.available')}
                 </span>
               ) : (
                 <span className="badge badge-off">
-                  <span className="glow-dot is-muted" aria-hidden /> Tidak tersedia
+                  <span className="glow-dot is-muted" aria-hidden /> {tr('common.unavailable')}
                 </span>
               )}
             </div>
@@ -91,31 +95,27 @@ function DetailPage() {
 
             <div className="mt-8 rounded-2xl p-6" style={{ background: 'var(--color-shell)', border: '1px solid var(--color-line)' }}>
               <div className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-                {t.isPromo && t.promoPrice != null && t.promoPrice < t.price ? 'Harga promo' : 'Harga mulai'}
+                {t.isPromo && t.promoPrice != null && t.promoPrice < t.price ? tr('td.pricePromo') : tr('td.priceFrom')}
               </div>
               <div className="mt-1"><PriceTag t={t} numClass="text-3xl" /></div>
               <div className="mt-1 text-[0.8rem]" style={{ color: 'var(--color-ink-muted)' }}>
                 {t.isPromo && t.promoPrice != null && t.promoPrice < t.price
-                  ? 'Harga sudah termasuk diskon promo.'
-                  : '*Belum termasuk promo/diskon'}
+                  ? tr('td.priceWithDiscount')
+                  : tr('td.priceExcl')}
               </div>
 
               <div className="mt-5 flex flex-wrap gap-3">
                 <button type="button" className="btn btn-gold" disabled={!t.available} onClick={bookNow}>
-                  <CalendarCheck size={18} /> Booking sekarang
+                  <CalendarCheck size={18} /> {tr('common.bookNow')}
                 </button>
-                <AddToCartButton t={t} className="btn btn-outline px-5" label="Tambah ke keranjang" />
+                <AddToCartButton t={t} className="btn btn-outline px-5" label={tr('cart.addLong')} />
               </div>
             </div>
 
             <ul className="mt-6 flex flex-col gap-2 text-sm" style={{ color: 'var(--color-ink-soft)' }}>
-              {[
-                'Ditangani oleh tenaga profesional bersertifikat',
-                'Konsultasi kondisi kulit sebelum treatment',
-                'Poin Ameris Privilege otomatis di tiap transaksi',
-              ].map((p) => (
-                <li key={p} className="flex items-center gap-2">
-                  <span className="glow-dot" aria-hidden /> {p}
+              {(['td.bullet1', 'td.bullet2', 'td.bullet3'] as DictKey[]).map((key) => (
+                <li key={key} className="flex items-center gap-2">
+                  <span className="glow-dot" aria-hidden /> {tr(key)}
                 </li>
               ))}
             </ul>
@@ -125,7 +125,7 @@ function DetailPage() {
         {/* Related */}
         {related.length > 0 && (
           <div className="mt-16">
-            <h2 className="text-2xl">Treatment {t.category} lainnya</h2>
+            <h2 className="text-2xl">{tr('td.relatedTitle', { category: tr(`cat.${t.category}` as DictKey) })}</h2>
             <div className="mt-6 grid gap-5 sm:grid-cols-3">
               {related.map((r) => (
                 <Link

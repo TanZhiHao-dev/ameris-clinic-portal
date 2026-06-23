@@ -4,19 +4,22 @@ import { CalendarDays, Crown, LayoutDashboard, LogOut, UserCog } from 'lucide-re
 import { PageShell } from '../components/app/PageShell'
 import { SocialLinks } from '../components/app/SocialLinks'
 import { authClient } from '../lib/auth-client'
+import { useI18n } from '../lib/i18n'
+import type { DictKey } from '../lib/i18n-dict'
 
 export const Route = createFileRoute('/akun')({ component: AccountLayout })
 
-const NAV = [
-  { to: '/akun', label: 'Ringkasan', icon: LayoutDashboard, exact: true },
-  { to: '/akun/booking', label: 'Booking saya', icon: CalendarDays, exact: false },
-  { to: '/akun/privilege', label: 'Privilege Club', icon: Crown, exact: false },
-  { to: '/akun/profil', label: 'Profil', icon: UserCog, exact: false },
+const NAV: { to: string; label: DictKey; icon: typeof LayoutDashboard; exact: boolean }[] = [
+  { to: '/akun', label: 'ac.nav.overview', icon: LayoutDashboard, exact: true },
+  { to: '/akun/booking', label: 'ac.nav.bookings', icon: CalendarDays, exact: false },
+  { to: '/akun/privilege', label: 'ac.nav.privilege', icon: Crown, exact: false },
+  { to: '/akun/profil', label: 'ac.nav.profile', icon: UserCog, exact: false },
 ]
 
 function AccountLayout() {
   const navigate = useNavigate()
   const { data: session, isPending } = authClient.useSession()
+  const { t } = useI18n()
   const role = (session?.user as { role?: string } | undefined)?.role
 
   // Patient area. Send staff (owner/dokter) to their own console instead of
@@ -30,7 +33,7 @@ function AccountLayout() {
   }, [isPending, session, role, navigate])
 
   const userName = session?.user.name ?? '—'
-  const memberLine = session ? 'Member' : '—'
+  const memberLine = session ? t('ac.member') : '—'
 
   // Avoid flashing the patient dashboard (and firing 401 queries) before auth
   // resolves, or while a non-patient is being redirected to their console.
@@ -38,7 +41,7 @@ function AccountLayout() {
     return (
       <PageShell>
         <div className="grid min-h-[60vh] place-items-center">
-          <span className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>Memuat…</span>
+          <span className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>{t('ac.loading')}</span>
         </div>
       </PageShell>
     )
@@ -78,7 +81,7 @@ function AccountLayout() {
                       activeProps={{ style: { background: 'var(--color-ink)', color: 'var(--color-cream)' } }}
                       inactiveProps={{ style: { color: 'var(--color-ink-soft)' } }}
                     >
-                      <Icon size={18} /> {n.label}
+                      <Icon size={18} /> {t(n.label)}
                     </Link>
                   )
                 })}
@@ -91,13 +94,13 @@ function AccountLayout() {
                   className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition"
                   style={{ color: 'var(--color-rose)' }}
                 >
-                  <LogOut size={18} /> Keluar
+                  <LogOut size={18} /> {t('header.logout')}
                 </button>
               </nav>
 
               <div className="mt-5 border-t pt-5" style={{ borderColor: 'var(--color-line)' }}>
                 <div className="px-1 text-[0.7rem] font-semibold uppercase tracking-wider" style={{ color: 'var(--color-ink-muted)' }}>
-                  Ikuti kami
+                  {t('ac.followUs')}
                 </div>
                 <div className="mt-3 px-1">
                   <SocialLinks size={18} />
