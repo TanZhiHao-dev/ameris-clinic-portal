@@ -9,7 +9,6 @@ import { Loyalty } from '../components/landing/Loyalty'
 import { ValueProps } from '../components/landing/ValueProps'
 import { FinalCta } from '../components/landing/FinalCta'
 import { SiteFooter } from '../components/landing/SiteFooter'
-import { useReveal } from '../hooks/useReveal'
 
 export const Route = createFileRoute('/')({
   // Prefetch on the server so the menu/promos/tiers are in the initial HTML.
@@ -23,7 +22,6 @@ export const Route = createFileRoute('/')({
 })
 
 function Home() {
-  useReveal()
   return (
     <div>
       <SiteHeader />
