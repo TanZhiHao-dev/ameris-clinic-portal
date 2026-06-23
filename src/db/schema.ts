@@ -36,6 +36,9 @@ export const treatments = pgTable('treatments', {
   isAvailable: boolean('is_available').notNull().default(true),
   isPromo: boolean('is_promo').notNull().default(false),
   isBestSeller: boolean('is_best_seller').notNull().default(false),
+  // The single treatment featured in the landing hero card. Owner-controlled,
+  // single-select (turning one on clears the others).
+  isHeroFeatured: boolean('is_hero_featured').notNull().default(false),
   pointCost: integer('point_cost'),
   image: text('image'),
   promoWas: integer('promo_was'),

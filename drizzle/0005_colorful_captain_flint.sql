@@ -1,0 +1,1 @@
+ALTER TABLE "treatments" ADD COLUMN "is_hero_featured" boolean DEFAULT false NOT NULL;

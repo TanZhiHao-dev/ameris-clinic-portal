@@ -48,6 +48,8 @@ export type Treatment = {
   pricePerUnit?: boolean
   available: boolean
   bestSeller?: boolean
+  /** The single treatment featured in the landing hero card (owner-controlled). */
+  heroFeatured?: boolean
   /** Promo state from the DB (owner-managed). `promoPrice` < `price` activates
    *  the discount on the website; the cart/booking then charge `promoPrice`. */
   isPromo?: boolean
@@ -84,7 +86,7 @@ export const categories = [
 
 export const treatments: Treatment[] = [
   // ── Ameris Signature Facial ──
-  { id: 'facial-basic', name: 'Ameris Basic Facial', blurb: 'Membersihkan kotoran, minyak & sel kulit mati — wajah lebih segar dan sehat.', category: 'Facial', duration: '90 min', price: 170_000, available: true, bestSeller: true },
+  { id: 'facial-basic', name: 'Ameris Basic Facial', blurb: 'Membersihkan kotoran, minyak & sel kulit mati — wajah lebih segar dan sehat.', category: 'Facial', duration: '90 min', price: 170_000, available: true, bestSeller: true, heroFeatured: true },
   { id: 'facial-acne', name: 'Acne Recovery Facial', blurb: 'Untuk kulit berjerawat — bersihkan pori mendalam dan redakan peradangan.', category: 'Facial', duration: '90 min', price: 370_000, available: true },
   { id: 'facial-platinum', name: 'Platinum Glow Facial', blurb: 'Facial premium untuk kulit lebih halus, cerah, lembap, dan glowing.', category: 'Facial', duration: '90 min', price: 370_000, available: true, bestSeller: true },
   { id: 'facial-diamond', name: 'Diamond Rejuvenation Facial', blurb: 'Microdermabrasi untuk angkat sel mati & regenerasi kulit lebih cerah.', category: 'Facial', duration: '30 min', price: 370_000, available: true },

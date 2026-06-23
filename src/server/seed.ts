@@ -139,6 +139,7 @@ export async function seedDatabase() {
         isAvailable: t.available,
         isPromo: !!promo,
         isBestSeller: !!t.bestSeller,
+        isHeroFeatured: !!t.heroFeatured,
         pointCost: redeemableIds.has(t.id) ? pointOf(price) : null,
         promoWas: promo?.was ?? null,
         promoNow: promo?.now ?? null,

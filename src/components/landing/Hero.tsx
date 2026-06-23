@@ -15,9 +15,10 @@ const STATS = [
 
 export function Hero() {
   const { data: treatments = [] } = useQuery(treatmentsQuery)
-  // Feature a real best-seller — prefer one with a photo so the hero shows an
-  // actual treatment image, not a placeholder.
+  // The owner's hero pick wins; otherwise fall back to a real best-seller —
+  // preferring one with a photo so the hero shows an actual treatment image.
   const featured =
+    treatments.find((t) => t.heroFeatured) ??
     treatments.find((t) => t.bestSeller && t.image && t.available) ??
     treatments.find((t) => t.bestSeller && t.image) ??
     treatments.find((t) => t.image) ??

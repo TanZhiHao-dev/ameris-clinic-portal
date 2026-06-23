@@ -16,6 +16,7 @@ export type ClientTreatment = {
   pricePerUnit: boolean // when true, price is shown as "Rp.../unit"
   available: boolean
   bestSeller: boolean
+  heroFeatured: boolean // the single treatment shown in the landing hero card
   isPromo: boolean
   pointCost: number | null
   promoPrice: number | null // owner-set promo price; discount derived vs `price`
@@ -34,6 +35,7 @@ const toClient = (t: Row): ClientTreatment => ({
   pricePerUnit: t.pricePerUnit,
   available: t.isAvailable,
   bestSeller: t.isBestSeller,
+  heroFeatured: t.isHeroFeatured,
   isPromo: t.isPromo,
   pointCost: t.pointCost,
   promoPrice: t.promoNow ?? null,
@@ -114,6 +116,8 @@ export const updateTreatment = createServerFn({ method: 'POST' })
       duration: z.string().optional(),
       pricePerUnit: z.boolean().optional(),
       isAvailable: z.boolean().optional(),
+      isBestSeller: z.boolean().optional(),
+      isHeroFeatured: z.boolean().optional(),
       isPromo: z.boolean().optional(),
       promoNow: z.number().int().nonnegative().nullable().optional(), // owner-set promo price (null clears)
       pointCost: z.number().int().nullable().optional(),
@@ -123,6 +127,12 @@ export const updateTreatment = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     await requireOwner()
     const { id, ...patch } = data
+    // A non-best-seller can't be the hero pick.
+    if (patch.isBestSeller === false) patch.isHeroFeatured = false
+    // The hero is single-select: turning it on clears it from every other row.
+    if (patch.isHeroFeatured === true) {
+      await db.update(treatments).set({ isHeroFeatured: false }).where(ne(treatments.id, id))
+    }
     const [row] = await db.update(treatments).set(patch).where(eq(treatments.id, id)).returning()
     return row ? toClient(row) : null
   })

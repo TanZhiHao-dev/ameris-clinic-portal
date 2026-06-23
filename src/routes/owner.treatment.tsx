@@ -1,7 +1,7 @@
 import { type ChangeEvent, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ImagePlus, Plus, Search, Trash2, Upload, X } from 'lucide-react'
+import { ImagePlus, Plus, Search, Star, Trash2, Upload, X } from 'lucide-react'
 import type { Category } from '../data/clinic'
 import {
   createTreatment,
@@ -20,6 +20,8 @@ type Row = {
   price: number
   pricePerUnit: boolean
   available: boolean
+  bestSeller: boolean
+  heroFeatured: boolean
   promo: boolean
   promoPrice: number | null
   image?: string
@@ -32,6 +34,8 @@ type UpdateVars = {
   price?: number
   pricePerUnit?: boolean
   isAvailable?: boolean
+  isBestSeller?: boolean
+  isHeroFeatured?: boolean
   isPromo?: boolean
   promoNow?: number | null
   image?: string | null
@@ -69,6 +73,8 @@ function CatalogAdmin() {
     price: t.price,
     pricePerUnit: t.pricePerUnit,
     available: t.available,
+    bestSeller: t.bestSeller,
+    heroFeatured: t.heroFeatured,
     promo: t.promo,
     promoPrice: t.promoPrice,
     image: t.image,
@@ -102,6 +108,9 @@ function CatalogAdmin() {
     ...(v.price !== undefined && { price: v.price }),
     ...(v.pricePerUnit !== undefined && { pricePerUnit: v.pricePerUnit }),
     ...(v.isAvailable !== undefined && { available: v.isAvailable }),
+    // Dropping best-seller also drops the hero pick (a non-best-seller can't be hero).
+    ...(v.isBestSeller !== undefined && { bestSeller: v.isBestSeller, ...(v.isBestSeller === false && { heroFeatured: false }) }),
+    ...(v.isHeroFeatured !== undefined && { heroFeatured: v.isHeroFeatured }),
     ...(v.isPromo !== undefined && { isPromo: v.isPromo, promo: v.isPromo }),
     ...(v.promoNow !== undefined && { promoPrice: v.promoNow }),
     ...(v.image !== undefined && { image: v.image ?? undefined }),
@@ -116,7 +125,12 @@ function CatalogAdmin() {
       await qc.cancelQueries({ queryKey: ['owner-treatments'] })
       const prev = qc.getQueryData<AdminRow[]>(['owner-treatments'])
       qc.setQueryData<AdminRow[]>(['owner-treatments'], (old) =>
-        old?.map((t) => (t.id === v.id ? applyPatch(t, v) : t)),
+        old?.map((t) => {
+          if (t.id === v.id) return applyPatch(t, v)
+          // Hero is single-select: turning one on clears it from the others.
+          if (v.isHeroFeatured === true && t.heroFeatured) return { ...t, heroFeatured: false }
+          return t
+        }),
       )
       return { prev }
     },
@@ -152,6 +166,8 @@ function CatalogAdmin() {
     if ('available' in p && p.available !== undefined) updateMut.mutate({ id, isAvailable: p.available })
     if ('promo' in p && p.promo !== undefined) updateMut.mutate({ id, isPromo: p.promo })
     if ('pricePerUnit' in p && p.pricePerUnit !== undefined) updateMut.mutate({ id, pricePerUnit: p.pricePerUnit })
+    if ('bestSeller' in p && p.bestSeller !== undefined) updateMut.mutate({ id, isBestSeller: p.bestSeller })
+    if ('heroFeatured' in p && p.heroFeatured !== undefined) updateMut.mutate({ id, isHeroFeatured: p.heroFeatured })
   }
   const commitPrice = (id: string) => {
     const raw = priceEdits[id]
@@ -192,7 +208,7 @@ function CatalogAdmin() {
           <span className="eyebrow">Kelola Katalog</span>
           <h1 className="mt-2 text-[2rem]">Treatment</h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-            Ubah harga, status ketersediaan, dan promo. {rows.length} treatment.
+            Ubah harga, ketersediaan, best seller, dan promo. Pilih 1 best seller jadi “hero” di landing. {rows.length} treatment.
           </p>
         </div>
         <button type="button" className="btn btn-gold" onClick={() => setAdding((v) => !v)}>
@@ -237,6 +253,7 @@ function CatalogAdmin() {
               <th className="px-3 py-4 font-semibold">Gambar</th>
               <th className="px-3 py-4 font-semibold">Harga</th>
               <th className="px-3 py-4 font-semibold">Tersedia</th>
+              <th className="px-3 py-4 font-semibold">Best Seller</th>
               <th className="px-3 py-4 font-semibold">Promo</th>
               <th className="px-3 py-4" />
             </tr>
@@ -290,6 +307,29 @@ function CatalogAdmin() {
                   </div>
                 </td>
                 <td data-label="Tersedia" className="px-3 py-4"><Switch on={r.available} onChange={() => patch(r.id, { available: !r.available })} label={`Tersedia ${r.name}`} /></td>
+                <td data-label="Best Seller" className="px-3 py-4">
+                  <div className="flex flex-col gap-2">
+                    <Switch on={r.bestSeller} onChange={() => patch(r.id, { bestSeller: !r.bestSeller })} label={`Best seller ${r.name}`} />
+                    {r.bestSeller && (
+                      <button
+                        type="button"
+                        onClick={() => patch(r.id, { heroFeatured: !r.heroFeatured })}
+                        aria-pressed={r.heroFeatured}
+                        aria-label={`Tampilkan ${r.name} di hero`}
+                        title="Hanya 1 treatment yang tampil di hero section"
+                        className="inline-flex w-fit items-center gap-1 rounded-full px-2.5 py-1 text-[0.7rem] font-semibold transition"
+                        style={
+                          r.heroFeatured
+                            ? { background: 'var(--grad-gold)', color: '#3a2c0f' }
+                            : { border: '1px solid var(--color-line)', color: 'var(--color-ink-muted)' }
+                        }
+                      >
+                        <Star size={12} style={r.heroFeatured ? { fill: '#3a2c0f' } : undefined} />
+                        {r.heroFeatured ? 'Tampil di hero' : 'Jadikan hero'}
+                      </button>
+                    )}
+                  </div>
+                </td>
                 <td data-label="Promo" className="px-3 py-4">
                   <div className="flex flex-col gap-2">
                     <Switch on={r.promo} onChange={() => patch(r.id, { promo: !r.promo })} label={`Promo ${r.name}`} />
