@@ -50,6 +50,13 @@
       "when": 1782269609057,
       "tag": "0006_add_blurb_en",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1782271769666,
+      "tag": "0007_seed_blurb_en",
+      "breakpoints": true
     }
   ]
 }

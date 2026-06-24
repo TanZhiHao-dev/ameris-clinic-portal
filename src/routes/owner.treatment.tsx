@@ -89,7 +89,7 @@ function CatalogAdmin() {
   const [q, setQ] = useState('')
   const [cat, setCat] = useState<'Semua' | Category>('Semua')
   const [adding, setAdding] = useState(false)
-  const [draft, setDraft] = useState({ name: '', category: 'Facial' as Category, duration: '60 min', price: '' })
+  const [draft, setDraft] = useState({ name: '', category: 'Facial' as Category, duration: '60 min', price: '', blurb: '', blurbEn: '' })
   const [priceEdits, setPriceEdits] = useState<Record<string, string>>({})
   const [promoEdits, setPromoEdits] = useState<Record<string, string>>({})
   const [imgEdit, setImgEdit] = useState<Row | null>(null)
@@ -164,7 +164,7 @@ function CatalogAdmin() {
     setSubEdit(null)
   }
   const createMut = useMutation({
-    mutationFn: (v: { name: string; category: string; duration: string; price: number }) =>
+    mutationFn: (v: { name: string; category: string; duration: string; price: number; blurb: string; blurbEn: string }) =>
       createTreatment({ data: v }),
     onSuccess: invalidate,
   })
@@ -209,8 +209,15 @@ function CatalogAdmin() {
   const add = () => {
     const price = parseInt(draft.price.replace(/\D/g, ''), 10)
     if (!draft.name.trim() || !price) return
-    createMut.mutate({ name: draft.name.trim(), category: draft.category, duration: draft.duration, price })
-    setDraft({ name: '', category: 'Facial', duration: '60 min', price: '' })
+    createMut.mutate({
+      name: draft.name.trim(),
+      category: draft.category,
+      duration: draft.duration,
+      price,
+      blurb: draft.blurb.trim(),
+      blurbEn: draft.blurbEn.trim(),
+    })
+    setDraft({ name: '', category: 'Facial', duration: '60 min', price: '', blurb: '', blurbEn: '' })
     setAdding(false)
   }
 
@@ -221,7 +228,7 @@ function CatalogAdmin() {
           <span className="eyebrow">Kelola Katalog</span>
           <h1 className="mt-2 text-[2rem]">Treatment</h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-            Ubah harga, subtitle (ID & English), ketersediaan, best seller, dan promo. Pilih 1 best seller jadi “hero” di landing. {rows.length} treatment.
+            Ubah harga, deskripsi (ID & English), ketersediaan, best seller, dan promo. Pilih 1 best seller jadi “hero” di landing. {rows.length} treatment.
           </p>
         </div>
         <button type="button" className="btn btn-gold" onClick={() => setAdding((v) => !v)}>
@@ -230,14 +237,28 @@ function CatalogAdmin() {
       </div>
 
       {adding && (
-        <div className="card-soft mt-5 grid gap-3 p-5 sm:grid-cols-[2fr_1fr_1fr_1fr_auto]">
-          <input className={inp} placeholder="Nama treatment" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-          <select className={inp} value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value as Category })}>
-            {CATS.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <input className={inp} placeholder="Durasi" value={draft.duration} onChange={(e) => setDraft({ ...draft, duration: e.target.value })} />
-          <input className={inp} inputMode="numeric" placeholder="Harga" value={draft.price} onChange={(e) => setDraft({ ...draft, price: e.target.value })} />
-          <button type="button" className="btn btn-primary" onClick={add}>Simpan</button>
+        <div className="card-soft mt-5 p-5">
+          <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr_1fr]">
+            <input className={inp} placeholder="Nama treatment" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+            <select className={inp} value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value as Category })}>
+              {CATS.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <input className={inp} placeholder="Durasi" value={draft.duration} onChange={(e) => setDraft({ ...draft, duration: e.target.value })} />
+            <input className={inp} inputMode="numeric" placeholder="Harga" value={draft.price} onChange={(e) => setDraft({ ...draft, price: e.target.value })} />
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-[0.78rem] font-semibold" style={{ color: 'var(--color-ink-soft)' }}>Deskripsi (Bahasa Indonesia)</label>
+              <textarea className={`${inp} h-20 w-full resize-none leading-relaxed`} placeholder="Cth: Membersihkan kotoran, minyak & sel kulit mati." value={draft.blurb} onChange={(e) => setDraft({ ...draft, blurb: e.target.value })} />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-[0.78rem] font-semibold" style={{ color: 'var(--color-ink-soft)' }}>Deskripsi (English) <span style={{ color: 'var(--color-ink-muted)' }}>— opsional</span></label>
+              <textarea className={`${inp} h-20 w-full resize-none leading-relaxed`} placeholder="E.g: Deep-cleanses dirt, oil & dead skin." value={draft.blurbEn} onChange={(e) => setDraft({ ...draft, blurbEn: e.target.value })} />
+            </div>
+          </div>
+          <div className="mt-3 flex justify-end">
+            <button type="button" className="btn btn-primary" onClick={add}>Simpan treatment</button>
+          </div>
         </div>
       )}
 
@@ -282,11 +303,11 @@ function CatalogAdmin() {
                     onClick={() => setSubEdit(r)}
                     className="mt-1.5 inline-flex max-w-[15rem] items-center gap-1.5 rounded-md px-2 py-1 text-left text-[0.72rem] transition hover:bg-[var(--color-muted)]"
                     style={{ color: 'var(--color-ink-soft)' }}
-                    aria-label={`Atur subtitle ${r.name}`}
-                    title="Atur subtitle (Indonesia & English)"
+                    aria-label={`Atur deskripsi ${r.name}`}
+                    title="Atur deskripsi (Indonesia & English)"
                   >
                     <Languages size={13} className="shrink-0" style={{ color: 'var(--color-gold-deep)' }} />
-                    <span className="truncate">{r.blurb || 'Tambah subtitle…'}</span>
+                    <span className="truncate">{r.blurb || 'Tambah deskripsi…'}</span>
                     {r.blurbEn ? (
                       <span className="shrink-0 rounded-sm px-1 text-[0.6rem] font-bold" style={{ background: 'var(--color-muted)', color: 'var(--color-gold-deep)' }}>EN</span>
                     ) : (
@@ -397,7 +418,7 @@ function CatalogAdmin() {
         </table>
       </div>
       <p className="mt-3 text-[0.78rem]" style={{ color: 'var(--color-ink-muted)' }}>
-        Perubahan harga, subtitle, ketersediaan, promo, dan gambar tersimpan langsung ke database.
+        Perubahan harga, deskripsi, ketersediaan, promo, dan gambar tersimpan langsung ke database.
       </p>
 
       {imgEdit && <ImageDialog row={imgEdit} saving={updateMut.isPending} onClose={() => setImgEdit(null)} onSave={saveImage} />}
@@ -499,7 +520,7 @@ function ImageDialog({
   )
 }
 
-// Subtitle editor — the short description shown under each treatment name on the
+// Description editor — the short text shown under each treatment name on the
 // public site. `blurb` = Indonesian (shown by default), `blurbEn` = English
 // (shown when the visitor switches the site to English; falls back to `blurb`).
 function SubtitleDialog({
@@ -524,14 +545,14 @@ function SubtitleDialog({
         <div className="flex items-center justify-between px-6 py-4" style={{ background: 'var(--color-espresso)', color: '#f6eddc' }}>
           <div className="flex items-center gap-2">
             <Languages size={18} style={{ color: 'var(--color-gold)' }} />
-            <span className="font-bold">Atur subtitle — {row.name}</span>
+            <span className="font-bold">Atur deskripsi — {row.name}</span>
           </div>
           <button type="button" aria-label="Tutup" onClick={onClose} className="opacity-80 transition hover:opacity-100"><X size={18} /></button>
         </div>
 
         <div className="p-6">
           <label className="block text-sm font-semibold">
-            Subtitle <span style={{ color: 'var(--color-ink-muted)' }}>(Bahasa Indonesia)</span>
+            Deskripsi <span style={{ color: 'var(--color-ink-muted)' }}>(Bahasa Indonesia)</span>
           </label>
           <textarea
             className={ta}
@@ -541,7 +562,7 @@ function SubtitleDialog({
           />
 
           <label className="mt-4 block text-sm font-semibold">
-            Subtitle <span style={{ color: 'var(--color-ink-muted)' }}>(English)</span>
+            Deskripsi <span style={{ color: 'var(--color-ink-muted)' }}>(English)</span>
           </label>
           <textarea
             className={ta}
@@ -551,7 +572,7 @@ function SubtitleDialog({
           />
 
           <p className="mt-3 rounded-xl px-4 py-3 text-[0.78rem] leading-relaxed" style={{ background: 'var(--color-cream)', color: 'var(--color-ink-soft)' }}>
-            Subtitle Indonesia tampil secara default. Subtitle English hanya tampil saat pengunjung memilih bahasa <strong>EN</strong> — kalau dikosongkan, versi Indonesia yang dipakai.
+            Deskripsi Indonesia tampil secara default. Deskripsi English hanya tampil saat pengunjung memilih bahasa <strong>EN</strong> — kalau dikosongkan, versi Indonesia yang dipakai.
           </p>
 
           <div className="mt-5 flex justify-end gap-3">
@@ -562,7 +583,7 @@ function SubtitleDialog({
               disabled={saving}
               onClick={() => onSave(row.id, id.trim(), en.trim() ? en.trim() : null)}
             >
-              {saving ? 'Menyimpan…' : 'Simpan subtitle'}
+              {saving ? 'Menyimpan…' : 'Simpan deskripsi'}
             </button>
           </div>
         </div>

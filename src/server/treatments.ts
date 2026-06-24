@@ -96,6 +96,8 @@ export const createTreatment = createServerFn({ method: 'POST' })
       category: z.string(),
       duration: z.string(),
       price: z.number().int().nonnegative(),
+      blurb: z.string().optional(), // Indonesian description
+      blurbEn: z.string().optional(), // English description
     }),
   )
   .handler(async ({ data }) => {
@@ -103,7 +105,15 @@ export const createTreatment = createServerFn({ method: 'POST' })
     const id = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Math.floor(Math.random() * 9999)
     const [row] = await db
       .insert(treatments)
-      .values({ id, name: data.name, category: data.category, duration: data.duration, price: data.price })
+      .values({
+        id,
+        name: data.name,
+        category: data.category,
+        duration: data.duration,
+        price: data.price,
+        blurb: data.blurb?.trim() || '',
+        blurbEn: data.blurbEn?.trim() || null,
+      })
       .returning()
     return toClient(row)
   })
