@@ -10,6 +10,7 @@ export type ClientTreatment = {
   id: string
   name: string
   blurb: string
+  blurbEn: string | null // optional English subtitle; falls back to `blurb`
   category: Category
   duration: string
   price: number
@@ -29,6 +30,7 @@ const toClient = (t: Row): ClientTreatment => ({
   id: t.id,
   name: t.name,
   blurb: t.blurb,
+  blurbEn: t.blurbEn ?? null,
   category: t.category as Category,
   duration: t.duration,
   price: t.price,
@@ -112,6 +114,8 @@ export const updateTreatment = createServerFn({ method: 'POST' })
       id: z.string(),
       price: z.number().int().nonnegative().optional(),
       name: z.string().optional(),
+      blurb: z.string().optional(), // Indonesian subtitle
+      blurbEn: z.string().nullable().optional(), // English subtitle (null clears)
       category: z.string().optional(),
       duration: z.string().optional(),
       pricePerUnit: z.boolean().optional(),

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, CalendarCheck, Sparkles } from 'lucide-react'
 import { clinic } from '../../data/clinic'
 import { treatmentsQuery } from '../../server/queries'
-import { useI18n } from '../../lib/i18n'
+import { pickLang, useI18n } from '../../lib/i18n'
 import type { DictKey } from '../../lib/i18n-dict'
 import { TreatmentThumb } from './TreatmentThumb'
 import { PriceTag } from '../app/PriceTag'
@@ -17,7 +17,7 @@ const STATS: { value: string; label: DictKey }[] = [
 
 export function Hero() {
   const { data: treatments = [] } = useQuery(treatmentsQuery)
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   // The owner's hero pick wins; otherwise fall back to a real best-seller —
   // preferring one with a photo so the hero shows an actual treatment image.
   const featured =
@@ -119,7 +119,7 @@ export function Hero() {
                 </span>
               </div>
               <p className="mt-1 line-clamp-2 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-                {featured?.blurb ?? 'Laser Pico Second Technology — cerahkan kulit & ratakan warna.'}
+                {featured ? pickLang(lang, featured.blurb, featured.blurbEn) : 'Laser Pico Second Technology — cerahkan kulit & ratakan warna.'}
               </p>
 
               <div className="mt-4 flex flex-wrap items-end justify-between gap-2">

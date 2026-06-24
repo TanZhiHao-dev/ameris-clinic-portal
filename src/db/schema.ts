@@ -27,6 +27,9 @@ export const treatments = pgTable('treatments', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   blurb: text('blurb').notNull().default(''),
+  // Optional English subtitle. When set, the public site shows it instead of
+  // `blurb` while the visitor's language is English. Owner-managed.
+  blurbEn: text('blurb_en'),
   category: text('category').notNull(),
   duration: text('duration').notNull().default(''),
   price: integer('price').notNull().default(0),
@@ -137,8 +140,9 @@ export const notifications = pgTable('notifications', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
-// Simple key-value store for owner-editable settings (e.g. the QRIS payment
-// image as a data-URL). Avoids a one-off table per setting.
+// Simple key-value store for owner-editable settings. Avoids a one-off table
+// per setting. Currently unused (the manual QRIS image it once held was
+// replaced by Midtrans-generated QRIS/VA) — kept for future settings.
 export const appSettings = pgTable('app_settings', {
   key: text('key').primaryKey(),
   value: text('value'),

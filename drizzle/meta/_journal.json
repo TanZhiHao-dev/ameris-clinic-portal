@@ -43,6 +43,13 @@
       "when": 1782189918600,
       "tag": "0005_colorful_captain_flint",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782269609057,
+      "tag": "0006_add_blurb_en",
+      "breakpoints": true
     }
   ]
 }

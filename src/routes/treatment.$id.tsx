@@ -7,7 +7,7 @@ import { AddToCartButton } from '../components/app/AddToCartButton'
 import { PriceTag } from '../components/app/PriceTag'
 import { useCart } from '../lib/cart'
 import { treatmentQuery } from '../server/queries'
-import { useI18n } from '../lib/i18n'
+import { pickLang, useI18n } from '../lib/i18n'
 import type { DictKey } from '../lib/i18n-dict'
 
 export const Route = createFileRoute('/treatment/$id')({
@@ -22,7 +22,7 @@ function DetailPage() {
   const { add } = useCart()
   const { data: t, isPending } = useQuery(treatmentQuery(id))
   // Aliased to `tr` — the treatment data is named `t`.
-  const { t: tr } = useI18n()
+  const { t: tr, lang } = useI18n()
 
   if (isPending) {
     return <PageShell><div className="shell-x py-24" /></PageShell>
@@ -90,7 +90,7 @@ function DetailPage() {
             </div>
 
             <p className="mt-6 text-[1.05rem] leading-relaxed" style={{ color: 'var(--color-ink-soft)' }}>
-              {t.blurb}
+              {pickLang(lang, t.blurb, t.blurbEn)}
             </p>
 
             <div className="mt-8 rounded-2xl p-6" style={{ background: 'var(--color-shell)', border: '1px solid var(--color-line)' }}>

@@ -73,3 +73,9 @@ export function useI18n() {
   if (!c) throw new Error('useI18n must be used within I18nProvider')
   return c
 }
+
+// Pick a localized value for owner-managed content (e.g. treatment subtitles):
+// the English text when the site is in English AND it exists, else the default.
+export function pickLang(lang: Lang, id: string, en?: string | null): string {
+  return lang === 'en' && en ? en : id
+}

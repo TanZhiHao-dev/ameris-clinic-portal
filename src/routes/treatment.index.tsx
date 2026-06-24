@@ -7,7 +7,7 @@ import { TreatmentThumb } from '../components/landing/TreatmentThumb'
 import { AddToCartButton } from '../components/app/AddToCartButton'
 import { PriceTag } from '../components/app/PriceTag'
 import { treatmentsQuery } from '../server/queries'
-import { useI18n } from '../lib/i18n'
+import { pickLang, useI18n } from '../lib/i18n'
 import type { DictKey } from '../lib/i18n-dict'
 
 export const Route = createFileRoute('/treatment/')({
@@ -31,7 +31,7 @@ function MenuPage() {
   const [q, setQ] = useState('')
   const { data: treatments = [] } = useQuery(treatmentsQuery)
   // Aliased to `tr` — the treatment map variable below is named `t`.
-  const { t: tr } = useI18n()
+  const { t: tr, lang } = useI18n()
 
   const list = treatments.filter((t) => {
     if (!t.name?.trim()) return false // skip malformed rows so they don't render as empty cards
@@ -151,7 +151,7 @@ function MenuPage() {
                       <h3 className="text-lg leading-snug transition hover:opacity-80">{t.name}</h3>
                     </Link>
                     <p className="mt-1.5 flex-1 text-sm leading-relaxed" style={{ color: 'var(--color-ink-muted)' }}>
-                      {t.blurb}
+                      {pickLang(lang, t.blurb, t.blurbEn)}
                     </p>
                     <div className="mt-4 flex flex-wrap items-end justify-between gap-2 border-t pt-4">
                       <PriceTag t={t} />

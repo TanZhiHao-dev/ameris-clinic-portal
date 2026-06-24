@@ -1,7 +1,7 @@
 import { type ChangeEvent, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ImagePlus, Plus, Search, Star, Trash2, Upload, X } from 'lucide-react'
+import { ImagePlus, Languages, Plus, Search, Star, Trash2, Upload, X } from 'lucide-react'
 import type { Category } from '../data/clinic'
 import {
   createTreatment,
@@ -15,6 +15,8 @@ export const Route = createFileRoute('/owner/treatment')({ component: CatalogAdm
 type Row = {
   id: string
   name: string
+  blurb: string
+  blurbEn: string | null
   category: Category
   duration: string
   price: number
@@ -32,6 +34,8 @@ type AdminRow = Awaited<ReturnType<typeof listTreatmentsAdmin>>[number]
 type UpdateVars = {
   id: string
   price?: number
+  blurb?: string
+  blurbEn?: string | null
   pricePerUnit?: boolean
   isAvailable?: boolean
   isBestSeller?: boolean
@@ -68,6 +72,8 @@ function CatalogAdmin() {
   const rows: Row[] = data.map((t) => ({
     id: t.id,
     name: t.name,
+    blurb: t.blurb,
+    blurbEn: t.blurbEn,
     category: t.category as Category,
     duration: t.duration,
     price: t.price,
@@ -87,6 +93,7 @@ function CatalogAdmin() {
   const [priceEdits, setPriceEdits] = useState<Record<string, string>>({})
   const [promoEdits, setPromoEdits] = useState<Record<string, string>>({})
   const [imgEdit, setImgEdit] = useState<Row | null>(null)
+  const [subEdit, setSubEdit] = useState<Row | null>(null)
 
   // Refresh the owner table AND every public-facing cache the catalog feeds:
   // landing (Catalog/Promo/Loyalty) + the /treatment menu & detail pages.
@@ -106,6 +113,8 @@ function CatalogAdmin() {
   const applyPatch = (t: AdminRow, v: UpdateVars): AdminRow => ({
     ...t,
     ...(v.price !== undefined && { price: v.price }),
+    ...(v.blurb !== undefined && { blurb: v.blurb }),
+    ...(v.blurbEn !== undefined && { blurbEn: v.blurbEn }),
     ...(v.pricePerUnit !== undefined && { pricePerUnit: v.pricePerUnit }),
     ...(v.isAvailable !== undefined && { available: v.isAvailable }),
     // Dropping best-seller also drops the hero pick (a non-best-seller can't be hero).
@@ -149,6 +158,10 @@ function CatalogAdmin() {
   const saveImage = (id: string, image: string | null) => {
     updateMut.mutate({ id, image })
     setImgEdit(null)
+  }
+  const saveSubtitle = (id: string, blurb: string, blurbEn: string | null) => {
+    updateMut.mutate({ id, blurb, blurbEn })
+    setSubEdit(null)
   }
   const createMut = useMutation({
     mutationFn: (v: { name: string; category: string; duration: string; price: number }) =>
@@ -208,7 +221,7 @@ function CatalogAdmin() {
           <span className="eyebrow">Kelola Katalog</span>
           <h1 className="mt-2 text-[2rem]">Treatment</h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-            Ubah harga, ketersediaan, best seller, dan promo. Pilih 1 best seller jadi “hero” di landing. {rows.length} treatment.
+            Ubah harga, subtitle (ID & English), ketersediaan, best seller, dan promo. Pilih 1 best seller jadi “hero” di landing. {rows.length} treatment.
           </p>
         </div>
         <button type="button" className="btn btn-gold" onClick={() => setAdding((v) => !v)}>
@@ -264,6 +277,22 @@ function CatalogAdmin() {
                 <td className="px-5 py-4">
                   <div className="font-bold">{r.name}</div>
                   <div className="text-[0.76rem]" style={{ color: 'var(--color-ink-muted)' }}>{r.category} · {r.duration}</div>
+                  <button
+                    type="button"
+                    onClick={() => setSubEdit(r)}
+                    className="mt-1.5 inline-flex max-w-[15rem] items-center gap-1.5 rounded-md px-2 py-1 text-left text-[0.72rem] transition hover:bg-[var(--color-muted)]"
+                    style={{ color: 'var(--color-ink-soft)' }}
+                    aria-label={`Atur subtitle ${r.name}`}
+                    title="Atur subtitle (Indonesia & English)"
+                  >
+                    <Languages size={13} className="shrink-0" style={{ color: 'var(--color-gold-deep)' }} />
+                    <span className="truncate">{r.blurb || 'Tambah subtitle…'}</span>
+                    {r.blurbEn ? (
+                      <span className="shrink-0 rounded-sm px-1 text-[0.6rem] font-bold" style={{ background: 'var(--color-muted)', color: 'var(--color-gold-deep)' }}>EN</span>
+                    ) : (
+                      <span className="shrink-0 rounded-sm px-1 text-[0.6rem] font-bold" style={{ background: 'rgba(197,135,108,0.18)', color: 'var(--color-rose)' }}>+EN</span>
+                    )}
+                  </button>
                 </td>
                 <td data-label="Gambar" className="px-3 py-4">
                   <button
@@ -368,10 +397,11 @@ function CatalogAdmin() {
         </table>
       </div>
       <p className="mt-3 text-[0.78rem]" style={{ color: 'var(--color-ink-muted)' }}>
-        Perubahan harga, ketersediaan, promo, dan gambar tersimpan langsung ke database.
+        Perubahan harga, subtitle, ketersediaan, promo, dan gambar tersimpan langsung ke database.
       </p>
 
       {imgEdit && <ImageDialog row={imgEdit} saving={updateMut.isPending} onClose={() => setImgEdit(null)} onSave={saveImage} />}
+      {subEdit && <SubtitleDialog row={subEdit} saving={updateMut.isPending} onClose={() => setSubEdit(null)} onSave={saveSubtitle} />}
     </div>
   )
 }
@@ -461,6 +491,78 @@ function ImageDialog({
             <button type="button" className="btn btn-ghost px-4 py-2 text-sm" onClick={onClose}>Batal</button>
             <button type="button" className="btn btn-gold px-5 py-2 text-sm disabled:opacity-50" disabled={saving} onClick={() => onSave(row.id, val.trim() ? val.trim() : null)}>
               {saving ? 'Menyimpan…' : 'Simpan gambar'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Subtitle editor — the short description shown under each treatment name on the
+// public site. `blurb` = Indonesian (shown by default), `blurbEn` = English
+// (shown when the visitor switches the site to English; falls back to `blurb`).
+function SubtitleDialog({
+  row,
+  saving,
+  onClose,
+  onSave,
+}: {
+  row: Row
+  saving: boolean
+  onClose: () => void
+  onSave: (id: string, blurb: string, blurbEn: string | null) => void
+}) {
+  const [id, setId] = useState(row.blurb)
+  const [en, setEn] = useState(row.blurbEn ?? '')
+
+  const ta = `${inp} mt-2 block h-24 w-full resize-none leading-relaxed`
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ background: 'rgba(33,28,23,0.55)', backdropFilter: 'blur(3px)' }} onClick={onClose}>
+      <div className="card-soft w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4" style={{ background: 'var(--color-espresso)', color: '#f6eddc' }}>
+          <div className="flex items-center gap-2">
+            <Languages size={18} style={{ color: 'var(--color-gold)' }} />
+            <span className="font-bold">Atur subtitle — {row.name}</span>
+          </div>
+          <button type="button" aria-label="Tutup" onClick={onClose} className="opacity-80 transition hover:opacity-100"><X size={18} /></button>
+        </div>
+
+        <div className="p-6">
+          <label className="block text-sm font-semibold">
+            Subtitle <span style={{ color: 'var(--color-ink-muted)' }}>(Bahasa Indonesia)</span>
+          </label>
+          <textarea
+            className={ta}
+            value={id}
+            onChange={(e) => setId(e.target.value)}
+            placeholder="Cth: Membersihkan kotoran, minyak & sel kulit mati — wajah lebih segar."
+          />
+
+          <label className="mt-4 block text-sm font-semibold">
+            Subtitle <span style={{ color: 'var(--color-ink-muted)' }}>(English)</span>
+          </label>
+          <textarea
+            className={ta}
+            value={en}
+            onChange={(e) => setEn(e.target.value)}
+            placeholder="E.g: Deep-cleanses dirt, oil & dead skin — for a fresher, healthier face."
+          />
+
+          <p className="mt-3 rounded-xl px-4 py-3 text-[0.78rem] leading-relaxed" style={{ background: 'var(--color-cream)', color: 'var(--color-ink-soft)' }}>
+            Subtitle Indonesia tampil secara default. Subtitle English hanya tampil saat pengunjung memilih bahasa <strong>EN</strong> — kalau dikosongkan, versi Indonesia yang dipakai.
+          </p>
+
+          <div className="mt-5 flex justify-end gap-3">
+            <button type="button" className="btn btn-ghost px-4 py-2 text-sm" onClick={onClose}>Batal</button>
+            <button
+              type="button"
+              className="btn btn-gold px-5 py-2 text-sm disabled:opacity-50"
+              disabled={saving}
+              onClick={() => onSave(row.id, id.trim(), en.trim() ? en.trim() : null)}
+            >
+              {saving ? 'Menyimpan…' : 'Simpan subtitle'}
             </button>
           </div>
         </div>

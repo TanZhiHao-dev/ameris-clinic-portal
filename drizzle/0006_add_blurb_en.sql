@@ -1,0 +1,1 @@
+ALTER TABLE "treatments" ADD COLUMN "blurb_en" text;

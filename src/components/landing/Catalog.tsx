@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Star } from 'lucide-react'
 import { categories } from '../../data/clinic'
 import { treatmentsQuery } from '../../server/queries'
-import { useI18n } from '../../lib/i18n'
+import { pickLang, useI18n } from '../../lib/i18n'
 import type { DictKey } from '../../lib/i18n-dict'
 import { TreatmentThumb } from './TreatmentThumb'
 import { AddToCartButton } from '../app/AddToCartButton'
@@ -14,7 +14,7 @@ export function Catalog() {
   const [active, setActive] = useState<(typeof categories)[number]>('Best Seller')
   const { data: treatments = [] } = useQuery(treatmentsQuery)
   // Aliased to `tr` — the treatment map variable below is named `t`.
-  const { t: tr } = useI18n()
+  const { t: tr, lang } = useI18n()
 
   // Guard against malformed rows (e.g. a treatment with no name) so they don't
   // render as an empty card in the grid.
@@ -109,7 +109,7 @@ export function Catalog() {
                   <h3 className="text-lg leading-snug transition hover:opacity-80">{t.name}</h3>
                 </Link>
                 <p className="mt-1.5 flex-1 text-sm leading-relaxed" style={{ color: 'var(--color-ink-muted)' }}>
-                  {t.blurb}
+                  {pickLang(lang, t.blurb, t.blurbEn)}
                 </p>
 
                 <div className="mt-4 flex flex-wrap items-end justify-between gap-2 border-t pt-4">
