@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { promosQuery, redeemTiersQuery, treatmentsQuery } from '../server/queries'
 import { SiteHeader } from '../components/landing/SiteHeader'
 import { Hero } from '../components/landing/Hero'
+import { BrandStrip } from '../components/landing/BrandStrip'
 import { Catalog } from '../components/landing/Catalog'
 import { Promo } from '../components/landing/Promo'
 import { AboutMe } from '../components/landing/AboutMe'
@@ -23,14 +24,15 @@ export const Route = createFileRoute('/')({
 })
 
 // Landing section order:
-// Hero · Treatment menu · Weekly promos · About Me · Privilege Club ·
-// Statistics · Client Love · Contact
+// Hero · Brand strip · Treatment menu · Weekly promos · About Me ·
+// Privilege Club · Statistics · Client Love · Contact
 function Home() {
   return (
     <div>
       <SiteHeader />
       <main>
         <Hero />
+        <BrandStrip />
         <Catalog />
         <Promo />
         <AboutMe />

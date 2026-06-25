@@ -9,6 +9,9 @@ export const clinic = {
   location: 'Gading Serpong',
   tagline: 'Refine Your Beauty',
   hashtag: '#RefineYourBeauty',
+  // Brand positioning "take line" — shown on the landing brand strip.
+  brandExpert: '1st Mindful Beauty Expert',
+  brandPillars: ['Designed for Holistic Aesthetic', 'Delivering Conscious Transformation'],
   motto: 'Because You Deserve the Best',
   mottoId: 'Karena Anda Istimewa Bagi Kami',
   since: '29 Januari 2026',
