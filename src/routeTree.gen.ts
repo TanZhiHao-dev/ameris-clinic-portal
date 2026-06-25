@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TentangRouteImport } from './routes/tentang'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as OwnerRouteImport } from './routes/owner'
 import { Route as MasukRouteImport } from './routes/masuk'
@@ -26,6 +27,7 @@ import { Route as TreatmentIdRouteImport } from './routes/treatment.$id'
 import { Route as OwnerTreatmentRouteImport } from './routes/owner.treatment'
 import { Route as OwnerTransaksiRouteImport } from './routes/owner.transaksi'
 import { Route as OwnerProfilRouteImport } from './routes/owner.profil'
+import { Route as OwnerPrivilegeRouteImport } from './routes/owner.privilege'
 import { Route as OwnerJadwalRouteImport } from './routes/owner.jadwal'
 import { Route as OwnerAkunRouteImport } from './routes/owner.akun'
 import { Route as DokterProfilRouteImport } from './routes/dokter.profil'
@@ -47,6 +49,11 @@ import { Route as ApiMidtransNotificationRouteImport } from './routes/api/midtra
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AkunBookingIdRouteImport } from './routes/akun.booking.$id'
 
+const TentangRoute = TentangRouteImport.update({
+  id: '/tentang',
+  path: '/tentang',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -130,6 +137,11 @@ const OwnerTransaksiRoute = OwnerTransaksiRouteImport.update({
 const OwnerProfilRoute = OwnerProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
+  getParentRoute: () => OwnerRoute,
+} as any)
+const OwnerPrivilegeRoute = OwnerPrivilegeRouteImport.update({
+  id: '/privilege',
+  path: '/privilege',
   getParentRoute: () => OwnerRoute,
 } as any)
 const OwnerJadwalRoute = OwnerJadwalRouteImport.update({
@@ -243,6 +255,7 @@ export interface FileRoutesByFullPath {
   '/masuk': typeof MasukRoute
   '/owner': typeof OwnerRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
+  '/tentang': typeof TentangRoute
   '/akun/privilege': typeof AkunPrivilegeRoute
   '/akun/profil': typeof AkunProfilRoute
   '/api/bootstrap-owner': typeof ApiBootstrapOwnerRoute
@@ -253,6 +266,7 @@ export interface FileRoutesByFullPath {
   '/dokter/profil': typeof DokterProfilRoute
   '/owner/akun': typeof OwnerAkunRoute
   '/owner/jadwal': typeof OwnerJadwalRoute
+  '/owner/privilege': typeof OwnerPrivilegeRoute
   '/owner/profil': typeof OwnerProfilRoute
   '/owner/transaksi': typeof OwnerTransaksiRoute
   '/owner/treatment': typeof OwnerTreatmentRoute
@@ -279,6 +293,7 @@ export interface FileRoutesByTo {
   '/lanjut': typeof LanjutRoute
   '/masuk': typeof MasukRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/tentang': typeof TentangRoute
   '/akun/privilege': typeof AkunPrivilegeRoute
   '/akun/profil': typeof AkunProfilRoute
   '/api/bootstrap-owner': typeof ApiBootstrapOwnerRoute
@@ -289,6 +304,7 @@ export interface FileRoutesByTo {
   '/dokter/profil': typeof DokterProfilRoute
   '/owner/akun': typeof OwnerAkunRoute
   '/owner/jadwal': typeof OwnerJadwalRoute
+  '/owner/privilege': typeof OwnerPrivilegeRoute
   '/owner/profil': typeof OwnerProfilRoute
   '/owner/transaksi': typeof OwnerTransaksiRoute
   '/owner/treatment': typeof OwnerTreatmentRoute
@@ -319,6 +335,7 @@ export interface FileRoutesById {
   '/masuk': typeof MasukRoute
   '/owner': typeof OwnerRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
+  '/tentang': typeof TentangRoute
   '/akun/privilege': typeof AkunPrivilegeRoute
   '/akun/profil': typeof AkunProfilRoute
   '/api/bootstrap-owner': typeof ApiBootstrapOwnerRoute
@@ -329,6 +346,7 @@ export interface FileRoutesById {
   '/dokter/profil': typeof DokterProfilRoute
   '/owner/akun': typeof OwnerAkunRoute
   '/owner/jadwal': typeof OwnerJadwalRoute
+  '/owner/privilege': typeof OwnerPrivilegeRoute
   '/owner/profil': typeof OwnerProfilRoute
   '/owner/transaksi': typeof OwnerTransaksiRoute
   '/owner/treatment': typeof OwnerTreatmentRoute
@@ -360,6 +378,7 @@ export interface FileRouteTypes {
     | '/masuk'
     | '/owner'
     | '/reset-password'
+    | '/tentang'
     | '/akun/privilege'
     | '/akun/profil'
     | '/api/bootstrap-owner'
@@ -370,6 +389,7 @@ export interface FileRouteTypes {
     | '/dokter/profil'
     | '/owner/akun'
     | '/owner/jadwal'
+    | '/owner/privilege'
     | '/owner/profil'
     | '/owner/transaksi'
     | '/owner/treatment'
@@ -396,6 +416,7 @@ export interface FileRouteTypes {
     | '/lanjut'
     | '/masuk'
     | '/reset-password'
+    | '/tentang'
     | '/akun/privilege'
     | '/akun/profil'
     | '/api/bootstrap-owner'
@@ -406,6 +427,7 @@ export interface FileRouteTypes {
     | '/dokter/profil'
     | '/owner/akun'
     | '/owner/jadwal'
+    | '/owner/privilege'
     | '/owner/profil'
     | '/owner/transaksi'
     | '/owner/treatment'
@@ -435,6 +457,7 @@ export interface FileRouteTypes {
     | '/masuk'
     | '/owner'
     | '/reset-password'
+    | '/tentang'
     | '/akun/privilege'
     | '/akun/profil'
     | '/api/bootstrap-owner'
@@ -445,6 +468,7 @@ export interface FileRouteTypes {
     | '/dokter/profil'
     | '/owner/akun'
     | '/owner/jadwal'
+    | '/owner/privilege'
     | '/owner/profil'
     | '/owner/transaksi'
     | '/owner/treatment'
@@ -475,6 +499,7 @@ export interface RootRouteChildren {
   MasukRoute: typeof MasukRoute
   OwnerRoute: typeof OwnerRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
+  TentangRoute: typeof TentangRoute
   ApiBootstrapOwnerRoute: typeof ApiBootstrapOwnerRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSeedRoute: typeof ApiSeedRoute
@@ -487,6 +512,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/tentang': {
+      id: '/tentang'
+      path: '/tentang'
+      fullPath: '/tentang'
+      preLoaderRoute: typeof TentangRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
@@ -604,6 +636,13 @@ declare module '@tanstack/react-router' {
       path: '/profil'
       fullPath: '/owner/profil'
       preLoaderRoute: typeof OwnerProfilRouteImport
+      parentRoute: typeof OwnerRoute
+    }
+    '/owner/privilege': {
+      id: '/owner/privilege'
+      path: '/privilege'
+      fullPath: '/owner/privilege'
+      preLoaderRoute: typeof OwnerPrivilegeRouteImport
       parentRoute: typeof OwnerRoute
     }
     '/owner/jadwal': {
@@ -789,6 +828,7 @@ const DokterRouteWithChildren =
 interface OwnerRouteChildren {
   OwnerAkunRoute: typeof OwnerAkunRoute
   OwnerJadwalRoute: typeof OwnerJadwalRoute
+  OwnerPrivilegeRoute: typeof OwnerPrivilegeRoute
   OwnerProfilRoute: typeof OwnerProfilRoute
   OwnerTransaksiRoute: typeof OwnerTransaksiRoute
   OwnerTreatmentRoute: typeof OwnerTreatmentRoute
@@ -802,6 +842,7 @@ interface OwnerRouteChildren {
 const OwnerRouteChildren: OwnerRouteChildren = {
   OwnerAkunRoute: OwnerAkunRoute,
   OwnerJadwalRoute: OwnerJadwalRoute,
+  OwnerPrivilegeRoute: OwnerPrivilegeRoute,
   OwnerProfilRoute: OwnerProfilRoute,
   OwnerTransaksiRoute: OwnerTransaksiRoute,
   OwnerTreatmentRoute: OwnerTreatmentRoute,
@@ -824,6 +865,7 @@ const rootRouteChildren: RootRouteChildren = {
   MasukRoute: MasukRoute,
   OwnerRoute: OwnerRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
+  TentangRoute: TentangRoute,
   ApiBootstrapOwnerRoute: ApiBootstrapOwnerRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiSeedRoute: ApiSeedRoute,

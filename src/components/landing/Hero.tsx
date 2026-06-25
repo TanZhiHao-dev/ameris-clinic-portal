@@ -29,18 +29,36 @@ export function Hero() {
     treatments[0]
 
   return (
-    <section id="top" className="relative overflow-hidden" style={{ background: 'var(--color-cream)' }}>
-      <div className="radiance-light" aria-hidden />
+    <section id="top" className="hero-dark relative overflow-hidden">
+      {/* full-bleed clinic photo */}
+      <div
+        className="absolute inset-0"
+        aria-hidden
+        style={{
+          backgroundImage: 'url(/about/banner.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      />
+      <div className="hero-veil" aria-hidden />
+      <div className="radiance-gold" aria-hidden />
+      <div className="grain" aria-hidden />
 
-      <div className="shell-x relative grid items-center gap-14 py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-28">
+      <div className="shell-x relative grid items-center gap-14 py-24 lg:grid-cols-[1.05fr_0.95fr] lg:py-32">
         {/* Left — thesis */}
         <div>
-          <span className="rise rise-1 eyebrow inline-flex items-center gap-2">
+          <span
+            className="rise rise-1 eyebrow inline-flex items-center gap-2"
+            style={{ color: 'var(--color-gold-light)' }}
+          >
             <span className="glow-dot" aria-hidden />
             {clinic.location} · {clinic.by}
           </span>
 
-          <h1 className="rise rise-2 mt-6 text-[3rem] leading-[1.02] sm:text-[3.8rem] lg:text-[4.4rem]">
+          <h1
+            className="rise rise-2 mt-6 text-[3rem] leading-[1.04] sm:text-[3.8rem] lg:text-[4.6rem]"
+            style={{ color: '#f6ecda' }}
+          >
             {t('hero.titleLine1')}
             <br />
             <span className="gold-text italic">{t('hero.titleAccent')}</span>
@@ -50,16 +68,19 @@ export function Hero() {
 
           <p
             className="rise rise-2 mt-6 max-w-xl text-[1.05rem] leading-relaxed"
-            style={{ color: 'var(--color-ink-soft)' }}
+            style={{ color: 'rgba(246,237,220,0.82)' }}
           >
             {t('hero.desc')}
           </p>
 
           <div className="rise rise-3 mt-9 flex flex-wrap items-center gap-3">
-            <Link to="/treatment" className="btn btn-gold">
-              {t('common.bookNow')} <ArrowRight size={18} />
+            <Link to="/treatment" className="btn-split">
+              <span>{t('common.bookNow')}</span>
+              <span className="btn-split-ic" aria-hidden>
+                <ArrowRight size={18} />
+              </span>
             </Link>
-            <Link to="/treatment" className="btn btn-outline">
+            <Link to="/treatment" className="btn btn-onink">
               {t('common.viewTreatments')}
             </Link>
           </div>
@@ -70,7 +91,7 @@ export function Hero() {
                 <div className="text-2xl font-extrabold gold-text">{s.value}</div>
                 <div
                   className="mt-1 text-[0.66rem] font-semibold uppercase tracking-[0.12em]"
-                  style={{ color: 'var(--color-ink-muted)' }}
+                  style={{ color: 'rgba(246,237,220,0.62)' }}
                 >
                   {t(s.label)}
                 </div>
@@ -90,7 +111,7 @@ export function Hero() {
             }}
           />
           <div
-            className="overflow-hidden rounded-[1.6rem]"
+            className="overflow-hidden rounded-[2rem]"
             style={{
               background: 'var(--color-shell)',
               boxShadow: 'var(--shadow-lift)',

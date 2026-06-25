@@ -7,11 +7,13 @@ import { useI18n } from '../../lib/i18n'
 import type { DictKey } from '../../lib/i18n-dict'
 import { LanguageToggle } from '../app/LanguageToggle'
 
+// Absolute hash links (`/#…`) so they also work from sub-pages like /tentang —
+// the browser navigates home first, then scrolls to the section.
 const NAV: { key: DictKey; href: string }[] = [
-  { key: 'nav.treatment', href: '#treatment' },
-  { key: 'nav.promo', href: '#promo' },
-  { key: 'nav.howItWorks', href: '#cara-kerja' },
-  { key: 'nav.privilege', href: '#privilege' },
+  { key: 'nav.treatment', href: '/#treatment' },
+  { key: 'nav.promo', href: '/#promo' },
+  { key: 'nav.howItWorks', href: '/#cara-kerja' },
+  { key: 'nav.privilege', href: '/#privilege' },
 ]
 
 const TICKER: DictKey[] = ['ticker.1', 'ticker.2', 'ticker.3', 'ticker.4']
@@ -25,6 +27,14 @@ export function SiteHeader() {
   const role = (session?.user as { role?: string } | undefined)?.role
   const dashboardTo = role === 'owner' ? '/owner' : role === 'dokter' ? '/dokter' : '/akun'
   const dashboardLabel = role === 'owner' || role === 'dokter' ? t('header.dashboard') : t('header.myAccount')
+
+  // Both pages that mount this header (/, /tentang) open on a dark full-bleed
+  // hero directly below it. At rest we paint the bar espresso so it reads as a
+  // dark floating header (cream text); once scrolled it flips to a light glass
+  // bar with dark text.
+  const onDark = !scrolled
+  const primaryBtn = onDark ? 'btn-gold' : 'btn-primary'
+  const ghostBtn = onDark ? 'btn-onink' : 'btn-ghost'
 
   async function logout() {
     setOpen(false)
@@ -70,41 +80,44 @@ export function SiteHeader() {
       <header
         className="sticky top-0 z-50 transition-all duration-300"
         style={{
-          background: scrolled ? 'rgba(253, 250, 244, 0.85)' : 'transparent',
+          background: scrolled ? 'rgba(253, 250, 244, 0.85)' : 'var(--color-espresso)',
           borderBottom: scrolled ? '1px solid var(--color-line)' : '1px solid transparent',
           backdropFilter: scrolled ? 'blur(12px)' : 'none',
         }}
       >
         <nav className="shell-x flex items-center justify-between py-4">
           <a href="#top" aria-label="Ameris — beranda">
-            <Brand withTagline />
+            <Brand withTagline tone={onDark ? 'light' : 'dark'} />
           </a>
 
           <div className="hidden items-center gap-8 lg:flex">
             {NAV.map((item) => (
-              <a key={item.href} href={item.href} className="nav-link">
+              <a key={item.href} href={item.href} className={`nav-link${onDark ? ' is-ondark' : ''}`}>
                 {t(item.key)}
               </a>
             ))}
+            <Link to="/tentang" className={`nav-link${onDark ? ' is-ondark' : ''}`}>
+              {t('nav.about')}
+            </Link>
           </div>
 
           <div className="hidden items-center gap-3 lg:flex">
             <LanguageToggle />
             {session ? (
               <>
-                <Link to={dashboardTo} className="btn btn-primary">
+                <Link to={dashboardTo} className={`btn ${primaryBtn}`}>
                   {dashboardLabel}
                 </Link>
-                <button type="button" onClick={logout} className="btn btn-ghost">
+                <button type="button" onClick={logout} className={`btn ${ghostBtn}`}>
                   {t('header.logout')}
                 </button>
               </>
             ) : (
               <>
-                <Link to="/masuk" className="btn btn-ghost">
+                <Link to="/masuk" className={`btn ${ghostBtn}`}>
                   {t('header.login')}
                 </Link>
-                <Link to="/treatment" className="btn btn-primary">
+                <Link to="/treatment" className={`btn ${primaryBtn}`}>
                   {t('header.register')}
                 </Link>
               </>
@@ -115,7 +128,7 @@ export function SiteHeader() {
             <LanguageToggle />
             <button
               type="button"
-              className="btn btn-ghost p-2"
+              className={`btn ${ghostBtn} p-2`}
               aria-label={open ? t('header.closeMenu') : t('header.openMenu')}
               aria-expanded={open}
               onClick={() => setOpen((v) => !v)}
@@ -155,6 +168,13 @@ export function SiteHeader() {
                   {t(item.key)}
                 </a>
               ))}
+              <Link
+                to="/tentang"
+                className="rounded-xl px-3 py-3 text-base font-medium"
+                onClick={() => setOpen(false)}
+              >
+                {t('nav.about')}
+              </Link>
             </div>
             <div className="mt-4 flex flex-col gap-2">
               {session ? (

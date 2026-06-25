@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,500;1,600&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Pinyon+Script&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,500;1,600&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Pinyon+Script&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,900;1,400;1,500;1,600&display=swap');
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 @import 'tw-animate-css';
@@ -10,7 +10,9 @@
 
 @theme {
   --font-sans: 'Hanken Grotesk', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  /* KGlow signature serif for all display headings */
+  --font-display: 'Playfair Display', 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --font-display-alt: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
   --font-script: 'Pinyon Script', cursive;
 
   /* Brand palette */
@@ -54,7 +56,9 @@
 }
 
 :root {
-  --radius: 0.95rem;
+  /* Softer, KGlow-style rounding. --radius-luxe is for big feature cards. */
+  --radius: 1.2rem;
+  --radius-luxe: 2rem;
   --grad-gold: linear-gradient(135deg, #efdca6 0%, #d4ad55 38%, #b58a32 70%, #9a7320 100%);
   --grad-gold-soft: linear-gradient(135deg, #f4e6c2, #dcc080);
   --shadow-soft: 0 1px 0 rgba(255, 255, 255, 0.7) inset,
@@ -107,8 +111,8 @@
   h1, h2 {
     font-family: var(--font-display);
     font-weight: 600;
-    line-height: 1.04;
-    letter-spacing: 0;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
     font-variant-numeric: lining-nums;
     color: var(--color-ink);
   }
@@ -271,6 +275,12 @@
   }
   .nav-link:hover { color: var(--color-ink); }
   .nav-link:hover::after { transform: scaleX(1); }
+  /* Over a dark hero (header transparent, not yet scrolled) */
+  .nav-link.is-ondark {
+    color: rgba(246, 237, 220, 0.92);
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.45);
+  }
+  .nav-link.is-ondark:hover { color: #fff; }
 
   .badge {
     display: inline-flex;
@@ -303,6 +313,128 @@
   .hairline-gold {
     height: 1px;
     background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
+  }
+
+  /* ── KGlow signature pieces (gold-keyed) ──────────────────── */
+
+  /* Big feature card — softer, rounder than .card-soft. */
+  .card-luxe {
+    background: var(--color-shell);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-luxe);
+    box-shadow: var(--shadow-soft);
+    transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 360ms ease, border-color 360ms ease;
+  }
+  .card-luxe:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-lift);
+    border-color: rgba(195, 154, 68, 0.5);
+  }
+
+  /* Soft glow blobs behind a light section — drop one <div class="aura-soft">
+     as the first child of a `position: relative` section. */
+  .aura-soft {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .aura-soft::before,
+  .aura-soft::after {
+    content: '';
+    position: absolute;
+    width: 26rem;
+    height: 26rem;
+    border-radius: 9999px;
+    filter: blur(80px);
+    opacity: 0.7;
+  }
+  .aura-soft::before {
+    top: -8rem;
+    left: -8rem;
+    background: rgba(231, 211, 156, 0.5);
+  }
+  .aura-soft::after {
+    right: -8rem;
+    bottom: -8rem;
+    background: rgba(233, 220, 194, 0.55);
+  }
+
+  /* Dark-hero veil: layered espresso gradient that sits over a photo so cream
+     text stays legible. Pair with a `.radiance-gold`/grain for depth. */
+  .hero-veil {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(
+        115deg,
+        rgba(18, 14, 10, 0.92) 0%,
+        rgba(33, 28, 23, 0.78) 45%,
+        rgba(18, 14, 10, 0.84) 100%
+      );
+  }
+
+  /* Signature split CTA: pill label + circular icon that rotates 45° on hover.
+     Markup: <a class="btn-split"><span>Label</span><span class="btn-split-ic">…</span></a> */
+  .btn-split {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border-radius: 9999px;
+    padding: 0.4rem 0.4rem 0.4rem 1.5rem;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1;
+    cursor: pointer;
+    border: 1px solid transparent;
+    background: var(--grad-gold);
+    color: #3a2c0f;
+    box-shadow: var(--shadow-gold);
+    transition: transform 200ms ease, box-shadow 200ms ease, filter 200ms ease;
+  }
+  .btn-split:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.04);
+    box-shadow: 0 16px 36px rgba(176, 132, 44, 0.42);
+  }
+  .btn-split-ic {
+    display: grid;
+    place-items: center;
+    width: 2.7rem;
+    height: 2.7rem;
+    flex-shrink: 0;
+    border-radius: 9999px;
+    background: var(--color-shell);
+    color: var(--color-gold-deep);
+    transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1), background-color 200ms ease;
+  }
+  .btn-split:hover .btn-split-ic {
+    transform: rotate(45deg);
+    background: #fff;
+  }
+  /* Glass variant for dark backgrounds */
+  .btn-split.is-glass {
+    background: rgba(250, 244, 233, 0.08);
+    color: #f6eddc;
+    border-color: rgba(231, 211, 156, 0.35);
+    box-shadow: none;
+    backdrop-filter: blur(8px);
+  }
+  .btn-split.is-glass:hover {
+    background: rgba(250, 244, 233, 0.16);
+    border-color: rgba(231, 211, 156, 0.6);
+  }
+  .btn-split.is-glass .btn-split-ic {
+    background: rgba(250, 244, 233, 0.16);
+    color: #f6eddc;
+  }
+  .btn-split.is-glass:hover .btn-split-ic {
+    background: var(--color-gold-light);
+    color: #3a2c0f;
   }
 }
 

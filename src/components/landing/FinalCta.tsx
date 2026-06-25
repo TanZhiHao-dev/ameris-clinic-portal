@@ -27,8 +27,11 @@ export function FinalCta() {
             </p>
 
             <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-              <Link to="/masuk" className="btn btn-gold">
-                {t('cta.registerFree')} <ArrowRight size={18} />
+              <Link to="/masuk" className="btn-split">
+                <span>{t('cta.registerFree')}</span>
+                <span className="btn-split-ic" aria-hidden>
+                  <ArrowRight size={18} />
+                </span>
               </Link>
               <a
                 href={`https://wa.me/${clinic.whatsappRaw}`}

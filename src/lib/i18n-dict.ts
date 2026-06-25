@@ -579,6 +579,82 @@ const dict = {
   },
   'pf.save': { id: 'Simpan perubahan', en: 'Save changes' },
   'pf.saved': { id: 'Tersimpan', en: 'Saved' },
+
+  // ── About / Tentang Kami (/tentang) ───────────────────────────────
+  'nav.about': { id: 'Tentang', en: 'About' },
+  'about.tag': { id: 'Tentang Ameris', en: 'About Ameris' },
+  'about.title': { id: 'Tentang Kami', en: 'About Us' },
+  'about.lead': {
+    id: 'Klinik kecantikan modern di Gading Serpong yang merawat setiap pasien dengan standar medis, kenyamanan, dan hasil yang natural.',
+    en: 'A modern aesthetic clinic in Gading Serpong, caring for every patient with medical standards, comfort, and natural results.',
+  },
+
+  'about.founder.eyebrow': { id: 'Founder Kami', en: 'Our Founder' },
+  'about.founder.title1': { id: 'Kulitmu Dirawat Langsung oleh', en: 'Your Skin, Always in' },
+  'about.founder.titleAccent': { id: 'Ahlinya', en: 'Expert Hands' },
+  'about.founder.body': {
+    id: 'dr. Meriana, M.Kes (AAM) memimpin langsung setiap konsultasi dan perawatan di Ameris. Dengan pendekatan yang aman, teliti, dan personal, ia memastikan setiap pasien mendapatkan hasil terbaik sesuai kebutuhan kulitnya.',
+    en: 'dr. Meriana, M.Kes (AAM) personally leads every consultation and treatment at Ameris. With a safe, meticulous, and personal approach, she ensures each patient gets the best result for their skin.',
+  },
+  'about.founder.role': { id: 'Founder & Dokter Estetika', en: 'Founder & Aesthetic Doctor' },
+
+  'about.story.eyebrow': { id: 'Cerita Kami', en: 'Our Story' },
+  'about.story.title1': { id: 'Cerita', en: 'The Ameris' },
+  'about.story.titleAccent': { id: 'Ameris', en: 'Story' },
+  'about.story.body1': {
+    id: 'Ameris Aesthetic Clinic hadir di Gading Serpong sejak 29 Januari 2026 dengan satu misi: membuat perawatan kecantikan berkualitas medis menjadi mudah diakses, nyaman, dan tepat sasaran.',
+    en: 'Ameris Aesthetic Clinic opened in Gading Serpong on 29 January 2026 with one mission: to make medical-grade beauty care accessible, comfortable, and precise.',
+  },
+  'about.story.body2': {
+    id: 'Mengusung filosofi #RefineYourBeauty, kami percaya kecantikan terbaik adalah versi dirimu yang paling sehat dan percaya diri — dirawat dengan teknologi modern dan sentuhan personal.',
+    en: 'Guided by our #RefineYourBeauty philosophy, we believe the best beauty is the healthiest, most confident version of you — cared for with modern technology and a personal touch.',
+  },
+  'about.story.cta': { id: 'Lihat Treatment', en: 'Explore Treatments' },
+  'about.story.statRating': { id: 'Rating Google', en: 'Google Rating' },
+  'about.story.statTreatments': { id: 'Pilihan Treatment', en: 'Treatments' },
+  'about.story.statSince': { id: 'Berdiri Sejak', en: 'Established' },
+
+  'about.why.eyebrow': { id: 'Kenapa Ameris', en: 'Why Ameris' },
+  'about.why.title1': { id: 'Kenapa Memilih', en: 'Why Choose' },
+  'about.why.titleAccent': { id: 'Ameris', en: 'Ameris' },
+  'about.why.subtitle': {
+    id: 'Perawatan berkualitas medis dengan kenyamanan dan hasil yang bisa kamu percaya.',
+    en: 'Medical-grade care with comfort and results you can trust.',
+  },
+  'about.why.doctor.title': { id: 'Ditangani Dokter', en: 'Doctor-Led Care' },
+  'about.why.doctor.body': {
+    id: 'Setiap perawatan diawasi langsung oleh dokter estetika berpengalaman.',
+    en: 'Every treatment is supervised directly by an experienced aesthetic doctor.',
+  },
+  'about.why.hygiene.title': { id: 'Higienis & Nyaman', en: 'Hygienic & Comfortable' },
+  'about.why.hygiene.body': {
+    id: 'Ruangan bersih, steril, dan nyaman untuk pengalaman perawatan terbaik.',
+    en: 'Clean, sterile, and comfortable rooms for the best treatment experience.',
+  },
+  'about.why.tech.title': { id: 'Teknologi Modern', en: 'Modern Technology' },
+  'about.why.tech.body': {
+    id: 'Alat & teknik terkini — dari Pico laser hingga skinbooster & exosome.',
+    en: 'The latest tools and techniques — from Pico laser to skinboosters and exosomes.',
+  },
+  'about.why.natural.title': { id: 'Hasil Natural', en: 'Natural Results' },
+  'about.why.natural.body': {
+    id: 'Fokus pada hasil yang aman, natural, dan sesuai karakter wajahmu.',
+    en: 'Focused on safe, natural results that suit your features.',
+  },
+
+  'about.team.eyebrow': { id: 'Tim Kami', en: 'Our Team' },
+  'about.team.title1': { id: 'Tim Profesional', en: 'Our Professional' },
+  'about.team.titleAccent': { id: 'Ameris', en: 'Team' },
+  'about.team.subtitle': {
+    id: 'Tim dokter, terapis, dan staf yang siap merawatmu dengan sepenuh hati.',
+    en: 'A team of doctors, therapists, and staff ready to care for you wholeheartedly.',
+  },
+  'about.team.role.doctor': { id: 'Dokter Estetika', en: 'Aesthetic Doctor' },
+  'about.team.role.therapist': { id: 'Beauty Therapist', en: 'Beauty Therapist' },
+  'about.team.role.care': { id: 'Customer Care', en: 'Customer Care' },
+  'about.team.doctorName': { id: 'Tim Dokter Ameris', en: 'Ameris Doctors' },
+  'about.team.therapistName': { id: 'Certified Therapist', en: 'Certified Therapists' },
+  'about.team.careName': { id: 'Front Office', en: 'Front Office' },
 } satisfies Record<string, { id: string; en: string }>
 
 export type DictKey = keyof typeof dict

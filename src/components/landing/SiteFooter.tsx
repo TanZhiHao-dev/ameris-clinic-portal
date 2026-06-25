@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { MapPin, Navigation } from 'lucide-react'
 import { Brand } from './Brand'
 import { clinic } from '../../data/clinic'
@@ -44,13 +45,21 @@ export function SiteFooter() {
                 {t(col.title)}
               </div>
               <ul className="mt-4 flex flex-col gap-2.5">
-                {col.links.map((l) => (
-                  <li key={l}>
-                    <a href="#" className="text-sm transition" style={{ color: 'var(--color-ink-soft)' }}>
-                      {t(l)}
-                    </a>
-                  </li>
-                ))}
+                {col.links.map((l) =>
+                  l === 'footer.link.about' ? (
+                    <li key={l}>
+                      <Link to="/tentang" className="text-sm transition" style={{ color: 'var(--color-ink-soft)' }}>
+                        {t(l)}
+                      </Link>
+                    </li>
+                  ) : (
+                    <li key={l}>
+                      <a href="#" className="text-sm transition" style={{ color: 'var(--color-ink-soft)' }}>
+                        {t(l)}
+                      </a>
+                    </li>
+                  ),
+                )}
               </ul>
             </div>
           ))}

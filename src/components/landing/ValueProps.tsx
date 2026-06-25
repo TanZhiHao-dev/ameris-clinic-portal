@@ -8,8 +8,9 @@ const ICONS = { clock: Clock, wallet: Wallet, file: FileText, bell: Bell }
 export function ValueProps() {
   const { t } = useI18n()
   return (
-    <section className="py-24">
-      <div className="shell-x">
+    <section className="relative overflow-hidden py-24">
+      <div className="aura-soft" aria-hidden />
+      <div className="shell-x relative">
         <div className="reveal max-w-xl">
           <span className="eyebrow">{t('value.eyebrow')}</span>
           <h2 className="mt-3 text-[2.4rem] sm:text-[3rem]">
