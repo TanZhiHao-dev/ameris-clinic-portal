@@ -509,6 +509,29 @@
   to { transform: translateX(-50%); }
 }
 
+/* Dual-row, hover-pausing card marquee (e.g. testimonials). Put a
+   `.marquee-row` wrapper (overflow-hidden) around a `.row-marquee` track whose
+   children are duplicated once so translateX(-50%) loops seamlessly. */
+.row-marquee {
+  display: flex;
+  width: max-content;
+  gap: 1.25rem;
+  animation: row-marquee 52s linear infinite;
+}
+.row-marquee.is-reverse {
+  animation-direction: reverse;
+}
+.marquee-row:hover .row-marquee {
+  animation-play-state: paused;
+}
+@keyframes row-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .row-marquee { animation: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -93,6 +93,11 @@ export function useMidtransPay() {
           onClose: () => resolve('closed'),
         })
       })
+    } catch {
+      // createSnapPayment rejected (e.g. gateway not configured in production):
+      // degrade to a recoverable 'error' so the booking confirmation still shows
+      // a retry button instead of crashing the checkout.
+      return 'error'
     } finally {
       setBusy(false)
     }

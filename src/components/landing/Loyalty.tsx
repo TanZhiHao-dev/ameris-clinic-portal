@@ -65,6 +65,7 @@ export function Loyalty() {
       className="relative overflow-hidden py-24"
       style={{ background: 'var(--color-espresso)', color: '#f6eddc' }}
     >
+      <div className="radiance-gold" aria-hidden />
       <div className="grain" aria-hidden />
       <div className="shell-x relative">
         {/* Heading */}
@@ -72,10 +73,10 @@ export function Loyalty() {
           <span className="inline-flex items-center gap-2 eyebrow" style={{ color: 'var(--color-gold-light)' }}>
             <Crown size={15} /> Ameris Privilege Club
           </span>
-          <h2 className="mt-3 max-w-2xl text-[2.4rem] sm:text-[3.1rem]" style={{ color: '#faf3e6' }}>
-            Every treatment, <span className="gold-text">every reward</span>.
+          <h2 className="mt-4 max-w-2xl text-[2.4rem] leading-[1.05] sm:text-[3.1rem]" style={{ color: '#faf3e6' }}>
+            Every treatment, <span className="gold-text italic">every reward</span>.
           </h2>
-          <p className="mt-4 max-w-xl text-[1.02rem]" style={{ color: 'rgba(246,237,220,0.72)' }}>
+          <p className="mt-5 max-w-xl text-[1.02rem]" style={{ color: 'rgba(246,237,220,0.72)' }}>
             {t('loyalty.desc1')}<strong style={{ color: '#faf3e6' }}>{t('loyalty.descStrong')}</strong>{t('loyalty.desc2')}
           </p>
         </div>
@@ -84,10 +85,21 @@ export function Loyalty() {
           {/* Ring + benefits */}
           <div className="reveal flex flex-col items-center gap-8">
             <GoldRing points={14} target={20} />
-            <ul className="flex w-full max-w-xs flex-col gap-2.5">
+            <ul className="flex w-full max-w-xs flex-col gap-3">
               {BENEFIT_KEYS.map((key) => (
-                <li key={key} className="flex items-center gap-2.5 text-sm" style={{ color: 'rgba(246,237,220,0.86)' }}>
-                  <Check size={15} style={{ color: 'var(--color-gold)' }} className="shrink-0" /> {t(key)}
+                <li
+                  key={key}
+                  className="group flex items-center gap-3 text-sm transition-transform duration-300 hover:translate-x-1"
+                  style={{ color: 'rgba(246,237,220,0.86)' }}
+                >
+                  <span
+                    className="grid h-6 w-6 shrink-0 place-items-center rounded-full transition-transform duration-300 group-hover:scale-105"
+                    style={{ background: 'var(--grad-gold)', color: '#3a2c0f', boxShadow: '0 4px 12px rgba(213,173,85,0.3)' }}
+                    aria-hidden
+                  >
+                    <Check size={13} strokeWidth={3} />
+                  </span>
+                  {t(key)}
                 </li>
               ))}
             </ul>
@@ -98,16 +110,24 @@ export function Loyalty() {
             <div className="mb-4 flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--color-gold-light)' }}>
               <Gift size={16} /> {t('loyalty.redeemTitle')}
             </div>
-            <ul className="grid gap-2.5 sm:grid-cols-2">
+            <ul className="grid gap-3 sm:grid-cols-2">
               {tiers.map((t) => (
                 <li
                   key={t.treatmentId}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                  className="group flex items-center gap-3 rounded-full px-3 py-2.5 transition-all duration-300 hover:-translate-y-0.5"
                   style={{ background: 'rgba(246,237,220,0.05)', border: '1px solid rgba(231,211,156,0.14)' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(231,211,156,0.4)'
+                    e.currentTarget.style.boxShadow = '0 12px 28px -16px rgba(213,173,85,0.5)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(231,211,156,0.14)'
+                    e.currentTarget.style.boxShadow = 'none'
+                  }}
                 >
                   <span
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-extrabold"
-                    style={{ background: 'var(--grad-gold)', color: '#3a2c0f' }}
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-extrabold transition-transform duration-300 group-hover:scale-105"
+                    style={{ background: 'var(--grad-gold)', color: '#3a2c0f', boxShadow: '0 6px 16px -6px rgba(213,173,85,0.6)' }}
                   >
                     {t.point}
                   </span>

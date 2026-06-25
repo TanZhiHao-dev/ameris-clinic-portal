@@ -5,12 +5,14 @@ import { formatDateId, statusTone, type BookingStatus } from '../data/account'
 import { clinic, formatRp } from '../data/clinic'
 import { getMyBooking } from '../server/bookings'
 import { useMidtransPay } from '../lib/useMidtransPay'
-import { BankTransferInstructions } from '../components/app/BankTransferInstructions'
+import { useI18n } from '../lib/i18n'
+import type { DictKey } from '../lib/i18n-dict'
 
 export const Route = createFileRoute('/akun/booking/$id')({ component: TicketPage })
 
 // Deterministic faux-QR (no external lib, SSR-safe via Math.sin hash).
 function FauxQR({ value, size = 150 }: { value: string; size?: number }) {
+  const { t } = useI18n()
   const N = 21
   const cell = size / N
   let h = 0
@@ -39,7 +41,7 @@ function FauxQR({ value, size = 150 }: { value: string; size?: number }) {
     }
   }
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`Kode booking ${value}`}>
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={t('tk.qrAria', { value })}>
       {rects}
     </svg>
   )
@@ -49,6 +51,7 @@ function TicketPage() {
   const { id } = Route.useParams()
   const qc = useQueryClient()
   const { pay, dialog, busy } = useMidtransPay()
+  const { t } = useI18n()
   const { data: appt = null, isPending } = useQuery({
     queryKey: ['my-booking', id],
     queryFn: () => getMyBooking({ data: { id } }),
@@ -66,33 +69,34 @@ function TicketPage() {
     return (
       <div>
         <Link to="/akun/booking" className="nav-link inline-flex items-center gap-1.5 text-sm">
-          <ArrowLeft size={16} /> Kembali ke booking
+          <ArrowLeft size={16} /> {t('tk.back')}
         </Link>
         <div className="card-soft mt-6 p-10 text-center">
-          <p className="text-lg font-bold">Bukti janji temu tidak ditemukan</p>
+          <p className="text-lg font-bold">{t('tk.notFoundTitle')}</p>
           <p className="mt-2 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-            Booking dengan nomor {id} tidak tersedia.
+            {t('tk.notFoundBody', { id })}
           </p>
         </div>
       </div>
     )
   }
 
-  const onlinePending = appt.payment === 'Online' && appt.payStatus === 'Pending'
-  const dpPaid = onlinePending && appt.paidAt != null
-  const needsPay = onlinePending && !appt.paidAt && appt.status !== 'Batal'
-  const transferPending = appt.payment === 'Transfer Bank' && appt.payStatus === 'Pending' && appt.status !== 'Batal'
+  // Online & Transfer Bank both pay through Midtrans Snap.
+  const gatewayPending =
+    (appt.payment === 'Online' || appt.payment === 'Transfer Bank') && appt.payStatus === 'Pending'
+  const dpPaid = gatewayPending && appt.paidAt != null
+  const needsPay = gatewayPending && !appt.paidAt && appt.status !== 'Batal'
 
   return (
     <div>
       {dialog}
       <Link to="/akun/booking" className="nav-link inline-flex items-center gap-1.5 text-sm">
-        <ArrowLeft size={16} /> Kembali ke booking
+        <ArrowLeft size={16} /> {t('tk.back')}
       </Link>
 
-      <h1 className="mt-4 text-[2rem]">Bukti janji temu</h1>
+      <h1 className="mt-4 text-[2rem]">{t('tk.title')}</h1>
       <p className="mt-1 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-        Tunjukkan kode ini saat tiba di klinik.
+        {t('tk.sub')}
       </p>
 
       <div className="mx-auto mt-6 max-w-xl">
@@ -101,7 +105,7 @@ function TicketPage() {
           <div className="flex items-center justify-between px-7 py-5" style={{ background: 'var(--color-espresso)', color: '#f6eddc' }}>
             <span className="script gold-text text-3xl leading-none">Ameris</span>
             <span className="badge" style={{ background: statusTone[appt.status as BookingStatus].bg, color: statusTone[appt.status as BookingStatus].color }}>
-              {appt.status}
+              {t(`status.${appt.status}` as DictKey)}
             </span>
           </div>
 
@@ -119,19 +123,19 @@ function TicketPage() {
             <dl className="flex flex-col gap-3 py-2 text-sm">
               <div className="flex items-center justify-between">
                 <dt className="inline-flex items-center gap-2" style={{ color: 'var(--color-ink-muted)' }}>
-                  <CalendarPlus size={15} /> Tanggal
+                  <CalendarPlus size={15} /> {t('tk.date')}
                 </dt>
                 <dd className="font-semibold">{formatDateId(appt.date)}</dd>
               </div>
               <div className="flex items-center justify-between">
                 <dt className="inline-flex items-center gap-2" style={{ color: 'var(--color-ink-muted)' }}>
-                  <Clock size={15} /> Jam
+                  <Clock size={15} /> {t('tk.time')}
                 </dt>
                 <dd className="font-semibold">{appt.time} WIB</dd>
               </div>
               <div className="flex items-center justify-between">
                 <dt className="inline-flex items-center gap-2" style={{ color: 'var(--color-ink-muted)' }}>
-                  <MapPin size={15} /> Lokasi
+                  <MapPin size={15} /> {t('tk.location')}
                 </dt>
                 <dd className="font-semibold">{clinic.name}, {clinic.location}</dd>
               </div>
@@ -151,35 +155,30 @@ function TicketPage() {
             <div className="flex items-end justify-between py-2">
               <div>
                 <div className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-                  Pembayaran {appt.payment === 'Online' ? 'online' : 'di klinik'}
+                  {appt.payment === 'Klinik' ? t('tk.payClinic') : appt.payment === 'Transfer Bank' ? t('tk.payTransfer') : t('tk.payOnline')}
                 </div>
-                <div className="font-bold">Total</div>
+                <div className="font-bold">{t('bk.total')}</div>
               </div>
               <span className="mono text-2xl font-extrabold gold-text">{formatRp(appt.total)}</span>
             </div>
 
             {needsPay && (
               <button type="button" onClick={handlePay} disabled={busy} className="btn btn-gold mt-5 w-full disabled:cursor-not-allowed disabled:opacity-60">
-                <CreditCard size={17} /> {busy ? 'Memproses…' : appt.paymentPlan === 'dp' ? 'Bayar DP sekarang' : 'Bayar sekarang'}
+                <CreditCard size={17} /> {busy ? t('bk.processing') : appt.paymentPlan === 'dp' ? t('tk.payDpNow') : t('bk.payNow')}
               </button>
             )}
             {dpPaid && (
               <div className="mt-5 flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold" style={{ background: 'rgba(154,115,32,0.12)', color: 'var(--color-gold-deep)' }}>
-                <CheckCircle2 size={15} /> DP terbayar online · sisa dilunasi di klinik
-              </div>
-            )}
-            {transferPending && (
-              <div className="mt-5">
-                <BankTransferInstructions amount={appt.total} bookingId={appt.id} />
+                <CheckCircle2 size={15} /> {t('tk.dpPaid')}
               </div>
             )}
 
             <div className="mt-5 flex flex-col gap-3 sm:flex-row">
               <button type="button" className="btn btn-primary flex-1">
-                <CalendarPlus size={17} /> Tambah ke kalender
+                <CalendarPlus size={17} /> {t('tk.addCalendar')}
               </button>
               <a href={`https://wa.me/${clinic.whatsappRaw}`} target="_blank" rel="noopener noreferrer" className="btn btn-ghost flex-1">
-                <MessageCircle size={17} /> Hubungi klinik
+                <MessageCircle size={17} /> {t('tk.contactClinic')}
               </a>
             </div>
           </div>

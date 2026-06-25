@@ -1,11 +1,10 @@
-import { type ChangeEvent, useState } from 'react'
+import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { BadgeCheck, CheckCheck, QrCode, Upload } from 'lucide-react'
+import { BadgeCheck, CheckCheck } from 'lucide-react'
 import { fmtDate, formatRp, type OwnerStatus, type PayStatus, payTone, statusTone } from '../data/owner'
 import { ownerApprovePayment, ownerTransactions } from '#/server/transactions'
 import { ownerCompleteBooking } from '#/server/bookings'
-import { getPaymentInfo, ownerSetQris } from '#/server/settings'
 
 export const Route = createFileRoute('/owner/transaksi')({ component: TransactionsPage })
 
@@ -53,25 +52,6 @@ function TransactionsPage() {
   })
   const complete = (b: { id: string }) => completeMut.mutate(b.id)
 
-  // ── QRIS payment image (owner-managed) ──
-  const { data: payInfo } = useQuery({ queryKey: ['payment-info'], queryFn: () => getPaymentInfo() })
-  const [qrisErr, setQrisErr] = useState('')
-  const qrisMut = useMutation({
-    mutationFn: (image: string | null) => ownerSetQris({ data: { image } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['payment-info'] }),
-  })
-  const onQrisFile = (e: ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]
-    e.target.value = '' // allow re-picking the same file
-    if (!f) return
-    setQrisErr('')
-    if (!f.type.startsWith('image/')) return setQrisErr('File harus berupa gambar.')
-    if (f.size > 600 * 1024) return setQrisErr('Gambar terlalu besar (maks 600 KB). Kompres dulu.')
-    const reader = new FileReader()
-    reader.onload = () => qrisMut.mutate(String(reader.result))
-    reader.readAsDataURL(f)
-  }
-
   return (
     <div>
       <span className="eyebrow">Manajemen Transaksi</span>
@@ -85,39 +65,6 @@ function TransactionsPage() {
           <CheckCheck size={16} /> {flash}
         </div>
       )}
-
-      {/* QRIS payment image */}
-      <div className="card-soft mt-6 p-5 sm:p-6">
-        <div className="flex items-center gap-2 font-bold">
-          <QrCode size={18} style={{ color: 'var(--color-gold-deep)' }} /> QRIS Pembayaran
-        </div>
-        <p className="mt-1 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-          Foto QRIS klinik yang ditampilkan saat customer memilih “Transfer Bank” di checkout.
-        </p>
-        <div className="mt-4 flex flex-wrap items-center gap-5">
-          <div className="grid h-36 w-36 shrink-0 place-items-center overflow-hidden rounded-xl" style={{ border: '1px solid var(--color-line)', background: 'var(--color-cream)' }}>
-            {payInfo?.qrisImage ? (
-              <img src={payInfo.qrisImage} alt="QRIS Ameris" className="h-full w-full object-contain" />
-            ) : (
-              <span className="px-3 text-center text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>Belum ada QRIS</span>
-            )}
-          </div>
-          <div className="flex flex-col items-start gap-2">
-            <label className="btn btn-gold cursor-pointer">
-              <Upload size={16} /> {payInfo?.qrisImage ? 'Ganti QRIS' : 'Upload QRIS'}
-              <input type="file" accept="image/*" className="hidden" onChange={onQrisFile} />
-            </label>
-            {payInfo?.qrisImage && (
-              <button type="button" onClick={() => qrisMut.mutate(null)} className="text-sm font-semibold" style={{ color: 'var(--color-rose)' }}>
-                Hapus QRIS
-              </button>
-            )}
-            <p className="text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>JPG/PNG, maks 600 KB.</p>
-            {qrisMut.isPending && <p className="text-[0.72rem] font-semibold" style={{ color: 'var(--color-gold-deep)' }}>Menyimpan…</p>}
-            {qrisErr && <p className="text-sm font-medium" style={{ color: 'var(--color-destructive)' }}>{qrisErr}</p>}
-          </div>
-        </div>
-      </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <div className="card-soft p-5">

@@ -11,6 +11,7 @@ import {
   isProduction,
   midtransConfigured,
   settlePayment,
+  simulationEnabled,
   snapJsUrl,
 } from './_midtrans'
 
@@ -18,8 +19,24 @@ import {
 const payNowAmount = (total: number, plan: string | null) =>
   plan === 'dp' ? Math.round(total / 2) : total
 
-// Load a patient's online booking + its transaction, enforcing ownership.
-async function loadOwnedOnlineTxn(userId: string, bookingId: string) {
+// Snap channels offered for the "Transfer Bank" method: QRIS + every Virtual
+// Account bank. Both settle automatically via the webhook — no manual verify.
+const QRIS_VA_CHANNELS = [
+  'qris',
+  'other_qris',
+  'bca_va',
+  'bni_va',
+  'bri_va',
+  'cimb_va',
+  'permata_va',
+  'echannel', // Mandiri Bill Payment
+  'other_va',
+]
+
+// Load a patient's payable booking + its transaction, enforcing ownership.
+// Both Online and Transfer Bank pay through Snap; only Offline (pay at clinic)
+// has no gateway session.
+async function loadOwnedPayableTxn(userId: string, bookingId: string) {
   const [bk] = await db
     .select()
     .from(bookings)
@@ -27,7 +44,7 @@ async function loadOwnedOnlineTxn(userId: string, bookingId: string) {
   if (!bk) throw new Error('Booking tidak ditemukan.')
   const [txn] = await db.select().from(transactions).where(eq(transactions.bookingId, bookingId))
   if (!txn) throw new Error('Transaksi tidak ditemukan.')
-  if (txn.paymentMethod !== 'Online') throw new Error('Booking ini dibayar di klinik.')
+  if (txn.paymentMethod === 'Offline') throw new Error('Booking ini dibayar di klinik.')
   return { bk, txn }
 }
 
@@ -36,7 +53,7 @@ export const createSnapPayment = createServerFn({ method: 'POST' })
   .validator(z.object({ bookingId: z.string() }))
   .handler(async ({ data }) => {
     const u = await requireUser()
-    const { bk, txn } = await loadOwnedOnlineTxn(u.id, data.bookingId)
+    const { bk, txn } = await loadOwnedPayableTxn(u.id, data.bookingId)
     if (txn.paymentStatus === 'Lunas') throw new Error('Pembayaran sudah lunas.')
 
     const amount = payNowAmount(bk.total, txn.paymentPlan)
@@ -45,9 +62,12 @@ export const createSnapPayment = createServerFn({ method: 'POST' })
     const orderId = `${bk.id}-${crypto.randomUUID().slice(0, 8)}`
 
     if (!midtransConfigured) {
-      // Simulation mode — frontend shows an in-app sandbox dialog instead of
-      // the hosted Snap popup. We still persist the order_id so the simulator
-      // and webhook resolve to this transaction.
+      // No real keys → the gateway can't actually charge. In dev we fall back to
+      // the in-app sandbox dialog; in production we REFUSE rather than let a
+      // visitor fake a paid booking. Configure MIDTRANS_SERVER_KEY to go live.
+      if (!simulationEnabled) {
+        throw new Error('Pembayaran online belum aktif. Silakan hubungi klinik untuk menyelesaikan pembayaran.')
+      }
       await db.update(transactions).set({ midtransOrderId: orderId }).where(eq(transactions.id, txn.id))
       return { simulated: true as const, orderId, amount, bookingId: bk.id, plan: txn.paymentPlan ?? 'full' }
     }
@@ -70,6 +90,8 @@ export const createSnapPayment = createServerFn({ method: 'POST' })
       items: snapItems,
       customer: { first_name: u.name, email: u.email, phone: u.phone ?? undefined },
       finishUrl: `${appUrl}/akun/booking/${bk.id}`,
+      // "Transfer Bank" → QRIS + Virtual Account only; "Online" → all channels.
+      ...(txn.paymentMethod === 'Transfer' ? { enabledPayments: QRIS_VA_CHANNELS } : {}),
     })
 
     await db
@@ -98,7 +120,7 @@ export const confirmPayment = createServerFn({ method: 'POST' })
   .validator(z.object({ bookingId: z.string() }))
   .handler(async ({ data }) => {
     const u = await requireUser()
-    const { txn } = await loadOwnedOnlineTxn(u.id, data.bookingId)
+    const { txn } = await loadOwnedPayableTxn(u.id, data.bookingId)
     if (midtransConfigured && txn.midtransOrderId) {
       const status = await fetchMidtransStatus(txn.midtransOrderId)
       if (status?.transaction_status) {
@@ -122,7 +144,9 @@ export const simulatePaymentResult = createServerFn({ method: 'POST' })
   .validator(z.object({ orderId: z.string(), outcome: z.enum(['success', 'pending']) }))
   .handler(async ({ data }) => {
     const u = await requireUser()
-    if (midtransConfigured) throw new Error('Simulasi nonaktif: Midtrans sudah terkonfigurasi.')
+    // Only the dev sandbox may settle a fake payment — never with real keys, and
+    // never in production (where !simulationEnabled even without keys).
+    if (!simulationEnabled) throw new Error('Simulasi pembayaran nonaktif.')
     // Ownership: the order_id prefix must be a booking owned by this user.
     const bookingId = data.orderId.slice(0, data.orderId.lastIndexOf('-'))
     const [bk] = await db

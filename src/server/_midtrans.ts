@@ -17,6 +17,12 @@ export const midtransConfigured = SERVER_KEY.length > 0
 export const clientKey = CLIENT_KEY
 export const isProduction = IS_PROD
 
+// The in-app "sandbox" dialog that lets the caller pick a fake payment outcome
+// is a DEV-ONLY convenience. It must NEVER run in a production build — otherwise
+// a visitor could mark their own booking Lunas without paying. `import.meta.env.DEV`
+// is true only under `vite dev`; the production bundle hard-codes it to false.
+export const simulationEnabled = !midtransConfigured && import.meta.env.DEV
+
 const SNAP_BASE = IS_PROD ? 'https://app.midtrans.com' : 'https://app.sandbox.midtrans.com'
 const API_BASE = IS_PROD ? 'https://api.midtrans.com' : 'https://api.sandbox.midtrans.com'
 
@@ -29,12 +35,15 @@ export type SnapItem = { id: string; name: string; price: number; quantity: numb
 export type SnapCustomer = { first_name: string; email: string; phone?: string }
 
 // Open a Snap transaction → { token, redirectUrl }. Throws on a non-2xx.
+// enabledPayments restricts which channels appear in the popup (e.g. QRIS + VA
+// only for the "Transfer Bank" method); omit to offer every enabled channel.
 export async function createSnapTransaction(input: {
   orderId: string
   grossAmount: number
   items: SnapItem[]
   customer: SnapCustomer
   finishUrl?: string
+  enabledPayments?: string[]
 }): Promise<{ token: string; redirectUrl: string }> {
   const res = await fetch(`${SNAP_BASE}/snap/v1/transactions`, {
     method: 'POST',
@@ -47,6 +56,7 @@ export async function createSnapTransaction(input: {
       transaction_details: { order_id: input.orderId, gross_amount: input.grossAmount },
       item_details: input.items,
       customer_details: input.customer,
+      ...(input.enabledPayments?.length ? { enabled_payments: input.enabledPayments } : {}),
       ...(input.finishUrl ? { callbacks: { finish: input.finishUrl } } : {}),
     }),
   })

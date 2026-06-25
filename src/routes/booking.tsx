@@ -14,17 +14,18 @@ import {
   ShoppingBag,
 } from 'lucide-react'
 import { PageShell } from '../components/app/PageShell'
-import { BankTransferInstructions } from '../components/app/BankTransferInstructions'
 import { useCart, type CartItem } from '../lib/cart'
 import { clinic, formatRp, loyaltyPointsFor, treatments } from '../data/clinic'
 import { createBooking } from '../server/bookings'
 import { useMidtransPay, type PayOutcome } from '../lib/useMidtransPay'
 import { getVisual } from '../components/landing/TreatmentThumb'
+import { useI18n } from '../lib/i18n'
+import type { DictKey } from '../lib/i18n-dict'
 
 export const Route = createFileRoute('/booking')({ component: BookingPage })
 
 const SLOTS = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00']
-const WD = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
+const WD: DictKey[] = ['wd.mon', 'wd.tue', 'wd.wed', 'wd.thu', 'wd.fri', 'wd.sat', 'wd.sun']
 const MAX_WEEK = 4
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -34,10 +35,10 @@ const slotFull = (iso: string, idx: number) => {
   for (const c of iso) h = (h * 31 + c.charCodeAt(0)) >>> 0
   return (h + idx * 5) % 7 === 0
 }
-const prettyDate = (iso: string) =>
-  new Date(iso + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })
-const monthLabel = (iso: string) =>
-  new Date(iso + 'T00:00:00').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+const prettyDate = (iso: string, loc: string) =>
+  new Date(iso + 'T00:00:00').toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })
+const monthLabel = (iso: string, loc: string) =>
+  new Date(iso + 'T00:00:00').toLocaleDateString(loc, { month: 'long', year: 'numeric' })
 
 type Confirmation = {
   id: string
@@ -46,13 +47,16 @@ type Confirmation = {
   date: string
   time: string
   payment: 'online' | 'klinik' | 'transfer'
-  payOutcome: PayOutcome | null // null = transfer bank / bayar di klinik (tidak ada gateway)
+  payOutcome: PayOutcome | null // null hanya untuk "Bayar di klinik" (tanpa gateway)
 }
 
 function BookingPage() {
   const { items, subtotal, clear, hydrated } = useCart()
   const qc = useQueryClient()
   const { pay, dialog, busy } = useMidtransPay()
+  // Aliased to `tr` — a treatment is named `t` in the summary map below.
+  const { t: tr, lang } = useI18n()
+  const loc = lang === 'en' ? 'en-US' : 'id-ID'
 
   const [today, setToday] = useState('')
   const [monday, setMonday] = useState<Date | null>(null)
@@ -102,9 +106,9 @@ function BookingPage() {
       paymentMethod: payment === 'online' ? 'Online' : payment === 'transfer' ? 'Transfer' : 'Offline',
       paymentPlan: payment === 'online' ? plan : 'full',
     })
-    // Online → open Midtrans Snap (or the sandbox dialog). Transfer Bank shows
-    // manual instructions; Offline pays at the clinic — neither hits a gateway.
-    const outcome = payment === 'online' ? await pay(res.id) : null
+    // Online & Transfer Bank both open Midtrans Snap (or the sandbox dialog) and
+    // settle automatically via the webhook. Only "Bayar di klinik" skips the gateway.
+    const outcome = payment === 'klinik' ? null : await pay(res.id)
     setDone({ id: res.id, items: [...items], total: subtotal, date, time, payment, payOutcome: outcome })
     clear()
     qc.invalidateQueries() // refresh my-bookings / upcoming after checkout
@@ -121,28 +125,25 @@ function BookingPage() {
 
   // ── Success ──
   if (done) {
-    const online = done.payment === 'online'
-    const transfer = done.payment === 'transfer'
+    // Online & Transfer Bank both settle through Midtrans Snap.
+    const gateway = done.payment !== 'klinik'
+    const methodLabel = done.payment === 'transfer' ? tr('bk.s.methodTransfer') : tr('bk.s.methodOnline')
     const paid = done.payOutcome === 'success'
     const pendingPay = done.payOutcome === 'pending'
-    const head = transfer
-      ? { title: 'Booking dibuat ✦', sub: 'Selesaikan transfer agar booking-mu dikonfirmasi.' }
+    const head = paid
+      ? { title: tr('bk.s.paidTitle'), sub: tr('bk.s.paidSub', { location: clinic.location }) }
+      : pendingPay
+        ? { title: tr('bk.s.pendingTitle'), sub: tr('bk.s.pendingSub') }
+        : gateway
+          ? { title: tr('bk.s.createdTitle'), sub: tr('bk.s.createdSub') }
+          : { title: tr('bk.s.successTitle'), sub: tr('bk.s.paidSub', { location: clinic.location }) }
+    const payValue = !gateway
+      ? tr('bk.s.payAtClinic')
       : paid
-        ? { title: 'Pembayaran berhasil!', sub: `Bukti janji temu sudah terbit. Sampai jumpa di ${clinic.location} ✦` }
+        ? `${methodLabel} · ${tr('bk.s.statusPaid')}`
         : pendingPay
-          ? { title: 'Menunggu pembayaran', sub: 'Selesaikan pembayaran agar booking-mu dikonfirmasi.' }
-          : online
-            ? { title: 'Booking dibuat ✦', sub: 'Pembayaran belum selesai — bisa dilanjutkan kapan saja.' }
-            : { title: 'Booking berhasil!', sub: `Bukti janji temu sudah terbit. Sampai jumpa di ${clinic.location} ✦` }
-    const payValue = transfer
-      ? 'Transfer Bank · Menunggu'
-      : !online
-        ? 'Bayar di klinik'
-        : paid
-          ? 'Online · Lunas'
-          : pendingPay
-            ? 'Online · Menunggu'
-            : 'Online · Belum dibayar'
+          ? `${methodLabel} · ${tr('bk.s.statusPending')}`
+          : `${methodLabel} · ${tr('bk.s.statusUnpaid')}`
     return (
       <PageShell>
         {dialog}
@@ -160,14 +161,14 @@ function BookingPage() {
               </div>
               <div className="p-8">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>No. Booking</span>
+                  <span className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>{tr('bk.s.bookingNo')}</span>
                   <span className="mono font-bold">{done.id}</span>
                 </div>
                 <div className="my-4 hairline-gold" />
                 <dl className="flex flex-col gap-3 text-sm">
-                  <Row label="Tanggal" value={prettyDate(done.date)} />
-                  <Row label="Jam" value={`${done.time} WIB`} />
-                  <Row label="Pembayaran" value={payValue} />
+                  <Row label={tr('bk.date')} value={prettyDate(done.date, loc)} />
+                  <Row label={tr('bk.time')} value={`${done.time} WIB`} />
+                  <Row label={tr('bk.s.payment')} value={payValue} />
                 </dl>
                 <div className="my-4 hairline-gold" />
                 {done.items.map((i) => (
@@ -178,22 +179,17 @@ function BookingPage() {
                 ))}
                 <div className="my-4 hairline-gold" />
                 <div className="flex items-end justify-between">
-                  <span className="font-bold">Total</span>
+                  <span className="font-bold">{tr('bk.total')}</span>
                   <span className="mono text-2xl font-extrabold gold-text">{formatRp(done.total)}</span>
                 </div>
-                {online && !paid && (
+                {gateway && !paid && (
                   <button type="button" onClick={retryPay} disabled={busy} className="btn btn-gold mt-7 w-full disabled:cursor-not-allowed disabled:opacity-60">
-                    <CreditCard size={17} /> {busy ? 'Memproses…' : pendingPay ? 'Cek / lanjutkan pembayaran' : 'Bayar sekarang'}
+                    <CreditCard size={17} /> {busy ? tr('bk.processing') : pendingPay ? tr('bk.s.retryPending') : tr('bk.payNow')}
                   </button>
                 )}
-                {transfer && (
-                  <div className="mt-6">
-                    <BankTransferInstructions amount={done.total} bookingId={done.id} />
-                  </div>
-                )}
                 <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-                  <Link to="/akun/booking" className="btn btn-primary flex-1">Lihat di akun saya</Link>
-                  <Link to="/treatment" className="btn btn-ghost flex-1">Booking lagi</Link>
+                  <Link to="/akun/booking" className="btn btn-primary flex-1">{tr('bk.s.viewInAccount')}</Link>
+                  <Link to="/treatment" className="btn btn-ghost flex-1">{tr('bk.s.bookAgain')}</Link>
                 </div>
               </div>
             </div>
@@ -213,11 +209,11 @@ function BookingPage() {
               <div className="grid h-16 w-16 place-items-center rounded-full" style={{ background: 'var(--color-muted)' }}>
                 <ShoppingBag size={26} style={{ color: 'var(--color-gold-deep)' }} />
               </div>
-              <p className="mt-5 text-xl font-bold">Belum ada treatment dipilih</p>
+              <p className="mt-5 text-xl font-bold">{tr('bk.emptyTitle')}</p>
               <p className="mt-2 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-                Pilih treatment dulu sebelum mengatur jadwal booking.
+                {tr('bk.emptyBody')}
               </p>
-              <Link to="/treatment" className="btn btn-gold mt-6">Lihat menu treatment <ArrowRight size={18} /></Link>
+              <Link to="/treatment" className="btn btn-gold mt-6">{tr('bk.emptyCta')} <ArrowRight size={18} /></Link>
             </div>
           </div>
         </section>
@@ -230,10 +226,10 @@ function BookingPage() {
       {dialog}
       <section className="py-10 pb-28 sm:py-14 lg:pb-14" style={{ background: 'var(--color-cream)' }}>
         <div className="shell-x">
-          <span className="eyebrow">Booking</span>
-          <h1 className="mt-2 text-[2.2rem] sm:text-[2.8rem]">Atur jadwal kunjunganmu</h1>
+          <span className="eyebrow">{tr('bk.eyebrow')}</span>
+          <h1 className="mt-2 text-[2.2rem] sm:text-[2.8rem]">{tr('bk.title')}</h1>
           <p className="mt-2 text-[1rem]" style={{ color: 'var(--color-ink-soft)' }}>
-            Pilih tanggal &amp; jam, lalu metode pembayaran. Hanya butuh satu menit.
+            {tr('bk.subtitle')}
           </p>
 
           <div className="mt-8 grid items-start gap-6 lg:grid-cols-[1.55fr_1fr]">
@@ -241,20 +237,20 @@ function BookingPage() {
             <div className="flex flex-col gap-6">
               {/* Step 1 — Schedule */}
               <div className="card-soft p-6 sm:p-7">
-                <StepHead n="1" title="Pilih tanggal & jam" icon={<CalendarCheck size={17} />} />
+                <StepHead n="1" title={tr('bk.step1')} icon={<CalendarCheck size={17} />} />
 
                 {/* Week calendar */}
                 <div className="mt-5">
                   <div className="mb-3 flex items-center justify-between">
-                    <span className="text-sm font-bold">{days[0] ? monthLabel(days[0].iso) : '—'}</span>
+                    <span className="text-sm font-bold">{days[0] ? monthLabel(days[0].iso, loc) : '—'}</span>
                     <div className="flex gap-1.5">
-                      <button type="button" aria-label="Minggu sebelumnya" disabled={week === 0}
+                      <button type="button" aria-label={tr('bk.prevWeek')} disabled={week === 0}
                         onClick={() => setWeek((w) => Math.max(0, w - 1))}
                         className="grid h-8 w-8 place-items-center rounded-full transition disabled:opacity-30"
                         style={{ border: '1px solid var(--color-line)', background: 'var(--color-shell)' }}>
                         <ChevronLeft size={16} />
                       </button>
-                      <button type="button" aria-label="Minggu berikutnya" disabled={week >= MAX_WEEK - 1}
+                      <button type="button" aria-label={tr('bk.nextWeek')} disabled={week >= MAX_WEEK - 1}
                         onClick={() => setWeek((w) => Math.min(MAX_WEEK - 1, w + 1))}
                         className="grid h-8 w-8 place-items-center rounded-full transition disabled:opacity-30"
                         style={{ border: '1px solid var(--color-line)', background: 'var(--color-shell)' }}>
@@ -266,7 +262,7 @@ function BookingPage() {
                   <div className="grid grid-cols-7 gap-1.5">
                     {WD.map((d) => (
                       <div key={d} className="pb-1 text-center text-[0.66rem] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-ink-muted)' }}>
-                        {d}
+                        {tr(d)}
                       </div>
                     ))}
                     {days.map((d) => {
@@ -297,12 +293,12 @@ function BookingPage() {
 
                 {/* Time slots */}
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold">Pilih jam</span>
-                  {date && <span className="text-[0.78rem]" style={{ color: 'var(--color-ink-muted)' }}>{prettyDate(date)}</span>}
+                  <span className="text-sm font-bold">{tr('bk.chooseTime')}</span>
+                  {date && <span className="text-[0.78rem]" style={{ color: 'var(--color-ink-muted)' }}>{prettyDate(date, loc)}</span>}
                 </div>
                 {!date ? (
                   <p className="mt-3 rounded-xl px-4 py-3 text-sm" style={{ background: 'var(--color-cream)', color: 'var(--color-ink-muted)' }}>
-                    Pilih tanggal dulu untuk melihat slot yang tersedia.
+                    {tr('bk.pickDateFirst')}
                   </p>
                 ) : (
                   <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -327,15 +323,15 @@ function BookingPage() {
 
               {/* Step 2 — Payment */}
               <div className="card-soft p-6 sm:p-7">
-                <StepHead n="2" title="Metode pembayaran" icon={<CreditCard size={17} />} />
+                <StepHead n="2" title={tr('bk.step2')} icon={<CreditCard size={17} />} />
                 <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                  <PayOption active={payment === 'transfer'} onClick={() => setPayment('transfer')} icon={<Landmark size={20} />} title="Transfer Bank" sub="BCA / QRIS" />
-                  <PayOption active={payment === 'online'} onClick={() => setPayment('online')} icon={<CreditCard size={20} />} title="Bayar online" sub="Kartu / e-wallet" />
-                  <PayOption active={payment === 'klinik'} onClick={() => setPayment('klinik')} icon={<MapPin size={20} />} title="Bayar di klinik" sub="Saat datang" />
+                  <PayOption active={payment === 'transfer'} onClick={() => setPayment('transfer')} icon={<Landmark size={20} />} title={tr('pay.transfer.title')} sub={tr('pay.transfer.sub')} />
+                  <PayOption active={payment === 'online'} onClick={() => setPayment('online')} icon={<CreditCard size={20} />} title={tr('pay.online.title')} sub={tr('pay.online.sub')} />
+                  <PayOption active={payment === 'klinik'} onClick={() => setPayment('klinik')} icon={<MapPin size={20} />} title={tr('pay.klinik.title')} sub={tr('pay.klinik.sub')} />
                 </div>
                 {payment === 'online' && (
                   <div className="mt-3 flex gap-2">
-                    {([['full', 'Bayar penuh'], ['dp', 'DP 50%']] as const).map(([k, label]) => (
+                    {([['full', tr('bk.payFull')], ['dp', tr('bk.payDp')]] as const).map(([k, label]) => (
                       <button key={k} type="button" onClick={() => setPlan(k)}
                         className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition"
                         style={plan === k ? { background: 'rgba(195,154,68,0.12)', border: '1.5px solid var(--color-gold)', color: 'var(--color-ink)' } : { background: 'var(--color-shell)', border: '1px solid var(--color-line)', color: 'var(--color-ink-muted)' }}>
@@ -349,7 +345,7 @@ function BookingPage() {
 
             {/* ── Summary ── */}
             <aside className="card-soft p-6 lg:sticky lg:top-28">
-              <h2 className="text-lg">Ringkasan booking</h2>
+              <h2 className="text-lg">{tr('bk.summary')}</h2>
               <div className="mt-4 flex flex-col gap-3">
                 {items.map((i) => {
                   const t = treatments.find((x) => x.id === i.id)
@@ -373,34 +369,34 @@ function BookingPage() {
               <div className="my-4 hairline-gold" />
               <dl className="flex flex-col gap-2 text-sm">
                 <div className="flex justify-between">
-                  <dt style={{ color: 'var(--color-ink-muted)' }}>Tanggal</dt>
-                  <dd className="font-semibold">{date ? prettyDate(date) : '—'}</dd>
+                  <dt style={{ color: 'var(--color-ink-muted)' }}>{tr('bk.date')}</dt>
+                  <dd className="font-semibold">{date ? prettyDate(date, loc) : '—'}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt style={{ color: 'var(--color-ink-muted)' }}>Jam</dt>
+                  <dt style={{ color: 'var(--color-ink-muted)' }}>{tr('bk.time')}</dt>
                   <dd className="font-semibold">{time ? `${time} WIB` : '—'}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt style={{ color: 'var(--color-ink-muted)' }}>Estimasi poin</dt>
+                  <dt style={{ color: 'var(--color-ink-muted)' }}>{tr('bk.estPoints')}</dt>
                   <dd className="mono font-semibold" style={{ color: 'var(--color-gold-deep)' }}>+{loyaltyPointsFor(subtotal)}</dd>
                 </div>
               </dl>
 
               <div className="my-4 hairline-gold" />
               <div className="flex items-end justify-between">
-                <span className="font-bold">Total</span>
+                <span className="font-bold">{tr('bk.total')}</span>
                 <span className="mono text-2xl font-extrabold gold-text">{formatRp(subtotal)}</span>
               </div>
               <div className="mt-1 flex items-center justify-between text-[0.8rem]" style={{ color: 'var(--color-ink-muted)' }}>
-                <span>Bayar sekarang</span>
-                <span className="mono font-semibold">{payNow === 0 ? 'di klinik' : formatRp(payNow)}</span>
+                <span>{tr('bk.payNow')}</span>
+                <span className="mono font-semibold">{payNow === 0 ? tr('bk.atClinic') : formatRp(payNow)}</span>
               </div>
 
               <button type="button" className="btn btn-gold mt-5 hidden w-full lg:inline-flex disabled:cursor-not-allowed disabled:opacity-50" disabled={!ready || submitting} onClick={confirm}>
-                {submitting ? 'Memproses…' : 'Konfirmasi booking'} {!submitting && <ArrowRight size={18} />}
+                {submitting ? tr('bk.processing') : tr('bk.confirm')} {!submitting && <ArrowRight size={18} />}
               </button>
               <div className="mt-3 hidden items-center justify-center gap-1.5 text-[0.76rem] lg:flex" style={{ color: 'var(--color-ink-muted)' }}>
-                <ShieldCheck size={13} /> Pembayaran aman · bisa dijadwalkan ulang
+                <ShieldCheck size={13} /> {tr('bk.secure')}
               </div>
             </aside>
           </div>
@@ -411,11 +407,11 @@ function BookingPage() {
       <div className="fixed inset-x-0 bottom-0 z-40 lg:hidden" style={{ background: 'rgba(253,250,244,0.95)', borderTop: '1px solid var(--color-line)', backdropFilter: 'blur(10px)' }}>
         <div className="shell-x flex items-center justify-between gap-3 py-3">
           <div>
-            <div className="text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>Total</div>
+            <div className="text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>{tr('bk.total')}</div>
             <div className="mono text-lg font-extrabold gold-text">{formatRp(subtotal)}</div>
           </div>
           <button type="button" className="btn btn-gold flex-1 disabled:cursor-not-allowed disabled:opacity-50" disabled={!ready || submitting} onClick={confirm}>
-            {submitting ? 'Memproses…' : ready ? 'Konfirmasi' : 'Pilih tanggal & jam'} {ready && !submitting && <ArrowRight size={18} />}
+            {submitting ? tr('bk.processing') : ready ? tr('bk.confirmShort') : tr('bk.pickDateTime')} {ready && !submitting && <ArrowRight size={18} />}
           </button>
         </div>
       </div>

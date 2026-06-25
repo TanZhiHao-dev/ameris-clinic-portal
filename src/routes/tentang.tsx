@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   ArrowRight,
+  ArrowUpRight,
   ChevronRight,
   Leaf,
   ShieldCheck,
@@ -28,12 +29,14 @@ function PhotoFrame({
   className,
   style,
   children,
+  fit = 'cover',
 }: {
   src?: string
   alt?: string
   className?: string
   style?: React.CSSProperties
   children?: ReactNode
+  fit?: 'cover' | 'contain'
 }) {
   // The brand placeholder sits underneath; a real photo layers on top and shows
   // immediately. If the file is missing the image errors out and hides itself,
@@ -57,7 +60,7 @@ function PhotoFrame({
           src={src}
           alt={alt ?? ''}
           onError={() => setFailed(true)}
-          style={{ position: 'absolute', inset: 0, height: '100%', width: '100%', objectFit: 'cover' }}
+          style={{ position: 'absolute', inset: 0, height: '100%', width: '100%', objectFit: fit }}
         />
       )}
     </div>
@@ -130,27 +133,31 @@ function Banner() {
 function Founder() {
   const { t, lang } = useI18n()
   return (
-    <section className="py-20 sm:py-24">
-      <div className="shell-x grid items-center gap-12 lg:grid-cols-[0.85fr_1.15fr]">
+    <section className="relative overflow-hidden py-24 sm:py-28">
+      <div className="aura-soft" aria-hidden />
+      <div className="shell-x relative grid items-center gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
         {/* portrait + supporting */}
-        <div className="reveal relative mx-auto w-full max-w-sm">
-          <PhotoFrame
-            src="/about/founder.jpg"
-            alt="dr. Meriana — Founder Ameris"
-            className="rounded-[1.8rem]"
-            style={{ aspectRatio: '4 / 5', boxShadow: 'var(--shadow-lift)' }}
-          >
-            <div className="flex flex-col items-center gap-3">
-              <Monogram size={84} />
-              <span className="badge badge-best">
-                <Sparkles size={12} /> FOUNDER
-              </span>
-            </div>
-          </PhotoFrame>
+        <div className="reveal group relative mx-auto w-full max-w-sm">
+          <div className="card-luxe relative p-3">
+            <PhotoFrame
+              src="/about/founder.png"
+              alt="dr. Meriana — Founder Ameris"
+              fit="contain"
+              className="rounded-2xl [&_img]:transition-transform [&_img]:duration-700 [&_img]:ease-out group-hover:[&_img]:scale-105"
+              style={{ aspectRatio: '4 / 5' }}
+            >
+              <div className="flex flex-col items-center gap-3">
+                <Monogram size={84} />
+                <span className="badge badge-best">
+                  <Sparkles size={12} /> FOUNDER
+                </span>
+              </div>
+            </PhotoFrame>
+          </div>
 
           {/* floating signature card */}
           <div
-            className="absolute -bottom-6 -right-3 rounded-2xl px-5 py-4 text-center sm:-right-6"
+            className="absolute -bottom-6 -right-3 rounded-2xl px-5 py-4 text-center transition-transform duration-300 group-hover:-translate-y-1 sm:-right-6"
             style={{ background: 'var(--color-shell)', border: '1px solid var(--color-line)', boxShadow: 'var(--shadow-soft)' }}
           >
             <div className="script gold-text text-[1.7rem] leading-none">dr. Meriana</div>
@@ -194,25 +201,28 @@ const STORY_STATS: { value: string; label: DictKey }[] = [
 function Story() {
   const { t } = useI18n()
   return (
-    <section className="py-20 sm:py-24" style={{ background: 'var(--color-shell)' }}>
-      <div className="shell-x grid items-center gap-12 lg:grid-cols-2">
+    <section className="relative overflow-hidden py-24 sm:py-28" style={{ background: 'var(--color-shell)' }}>
+      <div className="aura-soft" aria-hidden />
+      <div className="shell-x relative grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
         {/* media */}
-        <div className="reveal relative order-2 lg:order-1">
-          <PhotoFrame
-            src="/about/clinic.jpg"
-            alt="Ameris Aesthetic Clinic — Gading Serpong"
-            className="rounded-[1.8rem]"
-            style={{ aspectRatio: '4 / 3', boxShadow: 'var(--shadow-lift)' }}
-          >
-            <div className="flex flex-col items-center gap-3" style={{ color: 'var(--color-gold-deep)' }}>
-              <Sparkles size={40} />
-              <span className="text-[0.7rem] font-semibold uppercase tracking-[0.2em]">{clinic.location}</span>
-            </div>
-          </PhotoFrame>
+        <div className="reveal group relative order-2 lg:order-1">
+          <div className="card-luxe relative p-3">
+            <PhotoFrame
+              src="/about/clinic.jpg"
+              alt="Ameris Aesthetic Clinic — Gading Serpong"
+              className="rounded-2xl [&_img]:transition-transform [&_img]:duration-700 [&_img]:ease-out group-hover:[&_img]:scale-105"
+              style={{ aspectRatio: '4 / 3' }}
+            >
+              <div className="flex flex-col items-center gap-3" style={{ color: 'var(--color-gold-deep)' }}>
+                <Sparkles size={40} />
+                <span className="text-[0.7rem] font-semibold uppercase tracking-[0.2em]">{clinic.location}</span>
+              </div>
+            </PhotoFrame>
+          </div>
 
           {/* floating badge */}
           <div
-            className="absolute -left-3 -top-5 rounded-2xl px-4 py-3 sm:-left-6"
+            className="absolute -left-3 -top-5 rounded-2xl px-4 py-3 transition-transform duration-300 group-hover:-translate-y-1 sm:-left-6"
             style={{ background: 'var(--color-espresso)', color: '#f6eddc', boxShadow: 'var(--shadow-lift)' }}
           >
             <div className="script gold-text text-2xl leading-none">{clinic.tagline}</div>
@@ -235,14 +245,17 @@ function Story() {
             {t('about.story.body2')}
           </p>
 
-          <Link to="/treatment" className="btn btn-gold mt-8">
-            {t('about.story.cta')} <ArrowRight size={18} />
+          <Link to="/treatment" className="btn-split mt-8">
+            <span>{t('about.story.cta')}</span>
+            <span className="btn-split-ic" aria-hidden>
+              <ArrowRight size={18} />
+            </span>
           </Link>
 
           {/* stats */}
           <div className="mt-10 grid grid-cols-3 gap-4 border-t pt-8" style={{ borderColor: 'var(--color-line)' }}>
             {STORY_STATS.map((s) => (
-              <div key={s.label}>
+              <div key={s.label} className="transition-transform duration-300 hover:-translate-y-1">
                 <div className="font-display text-[2.4rem] font-bold leading-none gold-text" style={{ fontVariantNumeric: 'lining-nums' }}>
                   {s.value}
                 </div>
@@ -280,14 +293,27 @@ function WhyFeature({ item, side }: { item: WhyItem; side: 'left' | 'right' }) {
   const { icon: Icon, key, img } = item
   const isLeft = side === 'left'
   return (
-    <div className={`flex items-center gap-4 ${isLeft ? 'lg:flex-row-reverse lg:justify-end lg:text-right' : 'lg:text-left'}`}>
-      <PhotoFrame src={img} alt="" className="shrink-0 rounded-2xl" style={{ height: 92, width: 92 }}>
+    <div
+      className={`group flex items-center gap-4 transition-transform duration-300 ${
+        isLeft
+          ? 'lg:flex-row-reverse lg:justify-end lg:text-right lg:hover:-translate-x-1'
+          : 'lg:text-left lg:hover:translate-x-1'
+      }`}
+    >
+      <PhotoFrame
+        src={img}
+        alt=""
+        className="shrink-0 rounded-2xl [&_img]:transition-transform [&_img]:duration-700 [&_img]:ease-out group-hover:[&_img]:scale-105"
+        style={{ height: 92, width: 92, boxShadow: 'var(--shadow-soft)' }}
+      >
         <span style={{ color: 'var(--color-gold-deep)' }}>
           <Icon size={26} />
         </span>
       </PhotoFrame>
       <div className="max-w-[220px]">
-        <h3 className="text-base font-bold">{t(`about.why.${key}.title` as DictKey)}</h3>
+        <h3 className="text-base font-bold transition-colors duration-300 group-hover:text-[var(--color-gold-deep)]">
+          {t(`about.why.${key}.title` as DictKey)}
+        </h3>
         <p className="mt-1.5 text-sm leading-relaxed" style={{ color: 'var(--color-ink-muted)' }}>
           {t(`about.why.${key}.body` as DictKey)}
         </p>
@@ -299,8 +325,9 @@ function WhyFeature({ item, side }: { item: WhyItem; side: 'left' | 'right' }) {
 function WhyChoose() {
   const { t } = useI18n()
   return (
-    <section className="py-20 sm:py-24">
-      <div className="shell-x">
+    <section className="relative overflow-hidden py-24 sm:py-28">
+      <div className="aura-soft" aria-hidden />
+      <div className="shell-x relative">
         <div className="reveal mx-auto max-w-xl text-center">
           <span className="eyebrow">{t('about.why.eyebrow')}</span>
           <h2 className="mt-3 text-[2.2rem] sm:text-[2.9rem]">
@@ -320,19 +347,21 @@ function WhyChoose() {
           </div>
 
           {/* central image */}
-          <PhotoFrame
-            src="/about/why-main.jpg"
-            alt="Ameris Aesthetic Clinic"
-            className="order-first mx-auto w-full max-w-xs rounded-[2rem] lg:order-none"
-            style={{ aspectRatio: '3 / 4', boxShadow: 'var(--shadow-lift)' }}
-          >
-            <div className="flex flex-col items-center gap-4">
-              <Monogram size={76} />
-              <span className="badge badge-best">
-                <Sparkles size={12} /> AMERIS
-              </span>
-            </div>
-          </PhotoFrame>
+          <div className="card-luxe group order-first mx-auto w-full max-w-xs p-3 lg:order-none">
+            <PhotoFrame
+              src="/about/why-main.jpg"
+              alt="Ameris Aesthetic Clinic"
+              className="rounded-2xl [&_img]:transition-transform [&_img]:duration-700 [&_img]:ease-out group-hover:[&_img]:scale-105"
+              style={{ aspectRatio: '3 / 4' }}
+            >
+              <div className="flex flex-col items-center gap-4">
+                <Monogram size={76} />
+                <span className="badge badge-best">
+                  <Sparkles size={12} /> AMERIS
+                </span>
+              </div>
+            </PhotoFrame>
+          </div>
 
           {/* right features */}
           <div className="flex flex-col gap-10 lg:gap-12">
@@ -357,34 +386,44 @@ const TEAM = [
 function Team() {
   const { t } = useI18n()
   return (
-    <section className="py-20 sm:py-24" style={{ background: 'var(--color-shell)' }}>
-      <div className="shell-x">
-        <div className="reveal mx-auto max-w-xl text-center">
-          <span className="eyebrow">{t('about.team.eyebrow')}</span>
-          <h2 className="mt-3 text-[2.2rem] sm:text-[2.9rem]">
-            {t('about.team.title1')} <span className="gold-text">{t('about.team.titleAccent')}</span>
-          </h2>
-          <p className="mx-auto mt-4 max-w-md text-[0.98rem]" style={{ color: 'var(--color-ink-muted)' }}>
+    <section className="relative overflow-hidden py-24 sm:py-28" style={{ background: 'var(--color-shell)' }}>
+      <div className="aura-soft" aria-hidden />
+      <div className="shell-x relative">
+        <div className="reveal flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div className="max-w-xl">
+            <span className="eyebrow">{t('about.team.eyebrow')}</span>
+            <h2 className="mt-3 text-[2.2rem] sm:text-[2.9rem]">
+              {t('about.team.title1')} <span className="gold-text">{t('about.team.titleAccent')}</span>
+            </h2>
+          </div>
+          <p className="max-w-md text-[0.98rem] md:text-right" style={{ color: 'var(--color-ink-muted)' }}>
             {t('about.team.subtitle')}
           </p>
         </div>
 
-        <div className="reveal mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="reveal mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {TEAM.map((m, i) => {
             const displayName = m.founder ? 'dr. Meriana' : m.nameKey ? t(m.nameKey) : ''
             return (
-              <div key={i} className="text-center">
+              <div key={i} className="card-luxe group flex flex-col items-center p-6 text-center">
                 <PhotoFrame
                   src={m.photo}
                   alt={displayName}
-                  className="mx-auto rounded-full"
+                  className="mx-auto rounded-full [&_img]:transition-transform [&_img]:duration-700 [&_img]:ease-out group-hover:[&_img]:scale-105"
                   style={{ height: 168, width: 168, borderRadius: '9999px' }}
                 >
                   <Monogram size={56} />
                 </PhotoFrame>
-                <h3 className="mt-5 text-lg font-bold">{displayName}</h3>
-                <p className="mt-1 text-sm" style={{ color: 'var(--color-gold-deep)' }}>
+                <h3 className="mt-5 text-lg font-bold transition-colors duration-300 group-hover:text-[var(--color-gold-deep)]">
+                  {displayName}
+                </h3>
+                <p className="mt-1 inline-flex items-center gap-1 text-sm" style={{ color: 'var(--color-gold-deep)' }}>
                   {t(m.roleKey as DictKey)}
+                  <ArrowUpRight
+                    size={14}
+                    aria-hidden
+                    className="opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-100"
+                  />
                 </p>
               </div>
             )

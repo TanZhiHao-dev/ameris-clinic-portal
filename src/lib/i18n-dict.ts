@@ -185,11 +185,25 @@ const dict = {
   },
 
   // ── Testimonials ──────────────────────────────────────────────────
-  'testi.eyebrow': { id: 'Testimoni', en: 'Testimonials' },
-  'testi.title1': { id: 'Apa kata', en: 'What our' },
-  'testi.titleAccent': { id: 'pelanggan setia kami', en: 'loyal customers say' },
+  'testi.eyebrow': { id: 'Cerita Pelanggan', en: 'Client Love' },
+  'testi.title1': { id: 'Kata mereka yang', en: 'Words that make' },
+  'testi.titleAccent': { id: 'bikin kami berseri', en: 'us glow' },
+  'testi.subtitle': {
+    id: 'Cerita nyata, perawatan penuh perhatian, dan transformasi kulit yang lebih dari sekadar di permukaan.',
+    en: 'Real stories, thoughtful care, and skin transformations that go deeper than the surface.',
+  },
+  'testi.statHeading': { id: 'Kebahagiaan pasien, terukur di tiap momen', en: 'Client happiness, measured in moments' },
+  'testi.avgLabel': { id: 'Rating rata-rata', en: 'Average rating' },
+  'testi.statBody': {
+    id: 'Berdasarkan pengalaman pasien terverifikasi — dari konsultasi, perawatan, hingga follow-up.',
+    en: 'Based on verified client experiences across consultations, treatments, and follow-up care.',
+  },
+  'testi.verified': { id: 'Kunjungan terverifikasi', en: 'Verified appointment' },
+  'testi.bookCta': { id: 'Booking sesi glow', en: 'Book your glow session' },
+  'testi.moreStories': { id: 'Lihat ulasan lain', en: 'Read more stories' },
   'testi.googleCount': { id: '· {count} ulasan dari Google', en: '· {count} reviews from Google' },
   'testi.googleFallback': { id: '· ulasan di Google', en: '· reviews on Google' },
+  'testi.viaGoogle': { id: 'via Google', en: 'via Google' },
 
   // ── Final CTA ─────────────────────────────────────────────────────
   'cta.title1': { id: 'Kamu adalah mahakarya.', en: 'You are a masterpiece.' },
@@ -655,6 +669,73 @@ const dict = {
   'about.team.doctorName': { id: 'Tim Dokter Ameris', en: 'Ameris Doctors' },
   'about.team.therapistName': { id: 'Certified Therapist', en: 'Certified Therapists' },
   'about.team.careName': { id: 'Front Office', en: 'Front Office' },
+
+  // ── About Me (landing) — reuses about.founder.* for eyebrow/title/body/role ──
+  'aboutme.cred1': { id: 'Konsultasi & perawatan dipandu langsung oleh dokter', en: 'Consultation and treatment guided directly by a doctor' },
+  'aboutme.cred2': { id: 'Bersertifikasi Anti-Aging Medicine (AAM)', en: 'Certified in Anti-Aging Medicine (AAM)' },
+  'aboutme.cred3': { id: 'Teknologi Korea & exosome terkini untuk hasil natural', en: 'Latest Korean and exosome technology for natural results' },
+  'aboutme.readStory': { id: 'Baca kisah kami', en: 'Read our story' },
+
+  // ── Statistics ──
+  'stats.eyebrow': { id: 'Statistik', en: 'By the Numbers' },
+  'stats.title1': { id: 'Bukti', en: 'Proof in the' },
+  'stats.titleAccent': { id: 'kepercayaan', en: 'trust' },
+  'stats.title3': { id: 'yang pasien berikan', en: 'our patients place in us' },
+  'stats.desc': { id: 'Hasil, konsistensi, dan kenyamanan yang membuat pasien kembali lagi.', en: 'Results, consistency, and comfort that keep patients coming back.' },
+  'stats.ratingLabel': { id: 'Rating Google', en: 'Google rating' },
+  'stats.ratingNote': { id: 'dari ulasan pasien', en: 'from patient reviews' },
+  'stats.treatmentsLabel': { id: 'Pilihan treatment', en: 'Treatment options' },
+  'stats.treatmentsNote': { id: 'facial, laser, skinbooster & lainnya', en: 'facial, laser, skinbooster and more' },
+  'stats.sinceLabel': { id: 'Berdiri sejak', en: 'Established' },
+  'stats.sinceNote': { id: 'di Gading Serpong', en: 'in Gading Serpong' },
+  'stats.techLabel': { id: 'Teknologi Korea', en: 'Korean technology' },
+  'stats.techNote': { id: 'Pico laser & exosome terkini', en: 'latest Pico laser and exosome' },
+
+  // ── Services ──
+  'services.eyebrow': { id: 'Layanan', en: 'Services' },
+  'services.title1': { id: 'Rangkaian', en: 'A full range of' },
+  'services.titleAccent': { id: 'perawatan', en: 'treatments' },
+  'services.title3': { id: 'untuk setiap kebutuhan kulit', en: 'for every skin need' },
+  'services.desc': { id: 'Dari facial rutin hingga teknologi laser & injectable — semua dipandu dokter.', en: 'From routine facials to laser and injectable technology — all doctor-guided.' },
+  'services.explore': { id: 'Lihat treatment', en: 'Explore' },
+  'services.Facial': { id: 'Pembersihan mendalam, hidrasi, dan glow untuk perawatan rutin.', en: 'Deep cleansing, hydration, and glow for routine care.' },
+  'services.Peeling': { id: 'Eksfoliasi terkontrol untuk meratakan warna dan tekstur kulit.', en: 'Controlled exfoliation to even out skin tone and texture.' },
+  'services.Laser': { id: 'Korean Pico & DPL untuk pigmentasi, pori, dan peremajaan.', en: 'Korean Pico and DPL for pigmentation, pores, and rejuvenation.' },
+  'services.Skinbooster': { id: 'Hidrasi mendalam & stimulasi kolagen dari dalam kulit.', en: 'Deep hydration and collagen stimulation from within.' },
+  'services.Injeksi': { id: 'Botox, filler, meso, dan IV drip oleh dokter.', en: 'Botox, filler, meso, and IV drip by a doctor.' },
+  'services.Paket': { id: 'Paket signature gabungan untuk hasil paling maksimal.', en: 'Combined signature packages for the most complete results.' },
+  'services.countSuffix': { id: 'treatment', en: 'treatments' },
+
+  // ── Exclusive Packages (marquee) ──
+  'pkg.eyebrow': { id: 'Paket Eksklusif', en: 'Exclusive Packages' },
+  'pkg.title1': { id: 'Ritual yang dirancang membangunkan', en: 'Rituals designed to awaken your' },
+  'pkg.titleAccent': { id: 'kulit bercahaya', en: 'glow' },
+  'pkg.desc': { id: 'Paket signature yang memadukan beberapa perawatan untuk hasil paling maksimal.', en: 'Signature packages that combine several treatments for the most complete results.' },
+  'pkg.includes': { id: 'Termasuk', en: 'Includes' },
+  'pkg.cta': { id: 'Pilih paket', en: 'Choose package' },
+
+  // ── New Arrivals ──
+  'arrivals.eyebrow': { id: 'Terbaru', en: 'New Arrivals' },
+  'arrivals.title1': { id: 'Inovasi', en: 'The latest at' },
+  'arrivals.titleAccent': { id: 'terbaru kami', en: 'Ameris' },
+  'arrivals.desc': { id: 'Teknologi dan perawatan terkini yang baru hadir di Ameris.', en: 'The newest technology and treatments now available at Ameris.' },
+  'arrivals.seeAll': { id: 'Lihat semua', en: 'See all' },
+
+  // ── Contact ──
+  'contact.eyebrow': { id: 'Kontak', en: 'Contact' },
+  'contact.title1': { id: 'Kunjungi', en: 'Visit' },
+  'contact.titleAccent': { id: 'Ameris', en: 'Ameris' },
+  'contact.desc': { id: 'Temukan kami di jantung Gading Serpong — tenang, hangat, dan dirancang untuk ritual glow-up kamu.', en: 'Find us in the heart of Gading Serpong — calm, warm, and designed for your glow-up ritual.' },
+  'contact.addressTitle': { id: 'Alamat klinik', en: 'Clinic address' },
+  'contact.reachTitle': { id: 'Hubungi kami', en: 'Reach us' },
+  'contact.followTitle': { id: 'Ikuti kami', en: 'Follow us' },
+  'contact.openMaps': { id: 'Buka di Google Maps', en: 'Open in Google Maps' },
+  'contact.cta': { id: 'Booking sekarang', en: 'Book now' },
+  'contact.chat': { id: 'Chat WhatsApp', en: 'Chat on WhatsApp' },
+
+  // ── Nav additions ──
+  'nav.services': { id: 'Layanan', en: 'Services' },
+  'nav.contact': { id: 'Kontak', en: 'Contact' },
 } satisfies Record<string, { id: string; en: string }>
 
 export type DictKey = keyof typeof dict
