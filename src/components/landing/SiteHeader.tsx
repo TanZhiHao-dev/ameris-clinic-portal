@@ -12,8 +12,8 @@ import { LanguageToggle } from '../app/LanguageToggle'
 const NAV: { key: DictKey; href: string }[] = [
   { key: 'nav.treatment', href: '/#treatment' },
   { key: 'nav.promo', href: '/#promo' },
-  { key: 'nav.howItWorks', href: '/#cara-kerja' },
   { key: 'nav.privilege', href: '/#privilege' },
+  { key: 'nav.contact', href: '/#contact' },
 ]
 
 const TICKER: DictKey[] = ['ticker.1', 'ticker.2', 'ticker.3', 'ticker.4']

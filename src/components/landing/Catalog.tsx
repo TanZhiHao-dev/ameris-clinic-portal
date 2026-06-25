@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Star } from 'lucide-react'
+import { ArrowRight, Clock, Star } from 'lucide-react'
 import { categories } from '../../data/clinic'
 import { treatmentsQuery } from '../../server/queries'
 import { pickLang, useI18n } from '../../lib/i18n'
@@ -25,52 +25,61 @@ export function Catalog() {
       : named.filter((t) => t.category === active)
 
   return (
-    <section id="treatment" className="py-24">
-      <div className="shell-x">
+    <section id="treatment" className="relative overflow-hidden py-24 sm:py-28">
+      <div className="aura-soft" aria-hidden />
+      <div className="shell-x relative">
         <div className="reveal flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div className="max-w-xl">
             <span className="eyebrow">{tr('catalog.eyebrow')}</span>
-            <h2 className="mt-3 text-[2.4rem] sm:text-[3rem]">
-              {tr('catalog.title1')} <span className="gold-text">{tr('catalog.titleAccent')}</span> {tr('catalog.title3')}
+            <h2 className="mt-3 text-[2.4rem] leading-[1.08] sm:text-[3rem]">
+              {tr('catalog.title1')} <span className="gold-text italic">{tr('catalog.titleAccent')}</span> {tr('catalog.title3')}
             </h2>
-            <p className="mt-4 text-[1.02rem]" style={{ color: 'var(--color-ink-soft)' }}>
-              {tr('catalog.desc')}
-            </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {categories.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setActive(c)}
-                className="rounded-full px-4 py-2 text-sm font-semibold transition"
-                style={
-                  active === c
-                    ? { background: 'var(--color-ink)', color: 'var(--color-cream)' }
-                    : {
-                        background: 'var(--color-shell)',
-                        color: 'var(--color-ink-muted)',
-                        border: '1px solid var(--color-line)',
-                      }
-                }
-              >
-                {tr(`cat.${c}` as DictKey)}
-              </button>
-            ))}
-          </div>
+          <p className="max-w-sm text-[1.02rem] md:text-right" style={{ color: 'var(--color-ink-muted)' }}>
+            {tr('catalog.desc')}
+          </p>
         </div>
 
-        <div className="reveal mt-12 grid items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="reveal mt-10 flex flex-wrap gap-2.5">
+          {categories.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setActive(c)}
+              className="rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-300 hover:-translate-y-0.5"
+              style={
+                active === c
+                  ? {
+                      background: 'var(--color-ink)',
+                      color: 'var(--color-cream)',
+                      boxShadow: '0 10px 24px -12px rgba(42,37,32,0.55)',
+                    }
+                  : {
+                      background: 'var(--color-shell)',
+                      color: 'var(--color-ink-muted)',
+                      border: '1px solid var(--color-line)',
+                    }
+              }
+            >
+              {tr(`cat.${c}` as DictKey)}
+            </button>
+          ))}
+        </div>
+
+        <div className="reveal mt-12 grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {list.map((t) => (
             <article
               key={t.id}
-              className="card-soft flex h-full flex-col overflow-hidden"
+              className="card-luxe group flex h-full flex-col p-3"
               style={!t.available ? { opacity: 0.82 } : undefined}
             >
-              {/* Visual */}
-              <div className="relative aspect-[16/10]">
-                <TreatmentThumb t={t} className="h-full w-full" />
+              {/* Image well */}
+              <div className="relative aspect-[16/10] overflow-hidden rounded-2xl">
+                <TreatmentThumb
+                  t={t}
+                  className="h-full w-full transition-transform duration-700 ease-out group-hover:scale-105"
+                />
 
                 {t.bestSeller && (
                   <span
@@ -99,29 +108,59 @@ export function Catalog() {
                   className="absolute bottom-3 left-3 rounded-full px-2.5 py-1 text-[0.62rem] font-semibold uppercase tracking-wide"
                   style={{ background: 'rgba(42,37,32,0.62)', color: '#f6eddc', backdropFilter: 'blur(2px)' }}
                 >
-                  {tr(`cat.${t.category}` as DictKey)} · {t.duration}
+                  {tr(`cat.${t.category}` as DictKey)}
                 </span>
               </div>
 
               {/* Content */}
-              <div className="flex flex-1 flex-col p-5">
-                <Link to="/treatment/$id" params={{ id: t.id }}>
-                  <h3 className="text-lg leading-snug transition hover:opacity-80">{t.name}</h3>
-                </Link>
-                <p className="mt-1.5 flex-1 text-sm leading-relaxed" style={{ color: 'var(--color-ink-muted)' }}>
+              <div className="flex flex-1 flex-col px-3 pb-2 pt-5">
+                <div className="flex items-start justify-between gap-3">
+                  <Link to="/treatment/$id" params={{ id: t.id }} className="min-w-0">
+                    <h3 className="text-lg leading-snug transition-colors duration-300 group-hover:text-[color:var(--color-gold-deep)]">
+                      {t.name}
+                    </h3>
+                  </Link>
+                  <span
+                    className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-xs font-medium"
+                    style={{ color: 'var(--color-ink-muted)' }}
+                  >
+                    <Clock size={13} aria-hidden /> {t.duration}
+                  </span>
+                </div>
+
+                <p className="mt-2 flex-1 text-sm leading-relaxed" style={{ color: 'var(--color-ink-muted)' }}>
                   {pickLang(lang, t.blurb, t.blurbEn)}
                 </p>
 
-                <div className="mt-4 flex flex-wrap items-end justify-between gap-2 border-t pt-4">
+                <div
+                  className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-5"
+                  style={{ borderColor: 'var(--color-line)' }}
+                >
                   <PriceTag t={t} />
                   <AddToCartButton t={t} />
                 </div>
+
+                <Link
+                  to="/treatment/$id"
+                  params={{ id: t.id }}
+                  className="btn-split mt-4 w-full justify-between"
+                  style={{
+                    background: 'var(--color-ink)',
+                    color: 'var(--color-cream)',
+                    boxShadow: '0 14px 30px -14px rgba(42,37,32,0.6)',
+                  }}
+                >
+                  <span>{tr('common.selectSchedule')}</span>
+                  <span className="btn-split-ic" aria-hidden>
+                    <ArrowRight size={18} />
+                  </span>
+                </Link>
               </div>
             </article>
           ))}
         </div>
 
-        <p className="reveal mt-8 text-center text-[0.8rem]" style={{ color: 'var(--color-ink-muted)' }}>
+        <p className="reveal mt-10 text-center text-[0.8rem]" style={{ color: 'var(--color-ink-muted)' }}>
           {tr('catalog.note')}
         </p>
       </div>

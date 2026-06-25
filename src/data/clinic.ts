@@ -255,7 +255,7 @@ export const valueProps = [
 // ulasan sesuai Google Business). `url` membuka halaman ulasan klinik di Google
 // Maps. `testimonials` = ulasan asli dari Google Maps, salin dari screenshot.
 export const googleReview = {
-  url: 'https://www.google.com/maps/place/AMERIS+Aesthetic+Clinic/@-6.2645028,106.6184492,17z/data=!4m8!3m7!1s0x2e69fd0017816381:0xd0e161bafe5fd2a5!8m2!3d-6.2645028!4d106.6184492!9m1!1b1',
+  url: 'https://www.google.com/maps/place/AMERIS+Aesthetic+Clinic/@-6.2645028,106.6158743,17z/data=!4m8!3m7!1s0x2e69fd0017816381:0xd0e161bafe5fd2a5!8m2!3d-6.2645028!4d106.6184492!9m1!1b1!16s%2Fg%2F11yyxkq368?entry=ttu&g_ep=EgoyMDI2MDYyMy4wIKXMDSoASAFQAw%3D%3D',
   rating: 5.0,
   count: 5, // jumlah ulasan di Google — update sesuai listing
 }

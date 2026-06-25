@@ -4,11 +4,11 @@ import { SiteHeader } from '../components/landing/SiteHeader'
 import { Hero } from '../components/landing/Hero'
 import { Catalog } from '../components/landing/Catalog'
 import { Promo } from '../components/landing/Promo'
-import { HowItWorks } from '../components/landing/HowItWorks'
+import { AboutMe } from '../components/landing/AboutMe'
 import { Loyalty } from '../components/landing/Loyalty'
-import { ValueProps } from '../components/landing/ValueProps'
+import { Statistics } from '../components/landing/Statistics'
 import { Testimonials } from '../components/landing/Testimonials'
-import { FinalCta } from '../components/landing/FinalCta'
+import { Contact } from '../components/landing/Contact'
 import { SiteFooter } from '../components/landing/SiteFooter'
 
 export const Route = createFileRoute('/')({
@@ -22,6 +22,9 @@ export const Route = createFileRoute('/')({
   component: Home,
 })
 
+// Landing section order:
+// Hero · Treatment menu · Weekly promos · About Me · Privilege Club ·
+// Statistics · Client Love · Contact
 function Home() {
   return (
     <div>
@@ -30,13 +33,13 @@ function Home() {
         <Hero />
         <Catalog />
         <Promo />
-        <HowItWorks />
+        <AboutMe />
         <Loyalty />
-        <ValueProps />
+        <Statistics />
         <Testimonials />
-        <FinalCta />
+        <Contact />
       </main>
-      <SiteFooter />
+      <SiteFooter showLocation={false} />
     </div>
   )
 }
