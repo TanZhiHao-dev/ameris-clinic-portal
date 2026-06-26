@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Check, Phone, Calendar, User } from 'lucide-react'
 import { authClient } from '../lib/auth-client'
 import { profileNeedsCompletion } from '../lib/profile'
@@ -11,6 +11,7 @@ export const Route = createFileRoute('/lengkapi-profil')({ component: CompletePr
 
 function CompleteProfilePage() {
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const { data: session, isPending } = authClient.useSession()
   const userExt = session?.user as { phone?: string | null; birthDate?: string | null; role?: string } | undefined
 
@@ -51,8 +52,9 @@ function CompleteProfilePage() {
     mutationFn: (v: { name: string; phone: string; birthDate: string }) =>
       updateProfile({ data: v }),
     onSuccess: () => {
-      // Hard redirect so session is re-fetched with updated phone/birthDate
-      window.location.href = '/akun'
+      // Drop the cached profile so akun.tsx re-reads fresh data from DB.
+      qc.removeQueries({ queryKey: ['my-profile'] })
+      navigate({ to: '/akun' })
     },
     onError: () => setError('Terjadi kesalahan. Coba lagi ya.'),
   })

@@ -1,10 +1,12 @@
 import { useEffect } from 'react'
 import { createFileRoute, Link, Outlet, useNavigate } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
 import { CalendarDays, Crown, LayoutDashboard, LogOut, UserCog } from 'lucide-react'
 import { PageShell } from '../components/app/PageShell'
 import { SocialLinks } from '../components/app/SocialLinks'
 import { authClient } from '../lib/auth-client'
 import { profileNeedsCompletion } from '../lib/profile'
+import { myProfile } from '../server/account'
 import { useI18n } from '../lib/i18n'
 import type { DictKey } from '../lib/i18n-dict'
 
@@ -23,10 +25,16 @@ function AccountLayout() {
   const { t } = useI18n()
   const role = (session?.user as { role?: string } | undefined)?.role
 
-  // Any patient missing name / WhatsApp / birth date (Google sign-ups, and
-  // existing email patients who never had a phone collected) must finish
-  // onboarding before using the app. See lib/profile.ts.
-  const needsOnboarding = role !== 'owner' && role !== 'dokter' && profileNeedsCompletion(session?.user)
+  // Read profile from DB (not session cache) so the onboarding check is always
+  // fresh — session additionalFields are cached at login time and don't update
+  // when updateProfile() writes to the DB mid-session.
+  const isPatient = !!session && role !== 'owner' && role !== 'dokter'
+  const { data: profile, isLoading: profileLoading } = useQuery({
+    queryKey: ['my-profile'],
+    queryFn: () => myProfile(),
+    enabled: isPatient,
+  })
+  const needsOnboarding = isPatient && !profileLoading && profileNeedsCompletion(profile)
 
   // Patient area. Send staff (owner/dokter) to their own console instead of
   // stranding them here — otherwise a freshly promoted doctor still sees the
@@ -42,9 +50,9 @@ function AccountLayout() {
   const userName = session?.user.name ?? '—'
   const memberLine = session ? t('ac.member') : '—'
 
-  // Avoid flashing the patient dashboard (and firing 401 queries) before auth
-  // resolves, or while any redirect is pending.
-  if (isPending || !session || role === 'owner' || role === 'dokter' || needsOnboarding) {
+  // Avoid flashing the patient dashboard before auth + profile resolves,
+  // or while any redirect is pending.
+  if (isPending || !session || role === 'owner' || role === 'dokter' || profileLoading || needsOnboarding) {
     return (
       <PageShell>
         <div className="grid min-h-[60vh] place-items-center">
