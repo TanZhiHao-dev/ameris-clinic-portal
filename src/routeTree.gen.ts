@@ -13,6 +13,7 @@ import { Route as TentangRouteImport } from './routes/tentang'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as OwnerRouteImport } from './routes/owner'
 import { Route as MasukRouteImport } from './routes/masuk'
+import { Route as LengkapiProfilRouteImport } from './routes/lengkapi-profil'
 import { Route as LanjutRouteImport } from './routes/lanjut'
 import { Route as KeranjangRouteImport } from './routes/keranjang'
 import { Route as DokterRouteImport } from './routes/dokter'
@@ -67,6 +68,11 @@ const OwnerRoute = OwnerRouteImport.update({
 const MasukRoute = MasukRouteImport.update({
   id: '/masuk',
   path: '/masuk',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LengkapiProfilRoute = LengkapiProfilRouteImport.update({
+  id: '/lengkapi-profil',
+  path: '/lengkapi-profil',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LanjutRoute = LanjutRouteImport.update({
@@ -252,6 +258,7 @@ export interface FileRoutesByFullPath {
   '/dokter': typeof DokterRouteWithChildren
   '/keranjang': typeof KeranjangRoute
   '/lanjut': typeof LanjutRoute
+  '/lengkapi-profil': typeof LengkapiProfilRoute
   '/masuk': typeof MasukRoute
   '/owner': typeof OwnerRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
@@ -291,6 +298,7 @@ export interface FileRoutesByTo {
   '/booking': typeof BookingRoute
   '/keranjang': typeof KeranjangRoute
   '/lanjut': typeof LanjutRoute
+  '/lengkapi-profil': typeof LengkapiProfilRoute
   '/masuk': typeof MasukRoute
   '/reset-password': typeof ResetPasswordRoute
   '/tentang': typeof TentangRoute
@@ -332,6 +340,7 @@ export interface FileRoutesById {
   '/dokter': typeof DokterRouteWithChildren
   '/keranjang': typeof KeranjangRoute
   '/lanjut': typeof LanjutRoute
+  '/lengkapi-profil': typeof LengkapiProfilRoute
   '/masuk': typeof MasukRoute
   '/owner': typeof OwnerRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
@@ -375,6 +384,7 @@ export interface FileRouteTypes {
     | '/dokter'
     | '/keranjang'
     | '/lanjut'
+    | '/lengkapi-profil'
     | '/masuk'
     | '/owner'
     | '/reset-password'
@@ -414,6 +424,7 @@ export interface FileRouteTypes {
     | '/booking'
     | '/keranjang'
     | '/lanjut'
+    | '/lengkapi-profil'
     | '/masuk'
     | '/reset-password'
     | '/tentang'
@@ -454,6 +465,7 @@ export interface FileRouteTypes {
     | '/dokter'
     | '/keranjang'
     | '/lanjut'
+    | '/lengkapi-profil'
     | '/masuk'
     | '/owner'
     | '/reset-password'
@@ -496,6 +508,7 @@ export interface RootRouteChildren {
   DokterRoute: typeof DokterRouteWithChildren
   KeranjangRoute: typeof KeranjangRoute
   LanjutRoute: typeof LanjutRoute
+  LengkapiProfilRoute: typeof LengkapiProfilRoute
   MasukRoute: typeof MasukRoute
   OwnerRoute: typeof OwnerRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -538,6 +551,13 @@ declare module '@tanstack/react-router' {
       path: '/masuk'
       fullPath: '/masuk'
       preLoaderRoute: typeof MasukRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lengkapi-profil': {
+      id: '/lengkapi-profil'
+      path: '/lengkapi-profil'
+      fullPath: '/lengkapi-profil'
+      preLoaderRoute: typeof LengkapiProfilRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lanjut': {
@@ -862,6 +882,7 @@ const rootRouteChildren: RootRouteChildren = {
   DokterRoute: DokterRouteWithChildren,
   KeranjangRoute: KeranjangRoute,
   LanjutRoute: LanjutRoute,
+  LengkapiProfilRoute: LengkapiProfilRoute,
   MasukRoute: MasukRoute,
   OwnerRoute: OwnerRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,

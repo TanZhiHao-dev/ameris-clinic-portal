@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Brand } from '../components/landing/Brand'
 import { authClient } from '../lib/auth-client'
+import { profileNeedsCompletion } from '../lib/profile'
 import { useI18n } from '../lib/i18n'
 
 // Post-login landing. OAuth (Google) redirects here after sign-in; we then route
@@ -21,7 +22,10 @@ function PostLogin() {
       return
     }
     const role = (session.user as { role?: string }).role
-    navigate({ to: role === 'owner' ? '/owner' : role === 'dokter' ? '/dokter' : '/akun', replace: true })
+    if (role === 'owner') { navigate({ to: '/owner', replace: true }); return }
+    if (role === 'dokter') { navigate({ to: '/dokter', replace: true }); return }
+    // Patient: send to onboarding first if name / WhatsApp / birth date missing.
+    navigate({ to: profileNeedsCompletion(session.user) ? '/lengkapi-profil' : '/akun', replace: true })
   }, [isPending, session, navigate])
 
   return (

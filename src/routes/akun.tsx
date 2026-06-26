@@ -4,6 +4,7 @@ import { CalendarDays, Crown, LayoutDashboard, LogOut, UserCog } from 'lucide-re
 import { PageShell } from '../components/app/PageShell'
 import { SocialLinks } from '../components/app/SocialLinks'
 import { authClient } from '../lib/auth-client'
+import { profileNeedsCompletion } from '../lib/profile'
 import { useI18n } from '../lib/i18n'
 import type { DictKey } from '../lib/i18n-dict'
 
@@ -22,6 +23,11 @@ function AccountLayout() {
   const { t } = useI18n()
   const role = (session?.user as { role?: string } | undefined)?.role
 
+  // Any patient missing name / WhatsApp / birth date (Google sign-ups, and
+  // existing email patients who never had a phone collected) must finish
+  // onboarding before using the app. See lib/profile.ts.
+  const needsOnboarding = role !== 'owner' && role !== 'dokter' && profileNeedsCompletion(session?.user)
+
   // Patient area. Send staff (owner/dokter) to their own console instead of
   // stranding them here — otherwise a freshly promoted doctor still sees the
   // patient dashboard. Mirrors the role guard in dokter.tsx / owner.tsx.
@@ -30,14 +36,15 @@ function AccountLayout() {
     if (!session) navigate({ to: '/masuk' })
     else if (role === 'owner') navigate({ to: '/owner' })
     else if (role === 'dokter') navigate({ to: '/dokter' })
-  }, [isPending, session, role, navigate])
+    else if (needsOnboarding) navigate({ to: '/lengkapi-profil' })
+  }, [isPending, session, role, needsOnboarding, navigate])
 
   const userName = session?.user.name ?? '—'
   const memberLine = session ? t('ac.member') : '—'
 
   // Avoid flashing the patient dashboard (and firing 401 queries) before auth
-  // resolves, or while a non-patient is being redirected to their console.
-  if (isPending || !session || role === 'owner' || role === 'dokter') {
+  // resolves, or while any redirect is pending.
+  if (isPending || !session || role === 'owner' || role === 'dokter' || needsOnboarding) {
     return (
       <PageShell>
         <div className="grid min-h-[60vh] place-items-center">
