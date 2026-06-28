@@ -38,6 +38,14 @@ export const createBooking = createServerFn({ method: 'POST' })
       return { treatmentId: t.id, name: t.name, price: unit, qty: i.qty }
     })
 
+    if (!SLOTS.includes(data.bookingTime)) throw new Error('Waktu booking tidak valid.')
+    const [takenSlot] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.bookingDate, data.bookingDate), eq(bookings.bookingTime, data.bookingTime), sql`${bookings.status} <> 'Batal'`))
+      .limit(1)
+    if (takenSlot) throw new Error('Slot sudah terisi, pilih waktu lain.')
+
     const id = 'AMR-' + crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()
     await db.insert(bookings).values({
       id,

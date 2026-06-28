@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { asc, desc, eq, isNotNull, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, isNotNull, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '#/db'
 import { loyaltyTransactions, treatments } from '#/db/schema'
@@ -48,19 +48,24 @@ export const redeemPoints = createServerFn({ method: 'POST' })
     const u = await requireUser()
     const [t] = await db.select().from(treatments).where(eq(treatments.id, data.treatmentId)).limit(1)
     if (!t || t.pointCost == null) throw new Error('Treatment tidak bisa ditukar dengan poin.')
-    const points = u.loyaltyPoints ?? 0
-    if (points < t.pointCost) throw new Error('Poin tidak mencukupi.')
+    const pointCost = t.pointCost
 
-    await db
+    // Atomic check-and-deduct: only succeeds if user still has enough points at
+    // update time, preventing double-spend under concurrent requests.
+    const result = await db
       .update(user)
-      .set({ loyaltyPoints: sql`coalesce(${user.loyaltyPoints}, 0) - ${t.pointCost}` })
-      .where(eq(user.id, u.id))
+      .set({ loyaltyPoints: sql`coalesce(${user.loyaltyPoints}, 0) - ${pointCost}` })
+      .where(and(eq(user.id, u.id), sql`coalesce(${user.loyaltyPoints}, 0) >= ${pointCost}`))
+      .returning()
+    if (result.length === 0) throw new Error('Poin tidak mencukupi.')
+
+    const newPoints = result[0].loyaltyPoints ?? 0
     await db.insert(loyaltyTransactions).values({
       id: crypto.randomUUID(),
       userId: u.id,
       label: `Tukar poin — ${t.name}`,
-      delta: -t.pointCost,
+      delta: -pointCost,
       treatmentId: t.id,
     })
-    return { pointsAfter: points - t.pointCost, redeemed: t.name }
+    return { pointsAfter: newPoints, redeemed: t.name }
   })

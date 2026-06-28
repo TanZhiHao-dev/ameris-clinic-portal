@@ -31,10 +31,13 @@ export const Route = createFileRoute('/api/treatment-image')({
         const m = /^data:([^;]+);base64,(.*)$/s.exec(img)
         if (!m) return new Response('Unsupported image', { status: 415 })
         const [, contentType, b64] = m
+        const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'image/svg+xml'])
+        if (!ALLOWED_TYPES.has(contentType)) return new Response('Unsupported image type', { status: 415 })
         const bytes = Buffer.from(b64, 'base64')
         return new Response(bytes, {
           headers: {
             'content-type': contentType,
+            'x-content-type-options': 'nosniff',
             'cache-control': 'public, max-age=86400',
           },
         })
