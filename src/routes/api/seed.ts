@@ -20,6 +20,9 @@ export const Route = createFileRoute('/api/seed')({
           new URL(request.url).searchParams.get('token') ??
           request.headers.get('x-seed-token')
 
+        // Also block when a real Postgres is connected (DATABASE_URL set) even if
+        // NODE_ENV is not 'production' — staging/preview deploys use real DBs too.
+        const hasRealDb = !!process.env.DATABASE_URL
         if (expected) {
           if (!provided || provided !== expected) {
             return Response.json(
@@ -27,9 +30,9 @@ export const Route = createFileRoute('/api/seed')({
               { status: 401 },
             )
           }
-        } else if (isProd) {
+        } else if (isProd || hasRealDb) {
           return Response.json(
-            { ok: false, error: 'seeding disabled in production unless SEED_TOKEN is set' },
+            { ok: false, error: 'seeding disabled when DATABASE_URL is set — configure SEED_TOKEN to enable' },
             { status: 403 },
           )
         }

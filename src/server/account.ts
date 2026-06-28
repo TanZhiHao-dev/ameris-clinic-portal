@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '#/db'
 import { notifications } from '#/db/schema'
@@ -61,7 +61,7 @@ export const markNotificationsRead = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const u = await requireUser()
     if (data?.id) {
-      await db.update(notifications).set({ isRead: true }).where(eq(notifications.id, data.id))
+      await db.update(notifications).set({ isRead: true }).where(and(eq(notifications.id, data.id), eq(notifications.userId, u.id)))
     } else {
       await db.update(notifications).set({ isRead: true }).where(eq(notifications.userId, u.id))
     }

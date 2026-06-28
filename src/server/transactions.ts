@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '#/db'
 import { bookings, transactions } from '#/db/schema'
@@ -27,6 +27,9 @@ export const ownerApprovePayment = createServerFn({ method: 'POST' })
   .validator(z.object({ bookingId: z.string() }))
   .handler(async ({ data }) => {
     await requireOwner()
-    await db.update(transactions).set({ paymentStatus: 'Lunas' }).where(eq(transactions.bookingId, data.bookingId))
+    const [b] = await db.select({ status: bookings.status }).from(bookings).where(eq(bookings.id, data.bookingId))
+    if (!b) throw new Error('Booking tidak ditemukan.')
+    if (b.status === 'Batal') throw new Error('Tidak bisa approve pembayaran untuk booking yang dibatalkan.')
+    await db.update(transactions).set({ paymentStatus: 'Lunas' }).where(and(eq(transactions.bookingId, data.bookingId), sql`${transactions.paymentStatus} <> 'Lunas'`))
     return { bookingId: data.bookingId, paymentStatus: 'Lunas' as const }
   })

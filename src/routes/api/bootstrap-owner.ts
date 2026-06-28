@@ -21,13 +21,14 @@ export const Route = createFileRoute('/api/bootstrap-owner')({
         const url = new URL(request.url)
         const provided = url.searchParams.get('token') ?? request.headers.get('x-seed-token')
 
+        const hasRealDb = !!process.env.DATABASE_URL
         if (expected) {
           if (!provided || provided !== expected) {
             return Response.json({ ok: false, error: 'invalid or missing token' }, { status: 401 })
           }
-        } else if (isProd) {
+        } else if (isProd || hasRealDb) {
           return Response.json(
-            { ok: false, error: 'bootstrap disabled in production unless SEED_TOKEN is set' },
+            { ok: false, error: 'bootstrap disabled when DATABASE_URL is set — configure SEED_TOKEN to enable' },
             { status: 403 },
           )
         }

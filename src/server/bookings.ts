@@ -38,7 +38,7 @@ export const createBooking = createServerFn({ method: 'POST' })
       return { treatmentId: t.id, name: t.name, price: unit, qty: i.qty }
     })
 
-    const id = 'AMR-' + (2520 + Math.floor(Math.random() * 7000))
+    const id = 'AMR-' + crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()
     await db.insert(bookings).values({
       id,
       userId: u.id,
@@ -167,6 +167,7 @@ export const ownerCompleteBooking = createServerFn({ method: 'POST' })
     if (b.status === 'Batal') throw new Error('Booking dibatalkan.')
     // Idempotent: never re-grant loyalty for an already-completed booking.
     if (b.status === 'Selesai') return { id: data.id, status: 'Selesai' as const, pointsAdded: 0 }
+    if (b.status !== 'Hadir') throw new Error('Booking harus berstatus Hadir sebelum bisa diselesaikan.')
 
     await db.update(bookings).set({ status: 'Selesai' }).where(eq(bookings.id, data.id))
     await db.update(transactions).set({ paymentStatus: 'Lunas' }).where(eq(transactions.bookingId, data.id))

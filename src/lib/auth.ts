@@ -15,7 +15,7 @@ import { resetPasswordEmail, sendEmail } from '#/server/_email'
 export const googleConfigured = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
 
 export const auth = betterAuth({
-  secret: process.env.BETTER_AUTH_SECRET ?? 'dev-secret-change-me-0123456789abcdef',
+  secret: process.env.BETTER_AUTH_SECRET || (() => { throw new Error('BETTER_AUTH_SECRET is required') })(),
   baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3000',
   database: drizzleAdapter(db, { provider: 'pg', schema }),
 
