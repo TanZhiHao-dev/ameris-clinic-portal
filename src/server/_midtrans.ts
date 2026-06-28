@@ -1,7 +1,7 @@
 // Server-only Midtrans Snap helper. Reads MIDTRANS_SERVER_KEY and touches the
 // DB, so it must never be imported by a client component (underscore prefix =
 // server-only, same rule as _appointments.ts).
-import { createHash } from 'node:crypto'
+import { createHash, timingSafeEqual } from 'node:crypto'
 import { eq, sql } from 'drizzle-orm'
 import { db } from '#/db'
 import { bookings, transactions } from '#/db/schema'
@@ -77,7 +77,10 @@ export function verifySignature(p: {
   const expected = createHash('sha512')
     .update(p.order_id + p.status_code + p.gross_amount + SERVER_KEY)
     .digest('hex')
-  return expected === p.signature_key
+  const expectedBuf = Buffer.from(expected, 'hex')
+  const actualBuf = Buffer.from(p.signature_key ?? '', 'hex')
+  if (expectedBuf.length !== actualBuf.length) return false
+  return timingSafeEqual(expectedBuf, actualBuf)
 }
 
 const PAID = new Set(['capture', 'settlement'])
@@ -88,8 +91,9 @@ export async function settlePayment(args: {
   orderId: string
   transactionStatus: string
   fraudStatus?: string
+  grossAmount?: string
 }): Promise<{ bookingId: string; paymentStatus: string; settled: boolean } | null> {
-  const { orderId, transactionStatus, fraudStatus } = args
+  const { orderId, transactionStatus, fraudStatus, grossAmount } = args
   // Resolve the transaction: prefer the stored order_id, fall back to the
   // bookingId encoded as the order_id prefix (AMR-1234-<suffix>).
   let [txn] = await db.select().from(transactions).where(eq(transactions.midtransOrderId, orderId))
@@ -102,6 +106,10 @@ export async function settlePayment(args: {
   const isPaid = PAID.has(transactionStatus) && fraudStatus !== 'deny' && fraudStatus !== 'challenge'
 
   if (isPaid) {
+    // Validate amount matches stored transaction to prevent partial-payment attacks.
+    if (grossAmount && Math.round(parseFloat(grossAmount)) !== txn.amount) {
+      throw new Error(`Amount mismatch: expected ${txn.amount}, got ${grossAmount}`)
+    }
     // 'full' plan → fully paid (Lunas); 'dp' → DP recorded, balance settled at
     // the clinic on completion (keeps the existing Pending → Lunas model).
     const fullyPaid = (txn.paymentPlan ?? 'full') === 'full'

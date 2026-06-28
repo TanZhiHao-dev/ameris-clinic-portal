@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '#/db'
 import { bookings, medicalRecords } from '#/db/schema'
@@ -119,6 +119,12 @@ export const createMedicalRecord = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     await requireStaff()
+    const [target] = await db.select({ role: user.role }).from(user).where(eq(user.id, data.patientId)).limit(1)
+    if (!target || target.role !== 'pasien') throw new Error('Pasien tidak ditemukan.')
+    if (data.bookingId && data.bookingId !== '—') {
+      const [bk] = await db.select({ userId: bookings.userId }).from(bookings).where(and(eq(bookings.id, data.bookingId), eq(bookings.userId, data.patientId))).limit(1)
+      if (!bk) throw new Error('Booking tidak cocok dengan pasien.')
+    }
     const id = 'mr-' + crypto.randomUUID().slice(0, 8)
     const [row] = await db
       .insert(medicalRecords)

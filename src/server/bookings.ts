@@ -5,7 +5,7 @@ import { db } from '#/db'
 import { bookingItems, bookings, loyaltyTransactions, transactions, treatments } from '#/db/schema'
 import { user } from '#/db/auth-schema'
 import { loyaltyPointsFor } from '#/data/clinic'
-import { requireStaff, requireUser } from './_session'
+import { requireOwner, requireStaff, requireUser } from './_session'
 import { assemble } from './_appointments'
 
 const SLOTS = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00']
@@ -15,7 +15,7 @@ export const createBooking = createServerFn({ method: 'POST' })
   .validator(
     z.object({
       items: z.array(z.object({ treatmentId: z.string(), qty: z.number().int().positive() })).min(1),
-      bookingDate: z.string(),
+      bookingDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       bookingTime: z.string(),
       paymentMethod: z.enum(['Online', 'Offline', 'Transfer']),
       paymentPlan: z.enum(['full', 'dp']).optional(),
@@ -38,6 +38,8 @@ export const createBooking = createServerFn({ method: 'POST' })
       return { treatmentId: t.id, name: t.name, price: unit, qty: i.qty }
     })
 
+    const today = new Date().toISOString().slice(0, 10)
+    if (data.bookingDate < today) throw new Error('Tanggal booking sudah lewat.')
     if (!SLOTS.includes(data.bookingTime)) throw new Error('Waktu booking tidak valid.')
     const [takenSlot] = await db
       .select({ id: bookings.id })
@@ -169,7 +171,7 @@ export const ownerSetBookingStatus = createServerFn({ method: 'POST' })
 export const ownerCompleteBooking = createServerFn({ method: 'POST' })
   .validator(z.object({ id: z.string() }))
   .handler(async ({ data }) => {
-    await requireStaff()
+    await requireOwner()
     const [b] = await db.select().from(bookings).where(eq(bookings.id, data.id))
     if (!b) throw new Error('Booking tidak ditemukan.')
     if (b.status === 'Batal') throw new Error('Booking dibatalkan.')
@@ -177,8 +179,17 @@ export const ownerCompleteBooking = createServerFn({ method: 'POST' })
     if (b.status === 'Selesai') return { id: data.id, status: 'Selesai' as const, pointsAdded: 0 }
     if (b.status !== 'Hadir') throw new Error('Booking harus berstatus Hadir sebelum bisa diselesaikan.')
 
+    // For non-cash bookings, payment must be confirmed before completion.
+    const [txn] = await db.select().from(transactions).where(eq(transactions.bookingId, data.id)).limit(1)
+    if (txn && txn.paymentMethod !== 'Offline' && txn.paymentStatus !== 'Lunas') {
+      throw new Error('Pembayaran belum lunas. Setujui pembayaran terlebih dahulu.')
+    }
+
     await db.update(bookings).set({ status: 'Selesai' }).where(eq(bookings.id, data.id))
-    await db.update(transactions).set({ paymentStatus: 'Lunas' }).where(eq(transactions.bookingId, data.id))
+    // Offline bookings are settled here (cash at clinic); others already marked Lunas.
+    if (!txn || txn.paymentMethod === 'Offline') {
+      await db.update(transactions).set({ paymentStatus: 'Lunas' }).where(eq(transactions.bookingId, data.id))
+    }
 
     const points = loyaltyPointsFor(b.total)
     if (points > 0) {

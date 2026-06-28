@@ -33,6 +33,7 @@ export const Route = createFileRoute('/api/midtrans/notification')({
           orderId: order_id,
           transactionStatus: transaction_status,
           fraudStatus: fraud_status,
+          grossAmount: gross_amount,
         })
         if (!res) return Response.json({ ok: false, error: 'order not found' }, { status: 404 })
         return Response.json({ ok: true, ...res })

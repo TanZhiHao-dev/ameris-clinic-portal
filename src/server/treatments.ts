@@ -135,7 +135,7 @@ export const updateTreatment = createServerFn({ method: 'POST' })
       isPromo: z.boolean().optional(),
       promoNow: z.number().int().nonnegative().nullable().optional(), // owner-set promo price (null clears)
       pointCost: z.number().int().nullable().optional(),
-      image: z.string().nullable().optional(), // URL or data URL; null clears it
+      image: z.string().max(3_000_000).nullable().optional(), // URL or data URL; null clears it
     }),
   )
   .handler(async ({ data }) => {

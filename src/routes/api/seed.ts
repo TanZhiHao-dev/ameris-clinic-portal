@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto'
 import { createFileRoute } from '@tanstack/react-router'
 import { seedDatabase } from '#/server/seed'
 
@@ -24,7 +25,10 @@ export const Route = createFileRoute('/api/seed')({
         // NODE_ENV is not 'production' — staging/preview deploys use real DBs too.
         const hasRealDb = !!process.env.DATABASE_URL
         if (expected) {
-          if (!provided || provided !== expected) {
+          const match = provided
+            && provided.length === expected.length
+            && timingSafeEqual(Buffer.from(provided), Buffer.from(expected))
+          if (!match) {
             return Response.json(
               { ok: false, error: 'invalid or missing seed token' },
               { status: 401 },
