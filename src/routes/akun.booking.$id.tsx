@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, CalendarPlus, CheckCircle2, Clock, CreditCard, MapPin, MessageCircle } from 'lucide-react'
+import { ArrowLeft, CalendarPlus, CheckCircle2, Clock, CreditCard, MapPin, MessageCircle, ReceiptText } from 'lucide-react'
 import { formatDateId, statusTone, type BookingStatus } from '../data/account'
 import { clinic, formatRp } from '../data/clinic'
 import { getMyBooking } from '../server/bookings'
@@ -178,6 +178,12 @@ function TicketPage() {
               <div className="mt-5">
                 <BankTransferInstructions amount={appt.total} bookingId={appt.id} />
               </div>
+            )}
+
+            {appt.payStatus === 'Lunas' && (
+              <Link to="/kwitansi/$id" params={{ id: appt.id }} className="btn btn-gold mt-5 w-full">
+                <ReceiptText size={17} /> Lihat / Download Kwitansi
+              </Link>
             )}
 
             <div className="mt-5 flex flex-col gap-3 sm:flex-row">

@@ -32,6 +32,7 @@ import { Route as OwnerProfilRouteImport } from './routes/owner.profil'
 import { Route as OwnerPrivilegeRouteImport } from './routes/owner.privilege'
 import { Route as OwnerJadwalRouteImport } from './routes/owner.jadwal'
 import { Route as OwnerAkunRouteImport } from './routes/owner.akun'
+import { Route as KwitansiIdRouteImport } from './routes/kwitansi.$id'
 import { Route as DokterProfilRouteImport } from './routes/dokter.profil'
 import { Route as DokterJadwalRouteImport } from './routes/dokter.jadwal'
 import { Route as ApiTreatmentImageRouteImport } from './routes/api/treatment-image'
@@ -166,6 +167,11 @@ const OwnerAkunRoute = OwnerAkunRouteImport.update({
   path: '/akun',
   getParentRoute: () => OwnerRoute,
 } as any)
+const KwitansiIdRoute = KwitansiIdRouteImport.update({
+  id: '/kwitansi/$id',
+  path: '/kwitansi/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DokterProfilRoute = DokterProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
@@ -277,6 +283,7 @@ export interface FileRoutesByFullPath {
   '/api/treatment-image': typeof ApiTreatmentImageRoute
   '/dokter/jadwal': typeof DokterJadwalRoute
   '/dokter/profil': typeof DokterProfilRoute
+  '/kwitansi/$id': typeof KwitansiIdRoute
   '/owner/akun': typeof OwnerAkunRoute
   '/owner/jadwal': typeof OwnerJadwalRoute
   '/owner/privilege': typeof OwnerPrivilegeRoute
@@ -317,6 +324,7 @@ export interface FileRoutesByTo {
   '/api/treatment-image': typeof ApiTreatmentImageRoute
   '/dokter/jadwal': typeof DokterJadwalRoute
   '/dokter/profil': typeof DokterProfilRoute
+  '/kwitansi/$id': typeof KwitansiIdRoute
   '/owner/akun': typeof OwnerAkunRoute
   '/owner/jadwal': typeof OwnerJadwalRoute
   '/owner/privilege': typeof OwnerPrivilegeRoute
@@ -361,6 +369,7 @@ export interface FileRoutesById {
   '/api/treatment-image': typeof ApiTreatmentImageRoute
   '/dokter/jadwal': typeof DokterJadwalRoute
   '/dokter/profil': typeof DokterProfilRoute
+  '/kwitansi/$id': typeof KwitansiIdRoute
   '/owner/akun': typeof OwnerAkunRoute
   '/owner/jadwal': typeof OwnerJadwalRoute
   '/owner/privilege': typeof OwnerPrivilegeRoute
@@ -406,6 +415,7 @@ export interface FileRouteTypes {
     | '/api/treatment-image'
     | '/dokter/jadwal'
     | '/dokter/profil'
+    | '/kwitansi/$id'
     | '/owner/akun'
     | '/owner/jadwal'
     | '/owner/privilege'
@@ -446,6 +456,7 @@ export interface FileRouteTypes {
     | '/api/treatment-image'
     | '/dokter/jadwal'
     | '/dokter/profil'
+    | '/kwitansi/$id'
     | '/owner/akun'
     | '/owner/jadwal'
     | '/owner/privilege'
@@ -489,6 +500,7 @@ export interface FileRouteTypes {
     | '/api/treatment-image'
     | '/dokter/jadwal'
     | '/dokter/profil'
+    | '/kwitansi/$id'
     | '/owner/akun'
     | '/owner/jadwal'
     | '/owner/privilege'
@@ -529,6 +541,7 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSeedRoute: typeof ApiSeedRoute
   ApiTreatmentImageRoute: typeof ApiTreatmentImageRoute
+  KwitansiIdRoute: typeof KwitansiIdRoute
   TreatmentIdRoute: typeof TreatmentIdRoute
   TreatmentIndexRoute: typeof TreatmentIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -697,6 +710,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/owner/akun'
       preLoaderRoute: typeof OwnerAkunRouteImport
       parentRoute: typeof OwnerRoute
+    }
+    '/kwitansi/$id': {
+      id: '/kwitansi/$id'
+      path: '/kwitansi/$id'
+      fullPath: '/kwitansi/$id'
+      preLoaderRoute: typeof KwitansiIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/dokter/profil': {
       id: '/dokter/profil'
@@ -912,6 +932,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   ApiSeedRoute: ApiSeedRoute,
   ApiTreatmentImageRoute: ApiTreatmentImageRoute,
+  KwitansiIdRoute: KwitansiIdRoute,
   TreatmentIdRoute: TreatmentIdRoute,
   TreatmentIndexRoute: TreatmentIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

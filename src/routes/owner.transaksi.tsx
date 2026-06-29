@@ -1,7 +1,7 @@
 import { type ChangeEvent, useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { BadgeCheck, Ban, CheckCheck, QrCode, Upload } from 'lucide-react'
+import { BadgeCheck, Ban, CheckCheck, QrCode, ReceiptText, Upload } from 'lucide-react'
 import { fmtDate, formatRp, type OwnerStatus, type PayStatus, payTone, statusTone } from '../data/owner'
 import { ownerApprovePayment, ownerTransactions } from '#/server/transactions'
 import { ownerCompleteBooking, ownerMarkUnpaid } from '#/server/bookings'
@@ -208,6 +208,16 @@ function TransactionsPage() {
                       <button type="button" className="btn btn-gold whitespace-nowrap px-3 py-1.5 text-xs" onClick={() => complete(b)}>
                         Selesaikan
                       </button>
+                    )}
+                    {b.payStatus === 'Lunas' && (
+                      <Link
+                        to="/kwitansi/$id"
+                        params={{ id: b.id }}
+                        target="_blank"
+                        className="btn btn-ghost whitespace-nowrap px-3 py-1.5 text-xs"
+                      >
+                        <ReceiptText size={14} /> Kwitansi
+                      </Link>
                     )}
                     {b.status === 'Selesai' && b.payStatus === 'Lunas' && (
                       <span className="text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>Selesai</span>

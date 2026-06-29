@@ -149,6 +149,41 @@ export const getMyBooking = createServerFn({ method: 'GET' })
     return (await assemble(bks))[0] ?? null
   })
 
+// Receipt / kwitansi for a booking. Viewable by the booking's own patient OR by
+// clinic staff (owner/dokter) — so an owner can pull up & download any patient's
+// proof of payment. The UI only presents it as a valid kwitansi when Lunas.
+export const getReceipt = createServerFn({ method: 'GET' })
+  .validator(z.object({ id: z.string() }))
+  .handler(async ({ data }) => {
+    const u = await requireUser()
+    const [b] = await db.select().from(bookings).where(eq(bookings.id, data.id))
+    if (!b) throw new Error('Transaksi tidak ditemukan.')
+    const isStaff = u.role === 'owner' || u.role === 'dokter'
+    if (!isStaff && b.userId !== u.id) throw new Error('Tidak diizinkan melihat kwitansi ini.')
+    const [appt] = await assemble([b])
+    const [p] = await db
+      .select({ name: user.name, phone: user.phone })
+      .from(user)
+      .where(eq(user.id, b.userId))
+      .limit(1)
+    const subtotal = appt.items.reduce((s, it) => s + it.price * it.qty, 0)
+    return {
+      id: appt.id,
+      patientName: p?.name ?? 'Pasien',
+      patientPhone: p?.phone ?? '',
+      date: appt.date,
+      time: appt.time,
+      items: appt.items,
+      subtotal,
+      discount: appt.discount,
+      total: appt.total,
+      payment: appt.payment,
+      payStatus: appt.payStatus,
+      paymentPlan: appt.paymentPlan,
+      paidAt: appt.paidAt,
+    }
+  })
+
 export const upcomingMyBooking = createServerFn({ method: 'GET' }).handler(async () => {
   const u = await requireUser()
   const bks = await db.select().from(bookings).where(eq(bookings.userId, u.id))
