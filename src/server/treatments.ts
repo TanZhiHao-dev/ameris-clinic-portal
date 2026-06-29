@@ -15,6 +15,8 @@ export type ClientTreatment = {
   duration: string
   price: number
   pricePerUnit: boolean // when true, price is shown as "Rp.../unit"
+  minUnits: number // per-unit treatments: minimum units a patient must book (1 = none)
+  unitPresets: UnitPreset[] // per-unit quick-pick options, e.g. 50 "daerah tertentu", 100 "full face"
   available: boolean
   bestSeller: boolean
   heroFeatured: boolean // the single treatment shown in the landing hero card
@@ -26,6 +28,38 @@ export type ClientTreatment = {
 
 type Row = typeof treatments.$inferSelect
 
+// A per-unit quick-pick: a unit count with an optional descriptive label
+// (e.g. 50 "daerah tertentu", 100 "full face").
+export type UnitPreset = { units: number; label: string | null }
+
+// Parse the owner's free-text preset field into a clean, sorted, de-duplicated
+// list. Comma-separated entries; each is a unit count optionally followed by a
+// label after "=" / ":" (or just a space). Examples that all parse:
+//   "50, 100"                            → [{50}, {100}]
+//   "50=daerah tertentu, 100=full face"  → [{50,'daerah tertentu'}, {100,'full face'}]
+//   "50 unit (daerah tertentu)"          → [{50,'daerah tertentu'}]
+export function parseUnitPresets(raw: string | null | undefined): UnitPreset[] {
+  if (!raw) return []
+  const seen = new Set<number>()
+  const out: UnitPreset[] = []
+  for (const part of raw.split(',')) {
+    const m = part.trim().match(/^(\d+)\s*(?:unit\b)?\s*[=:]?\s*(.*)$/i)
+    if (!m) continue
+    const units = parseInt(m[1], 10)
+    if (!Number.isFinite(units) || units <= 0 || seen.has(units)) continue
+    seen.add(units)
+    const label = m[2].trim().replace(/^\((.*)\)$/, '$1').trim()
+    out.push({ units, label: label || null })
+  }
+  return out.sort((a, b) => a.units - b.units)
+}
+
+// Serialize a preset list back to the stored/displayed text form
+// ("50=daerah tertentu, 100=full face").
+export function serializeUnitPresets(list: UnitPreset[]): string {
+  return list.map((p) => (p.label ? `${p.units}=${p.label}` : String(p.units))).join(', ')
+}
+
 const toClient = (t: Row): ClientTreatment => ({
   id: t.id,
   name: t.name,
@@ -35,6 +69,8 @@ const toClient = (t: Row): ClientTreatment => ({
   duration: t.duration,
   price: t.price,
   pricePerUnit: t.pricePerUnit,
+  minUnits: t.minUnits,
+  unitPresets: parseUnitPresets(t.unitPresets),
   available: t.isAvailable,
   bestSeller: t.isBestSeller,
   heroFeatured: t.isHeroFeatured,
@@ -129,6 +165,8 @@ export const updateTreatment = createServerFn({ method: 'POST' })
       category: z.string().optional(),
       duration: z.string().optional(),
       pricePerUnit: z.boolean().optional(),
+      minUnits: z.number().int().positive().optional(),
+      unitPresets: z.string().nullable().optional(), // raw "50, 100"; null clears
       isAvailable: z.boolean().optional(),
       isBestSeller: z.boolean().optional(),
       isHeroFeatured: z.boolean().optional(),
@@ -141,6 +179,12 @@ export const updateTreatment = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     await requireOwner()
     const { id, ...patch } = data
+    // Normalise the preset field to a clean canonical string (or null) so the DB
+    // never holds the owner's raw whitespace/garbage.
+    if (patch.unitPresets !== undefined) {
+      const cleaned = parseUnitPresets(patch.unitPresets)
+      patch.unitPresets = cleaned.length ? serializeUnitPresets(cleaned) : null
+    }
     // A non-best-seller can't be the hero pick.
     if (patch.isBestSeller === false) patch.isHeroFeatured = false
     // The hero is single-select: turning it on clears it from every other row.

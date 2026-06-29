@@ -33,6 +33,11 @@ export const createBooking = createServerFn({ method: 'POST' })
     const rows = data.items.map((i) => {
       const t = byId.get(i.treatmentId)
       if (!t) throw new Error(`Treatment ${i.treatmentId} tidak ditemukan.`)
+      // Enforce the per-unit minimum server-side; the client UI prevents this but
+      // the price/qty sent by the browser is never trusted.
+      if (t.pricePerUnit && i.qty < t.minUnits) {
+        throw new Error(`${t.name} minimal ${t.minUnits} unit.`)
+      }
       // Authoritative price: charge the promo price when the treatment is on a
       // valid promo, regardless of what the client sent.
       const promoApplied = t.isPromo && t.promoNow != null && t.promoNow < t.price

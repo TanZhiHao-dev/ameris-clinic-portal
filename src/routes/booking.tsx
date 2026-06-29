@@ -194,7 +194,7 @@ function BookingPage() {
                 <div className="my-4 hairline-gold" />
                 {done.items.map((i) => (
                   <div key={i.id} className="flex justify-between py-1 text-sm">
-                    <span>{i.name}{i.qty > 1 ? ` ×${i.qty}` : ''}</span>
+                    <span>{i.name}{i.pricePerUnit ? ` · ${i.qty} unit` : i.qty > 1 ? ` ×${i.qty}` : ''}</span>
                     <span className="mono">{formatRp(i.price * i.qty)}</span>
                   </div>
                 ))}
@@ -390,7 +390,11 @@ function BookingPage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-semibold">{i.name}</div>
-                        {i.qty > 1 && <div className="text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>×{i.qty}</div>}
+                        {i.pricePerUnit ? (
+                          <div className="text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>{i.qty} unit</div>
+                        ) : i.qty > 1 ? (
+                          <div className="text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>×{i.qty}</div>
+                        ) : null}
                       </div>
                       <span className="mono shrink-0 text-sm font-semibold">{formatRp(i.price * i.qty)}</span>
                     </div>

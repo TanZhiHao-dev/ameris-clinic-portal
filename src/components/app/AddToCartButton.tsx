@@ -8,10 +8,12 @@ export function AddToCartButton({
   t,
   className = 'btn btn-ghost px-4 py-2 text-sm',
   label,
+  qty,
 }: {
   t: Treatment
   className?: string
   label?: string
+  qty?: number // explicit quantity (per-unit treatments); defaults to the minimum
 }) {
   const { add } = useCart()
   const { t: tr } = useI18n()
@@ -27,7 +29,7 @@ export function AddToCartButton({
       type="button"
       disabled={!t.available}
       onClick={() => {
-        add(t)
+        add(t, qty)
         setAdded(true)
         if (timer.current) clearTimeout(timer.current)
         timer.current = setTimeout(() => setAdded(false), 1500)

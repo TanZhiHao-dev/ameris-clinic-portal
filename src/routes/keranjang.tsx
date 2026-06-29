@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { ArrowRight, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
 import { PageShell } from '../components/app/PageShell'
-import { useCart } from '../lib/cart'
+import { useCart, minQtyFor } from '../lib/cart'
 import { formatRp, loyaltyPointsFor } from '../data/clinic'
 import { useI18n } from '../lib/i18n'
 
@@ -35,23 +35,33 @@ function CartPage() {
             <div className="mt-8 grid gap-8 lg:grid-cols-[1.6fr_1fr]">
               {/* Items */}
               <div className="flex flex-col gap-4">
-                {items.map((i) => (
+                {items.map((i) => {
+                  const min = minQtyFor(i)
+                  return (
                   <div key={i.id} className="card-soft flex items-center gap-4 p-4 sm:p-5">
                     <div className="flex-1">
                       <h3 className="text-base leading-snug">{i.name}</h3>
-                      <div className="mono mt-1 text-sm font-bold gold-text">{formatRp(i.price)}</div>
+                      <div className="mono mt-1 text-sm font-bold gold-text">
+                        {formatRp(i.price)}{i.pricePerUnit && <span className="font-semibold" style={{ color: 'var(--color-ink-muted)' }}>/unit</span>}
+                      </div>
+                      {i.pricePerUnit && (
+                        <div className="mt-1 text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>
+                          {i.qty} unit · {formatRp(i.price * i.qty)}{min > 1 ? ` · min. ${min}` : ''}
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-1 rounded-full p-1" style={{ border: '1px solid var(--color-line)' }}>
                       <button
                         type="button"
                         onClick={() => setQty(i.id, i.qty - 1)}
-                        className="grid h-8 w-8 place-items-center rounded-full transition hover:bg-[var(--color-muted)]"
+                        disabled={i.pricePerUnit && i.qty <= min}
+                        className="grid h-8 w-8 place-items-center rounded-full transition hover:bg-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-30"
                         aria-label={t('kr.decrease')}
                       >
                         <Minus size={15} />
                       </button>
-                      <span className="mono w-7 text-center text-sm font-bold">{i.qty}</span>
+                      <span className="mono w-9 text-center text-sm font-bold">{i.qty}</span>
                       <button
                         type="button"
                         onClick={() => setQty(i.id, i.qty + 1)}
@@ -72,7 +82,8 @@ function CartPage() {
                       <Trash2 size={17} />
                     </button>
                   </div>
-                ))}
+                  )
+                })}
               </div>
 
               {/* Summary */}

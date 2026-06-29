@@ -36,6 +36,12 @@ export const treatments = pgTable('treatments', {
   // When true the price is charged per unit (e.g. Botox per unit) — the website
   // renders it as "Rp45.000/unit".
   pricePerUnit: boolean('price_per_unit').notNull().default(false),
+  // For per-unit treatments: the minimum units a patient must book (e.g. Botox
+  // full face = 50). 1 = no special minimum. Enforced server-side at checkout.
+  minUnits: integer('min_units').notNull().default(1),
+  // Optional comma-separated quick-pick unit counts shown as buttons on the
+  // detail page, e.g. "50,100". Empty = stepper only. Per-unit treatments only.
+  unitPresets: text('unit_presets'),
   isAvailable: boolean('is_available').notNull().default(true),
   isPromo: boolean('is_promo').notNull().default(false),
   isBestSeller: boolean('is_best_seller').notNull().default(false),

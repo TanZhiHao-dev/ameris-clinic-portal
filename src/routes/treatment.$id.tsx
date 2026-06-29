@@ -1,11 +1,13 @@
+import { useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, CalendarCheck, Clock, Star } from 'lucide-react'
+import { ArrowLeft, CalendarCheck, Clock, Minus, Plus, Star } from 'lucide-react'
 import { PageShell } from '../components/app/PageShell'
 import { TreatmentThumb } from '../components/landing/TreatmentThumb'
 import { AddToCartButton } from '../components/app/AddToCartButton'
 import { PriceTag } from '../components/app/PriceTag'
-import { useCart } from '../lib/cart'
+import { useCart, minQtyFor } from '../lib/cart'
+import { effectivePrice, formatRp } from '../data/clinic'
 import { treatmentQuery } from '../server/queries'
 import { pickLang, useI18n } from '../lib/i18n'
 import type { DictKey } from '../lib/i18n-dict'
@@ -23,6 +25,9 @@ function DetailPage() {
   const { data: t, isPending } = useQuery(treatmentQuery(id))
   // Aliased to `tr` — the treatment data is named `t`.
   const { t: tr, lang } = useI18n()
+  // Per-unit unit selection. `units` is the raw value the stepper/input shows
+  // (null = untouched → default below); `qty` is the clamped value actually used.
+  const [units, setUnits] = useState<number | null>(null)
 
   if (isPending) {
     return <PageShell><div className="shell-x py-24" /></PageShell>
@@ -43,8 +48,18 @@ function DetailPage() {
 
   const related = t.related
 
+  // Per-unit picker state (Botox etc.). `qty` is clamped to the minimum and is
+  // what gets added to the cart / charged; `rawUnits` is what the field shows.
+  const perUnit = t.pricePerUnit
+  const minUnits = minQtyFor(t)
+  const presets = t.unitPresets ?? []
+  const defaultUnits = presets[0]?.units ?? minUnits
+  const rawUnits = units ?? defaultUnits
+  const qty = perUnit ? Math.max(minUnits, rawUnits || minUnits) : 1
+  const unitPrice = effectivePrice(t)
+
   const bookNow = () => {
-    add(t)
+    add(t, perUnit ? qty : undefined)
     navigate({ to: '/booking' })
   }
 
@@ -104,11 +119,82 @@ function DetailPage() {
                   : tr('td.priceExcl')}
               </div>
 
+              {perUnit && (
+                <div className="mt-5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold">Jumlah unit</span>
+                    {minUnits > 1 && (
+                      <span className="text-[0.76rem]" style={{ color: 'var(--color-ink-muted)' }}>
+                        min. {minUnits} unit
+                      </span>
+                    )}
+                  </div>
+
+                  {presets.length > 0 && (
+                    <div className="mt-2.5 flex flex-wrap gap-2">
+                      {presets.map((p) => (
+                        <button
+                          key={p.units}
+                          type="button"
+                          onClick={() => setUnits(p.units)}
+                          className="rounded-xl px-3.5 py-2 text-left transition"
+                          style={
+                            qty === p.units
+                              ? { background: 'var(--grad-gold)', color: '#3a2c0f' }
+                              : { background: 'var(--color-shell)', border: '1px solid var(--color-line)', color: 'var(--color-ink)' }
+                          }
+                        >
+                          <span className="block text-sm font-bold leading-tight">{p.units} unit</span>
+                          {p.label && <span className="block text-[0.68rem] leading-tight" style={{ opacity: 0.85 }}>{p.label}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-1 rounded-full p-1" style={{ border: '1px solid var(--color-line)', background: 'var(--color-shell)' }}>
+                      <button
+                        type="button"
+                        onClick={() => setUnits(Math.max(minUnits, rawUnits - 1))}
+                        disabled={qty <= minUnits}
+                        className="grid h-9 w-9 place-items-center rounded-full transition hover:bg-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-30"
+                        aria-label="Kurangi unit"
+                      >
+                        <Minus size={16} />
+                      </button>
+                      <input
+                        inputMode="numeric"
+                        value={rawUnits}
+                        onChange={(e) => {
+                          const n = parseInt(e.target.value.replace(/\D/g, ''), 10)
+                          setUnits(Number.isFinite(n) ? n : 0)
+                        }}
+                        onBlur={() => setUnits(Math.max(minUnits, rawUnits || minUnits))}
+                        className="mono w-14 bg-transparent text-center text-base font-bold outline-none"
+                        aria-label="Jumlah unit"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setUnits(rawUnits + 1)}
+                        className="grid h-9 w-9 place-items-center rounded-full transition hover:bg-[var(--color-muted)]"
+                        aria-label="Tambah unit"
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
+                    <div className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>
+                      = <span className="mono text-lg font-extrabold gold-text">{formatRp(unitPrice * qty)}</span>
+                      <span className="ml-1">({qty} × {formatRp(unitPrice)})</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="mt-5 flex flex-wrap gap-3">
                 <button type="button" className="btn btn-gold" disabled={!t.available} onClick={bookNow}>
                   <CalendarCheck size={18} /> {tr('common.bookNow')}
                 </button>
-                <AddToCartButton t={t} className="btn btn-outline px-5" label={tr('cart.addLong')} />
+                <AddToCartButton t={t} className="btn btn-outline px-5" label={tr('cart.addLong')} qty={perUnit ? qty : undefined} />
               </div>
             </div>
 

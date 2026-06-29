@@ -121,6 +121,12 @@ export async function seedDatabase() {
       redeemableIds.add(t.id)
     }
   }
+  // Per-unit quick-pick presets for the (per-unit) Botox treatments. Owner can
+  // edit these later in the catalog admin.
+  const unitPresetsById: Record<string, string> = {
+    'botox-korea': '50=daerah tertentu, 100=full face',
+    'botox-us': '50=daerah tertentu, 100=full face',
+  }
   await db.insert(treatmentsTbl).values(
     treatmentData.map((t) => {
       const promo = promoByName.get(t.name)
@@ -136,6 +142,8 @@ export async function seedDatabase() {
         duration: t.duration,
         price,
         pricePerUnit: !!t.pricePerUnit,
+        minUnits: t.minUnits ?? 1,
+        unitPresets: unitPresetsById[t.id] ?? null,
         isAvailable: t.available,
         isPromo: !!promo,
         isBestSeller: !!t.bestSeller,

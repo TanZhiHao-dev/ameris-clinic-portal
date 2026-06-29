@@ -9,6 +9,7 @@ import {
   listTreatmentsAdmin,
   updateTreatment,
 } from '#/server/treatments'
+import type { UnitPreset } from '#/server/treatments'
 
 export const Route = createFileRoute('/owner/treatment')({ component: CatalogAdmin })
 
@@ -21,6 +22,8 @@ type Row = {
   duration: string
   price: number
   pricePerUnit: boolean
+  minUnits: number
+  unitPresets: UnitPreset[]
   available: boolean
   bestSeller: boolean
   heroFeatured: boolean
@@ -37,6 +40,8 @@ type UpdateVars = {
   blurb?: string
   blurbEn?: string | null
   pricePerUnit?: boolean
+  minUnits?: number
+  unitPresets?: string | null // raw "50, 100"; null clears
   isAvailable?: boolean
   isBestSeller?: boolean
   isHeroFeatured?: boolean
@@ -46,6 +51,26 @@ type UpdateVars = {
 }
 
 const CATS: Category[] = ['Facial', 'Peeling', 'Laser', 'Skinbooster', 'Injeksi', 'Paket']
+
+// Client-side mirror of the server's preset parser/serializer — kept local so
+// this route never imports db-backed server utilities. `parsePresets` feeds the
+// optimistic cache update; `serializePresets` renders the editable text field.
+const parsePresets = (raw: string): UnitPreset[] => {
+  const seen = new Set<number>()
+  const out: UnitPreset[] = []
+  for (const part of raw.split(',')) {
+    const m = part.trim().match(/^(\d+)\s*(?:unit\b)?\s*[=:]?\s*(.*)$/i)
+    if (!m) continue
+    const units = parseInt(m[1], 10)
+    if (!Number.isFinite(units) || units <= 0 || seen.has(units)) continue
+    seen.add(units)
+    const label = m[2].trim().replace(/^\((.*)\)$/, '$1').trim()
+    out.push({ units, label: label || null })
+  }
+  return out.sort((a, b) => a.units - b.units)
+}
+const serializePresets = (list: UnitPreset[]): string =>
+  list.map((p) => (p.label ? `${p.units}=${p.label}` : String(p.units))).join(', ')
 
 function Switch({ on, onChange, label }: { on: boolean; onChange: () => void; label: string }) {
   return (
@@ -78,6 +103,8 @@ function CatalogAdmin() {
     duration: t.duration,
     price: t.price,
     pricePerUnit: t.pricePerUnit,
+    minUnits: t.minUnits,
+    unitPresets: t.unitPresets,
     available: t.available,
     bestSeller: t.bestSeller,
     heroFeatured: t.heroFeatured,
@@ -92,6 +119,8 @@ function CatalogAdmin() {
   const [draft, setDraft] = useState({ name: '', category: 'Facial' as Category, duration: '60 min', price: '', blurb: '', blurbEn: '' })
   const [priceEdits, setPriceEdits] = useState<Record<string, string>>({})
   const [promoEdits, setPromoEdits] = useState<Record<string, string>>({})
+  const [minUnitEdits, setMinUnitEdits] = useState<Record<string, string>>({})
+  const [presetEdits, setPresetEdits] = useState<Record<string, string>>({})
   const [imgEdit, setImgEdit] = useState<Row | null>(null)
   const [subEdit, setSubEdit] = useState<Row | null>(null)
 
@@ -116,6 +145,8 @@ function CatalogAdmin() {
     ...(v.blurb !== undefined && { blurb: v.blurb }),
     ...(v.blurbEn !== undefined && { blurbEn: v.blurbEn }),
     ...(v.pricePerUnit !== undefined && { pricePerUnit: v.pricePerUnit }),
+    ...(v.minUnits !== undefined && { minUnits: v.minUnits }),
+    ...(v.unitPresets !== undefined && { unitPresets: v.unitPresets ? parsePresets(v.unitPresets) : [] }),
     ...(v.isAvailable !== undefined && { available: v.isAvailable }),
     // Dropping best-seller also drops the hero pick (a non-best-seller can't be hero).
     ...(v.isBestSeller !== undefined && { bestSeller: v.isBestSeller, ...(v.isBestSeller === false && { heroFeatured: false }) }),
@@ -204,6 +235,27 @@ function CatalogAdmin() {
       return next
     })
     updateMut.mutate({ id, promoNow })
+  }
+  const commitMinUnits = (id: string) => {
+    const raw = minUnitEdits[id]
+    if (raw === undefined) return
+    const minUnits = Math.max(1, parseInt(raw.replace(/\D/g, ''), 10) || 1)
+    setMinUnitEdits((cur) => {
+      const next = { ...cur }
+      delete next[id]
+      return next
+    })
+    updateMut.mutate({ id, minUnits })
+  }
+  const commitPresets = (id: string) => {
+    const raw = presetEdits[id]
+    if (raw === undefined) return
+    setPresetEdits((cur) => {
+      const next = { ...cur }
+      delete next[id]
+      return next
+    })
+    updateMut.mutate({ id, unitPresets: raw.trim() ? raw : null })
   }
   const remove = (id: string) => deleteMut.mutate(id)
   const add = () => {
@@ -354,6 +406,36 @@ function CatalogAdmin() {
                       <Switch on={r.pricePerUnit} onChange={() => patch(r.id, { pricePerUnit: !r.pricePerUnit })} label={`Harga per unit ${r.name}`} />
                       <span>Harga per unit</span>
                     </div>
+                    {r.pricePerUnit && (
+                      <div className="flex flex-col gap-2 rounded-lg p-2.5" style={{ background: 'var(--color-cream)', border: '1px solid var(--color-line)' }}>
+                        <label className="flex items-center justify-between gap-2 text-[0.72rem] font-semibold" style={{ color: 'var(--color-ink-muted)' }}>
+                          <span>Min. unit</span>
+                          <input
+                            className="mono w-16 rounded-md border bg-white px-2 py-1 text-right text-sm font-bold outline-none"
+                            style={{ borderColor: 'var(--color-line)' }}
+                            value={minUnitEdits[r.id] ?? String(r.minUnits)}
+                            onChange={(e) => setMinUnitEdits((cur) => ({ ...cur, [r.id]: e.target.value }))}
+                            onBlur={() => commitMinUnits(r.id)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                            inputMode="numeric"
+                            aria-label={`Minimum unit ${r.name}`}
+                          />
+                        </label>
+                        <label className="flex flex-col gap-1 text-[0.72rem] font-semibold" style={{ color: 'var(--color-ink-muted)' }}>
+                          <span>Pilihan cepat (unit = label)</span>
+                          <input
+                            className="w-full rounded-md border bg-white px-2 py-1 text-sm outline-none"
+                            style={{ borderColor: 'var(--color-line)' }}
+                            value={presetEdits[r.id] ?? serializePresets(r.unitPresets)}
+                            onChange={(e) => setPresetEdits((cur) => ({ ...cur, [r.id]: e.target.value }))}
+                            onBlur={() => commitPresets(r.id)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                            placeholder="cth: 50=daerah tertentu, 100=full face"
+                            aria-label={`Pilihan cepat unit ${r.name}`}
+                          />
+                        </label>
+                      </div>
+                    )}
                   </div>
                 </td>
                 <td data-label="Tersedia" className="px-3 py-4"><Switch on={r.available} onChange={() => patch(r.id, { available: !r.available })} label={`Tersedia ${r.name}`} /></td>
