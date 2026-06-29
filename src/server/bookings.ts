@@ -224,6 +224,31 @@ export const ownerSetBookingStatus = createServerFn({ method: 'POST' })
     return { id: data.id, status: data.status }
   })
 
+// Owner: mark an unpaid order as "tidak bayar" — cancels the booking so it
+// leaves the pending-transaction list and frees the slot. Only valid while the
+// payment is still Pending; a settled (Lunas) or finished booking can't be voided.
+export const ownerMarkUnpaid = createServerFn({ method: 'POST' })
+  .validator(z.object({ id: z.string() }))
+  .handler(async ({ data }) => {
+    await requireOwner()
+    const [b] = await db.select().from(bookings).where(eq(bookings.id, data.id))
+    if (!b) throw new Error('Booking tidak ditemukan.')
+    if (b.status === 'Selesai') throw new Error('Booking sudah selesai, tidak bisa ditandai tidak bayar.')
+    if (b.status === 'Batal') throw new Error('Booking sudah dibatalkan.')
+    const [txn] = await db.select().from(transactions).where(eq(transactions.bookingId, data.id)).limit(1)
+    if (txn && txn.paymentStatus === 'Lunas') {
+      throw new Error('Pembayaran sudah lunas, tidak bisa ditandai tidak bayar.')
+    }
+    await db.update(bookings).set({ status: 'Batal' }).where(eq(bookings.id, data.id))
+    // A no-pay shouldn't permanently consume a one-time voucher.
+    if (b.voucherId) {
+      await db
+        .delete(voucherRedemptions)
+        .where(and(eq(voucherRedemptions.bookingId, data.id), eq(voucherRedemptions.userId, b.userId)))
+    }
+    return { id: data.id, status: 'Batal' as const }
+  })
+
 // Hadir → Selesai: settle payment + grant loyalty points atomically.
 export const ownerCompleteBooking = createServerFn({ method: 'POST' })
   .validator(z.object({ id: z.string() }))

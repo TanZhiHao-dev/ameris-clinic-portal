@@ -1,10 +1,10 @@
 import { type ChangeEvent, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { BadgeCheck, CheckCheck, QrCode, Upload } from 'lucide-react'
+import { BadgeCheck, Ban, CheckCheck, QrCode, Upload } from 'lucide-react'
 import { fmtDate, formatRp, type OwnerStatus, type PayStatus, payTone, statusTone } from '../data/owner'
 import { ownerApprovePayment, ownerTransactions } from '#/server/transactions'
-import { ownerCompleteBooking } from '#/server/bookings'
+import { ownerCompleteBooking, ownerMarkUnpaid } from '#/server/bookings'
 import { getPaymentInfo, ownerSetQris } from '#/server/settings'
 
 export const Route = createFileRoute('/owner/transaksi')({ component: TransactionsPage })
@@ -52,6 +52,24 @@ function TransactionsPage() {
     },
   })
   const complete = (b: { id: string }) => completeMut.mutate(b.id)
+
+  const unpaidMut = useMutation({
+    mutationFn: (id: string) => ownerMarkUnpaid({ data: { id } }),
+    onSuccess: (res) => {
+      invalidate()
+      setFlash(`Pesanan ${res.id} ditandai tidak bayar & dihapus dari daftar.`)
+      setTimeout(() => setFlash(null), 3500)
+    },
+  })
+  const markUnpaid = (b: { id: string; patientName: string }) => {
+    if (
+      window.confirm(
+        `Tandai pesanan ${b.id} (${b.patientName}) sebagai TIDAK BAYAR?\n\nPesanan akan dibatalkan dan hilang dari daftar transaksi. Tindakan ini tidak bisa dibatalkan.`,
+      )
+    ) {
+      unpaidMut.mutate(b.id)
+    }
+  }
 
   // ── QRIS payment image (owner-managed) ──
   const { data: payInfo } = useQuery({ queryKey: ['payment-info'], queryFn: () => getPaymentInfo() })
@@ -174,6 +192,16 @@ function TransactionsPage() {
                     {b.payStatus === 'Pending' && (
                       <button type="button" className="btn btn-primary whitespace-nowrap px-3 py-1.5 text-xs" onClick={() => approve(b.id)}>
                         <BadgeCheck size={14} /> Lunas
+                      </button>
+                    )}
+                    {b.payStatus === 'Pending' && b.status !== 'Selesai' && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost whitespace-nowrap px-3 py-1.5 text-xs"
+                        style={{ color: 'var(--color-rose)' }}
+                        onClick={() => markUnpaid(b)}
+                      >
+                        <Ban size={14} /> Tidak Bayar
                       </button>
                     )}
                     {b.status !== 'Selesai' && (
