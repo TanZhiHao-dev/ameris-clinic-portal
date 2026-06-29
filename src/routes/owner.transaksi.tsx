@@ -37,7 +37,7 @@ function TransactionsPage() {
     mutationFn: (id: string) => ownerApprovePayment({ data: { bookingId: id } }),
     onSuccess: (res) => {
       invalidate()
-      setFlash(`Pembayaran ${res.bookingId} disetujui (Lunas).`)
+      setFlash(`Pembayaran ${res.bookingId} ditandai Lunas.`)
       setTimeout(() => setFlash(null), 3000)
     },
   })
@@ -77,7 +77,7 @@ function TransactionsPage() {
       <span className="eyebrow">Manajemen Transaksi</span>
       <h1 className="mt-2 text-[2rem]">Transaksi</h1>
       <p className="mt-1 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-        Setujui pembayaran dan konfirmasi penyelesaian treatment.
+        Tandai pembayaran Lunas dan konfirmasi penyelesaian treatment.
       </p>
 
       {flash && (
@@ -165,7 +165,7 @@ function TransactionsPage() {
                 <td data-label="Jumlah" className="px-3 py-4 mono font-bold gold-text whitespace-nowrap">{formatRp(b.total)}</td>
                 <td data-label="Status" className="px-3 py-4">
                   <div className="flex flex-col gap-1">
-                    <span className="badge w-fit" style={{ background: payTone[b.payStatus as PayStatus].bg, color: payTone[b.payStatus as PayStatus].color }}>{b.payStatus}</span>
+                    <span className="badge w-fit" style={{ background: payTone[b.payStatus as PayStatus].bg, color: payTone[b.payStatus as PayStatus].color }}>{b.payStatus === 'Pending' ? 'Transfer sudah masuk?' : b.payStatus}</span>
                     <span className="badge w-fit" style={{ background: statusTone[b.status as OwnerStatus].bg, color: statusTone[b.status as OwnerStatus].color }}>{b.status}</span>
                   </div>
                 </td>
@@ -173,7 +173,7 @@ function TransactionsPage() {
                   <div className="flex flex-col items-end gap-2">
                     {b.payStatus === 'Pending' && (
                       <button type="button" className="btn btn-primary whitespace-nowrap px-3 py-1.5 text-xs" onClick={() => approve(b.id)}>
-                        <BadgeCheck size={14} /> Setujui
+                        <BadgeCheck size={14} /> Lunas
                       </button>
                     )}
                     {b.status !== 'Selesai' && (

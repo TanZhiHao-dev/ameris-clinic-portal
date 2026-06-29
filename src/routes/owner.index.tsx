@@ -137,7 +137,7 @@ function OwnerDashboard() {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="mono text-sm font-bold gold-text">{formatRp(b.total)}</span>
-                  <span className="badge" style={{ background: payTone[b.payStatus as PayStatus].bg, color: payTone[b.payStatus as PayStatus].color }}>{b.payStatus}</span>
+                  <span className="badge" style={{ background: payTone[b.payStatus as PayStatus].bg, color: payTone[b.payStatus as PayStatus].color }}>{b.payStatus === 'Pending' ? 'Transfer sudah masuk?' : b.payStatus}</span>
                 </div>
               </div>
             ))}
