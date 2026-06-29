@@ -1,0 +1,1 @@
+ALTER TABLE "vouchers" ADD COLUMN "min_spend" integer DEFAULT 0 NOT NULL;

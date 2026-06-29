@@ -99,6 +99,7 @@ function BookingPage() {
     retry: false,
   })
   const voucher = preview?.voucher ?? null
+  const nudge = preview?.nudge ?? null
   const discount = preview?.discount ?? 0
   // Prefer authoritative server numbers; fall back to the cart estimate while loading.
   const displaySubtotal = preview?.subtotal ?? subtotal
@@ -418,7 +419,23 @@ function BookingPage() {
                   <Ticket size={16} style={{ color: 'var(--color-gold-deep)' }} className="mt-0.5 shrink-0" />
                   <div className="min-w-0 text-[0.8rem]">
                     <div className="font-semibold" style={{ color: 'var(--color-gold-deep)' }}>Voucher diterapkan</div>
-                    <div style={{ color: 'var(--color-ink-muted)' }}>{voucher.name} · hemat {formatRp(discount)}</div>
+                    <div style={{ color: 'var(--color-ink-muted)' }}>
+                      {voucher.name} · hemat {formatRp(discount)}
+                      {voucher.minSpend > 0 && ` · min. ${formatRp(voucher.minSpend)}`}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!voucher && nudge && (
+                <div className="mt-4 flex items-start gap-2 rounded-xl px-3 py-2.5" style={{ background: 'var(--color-muted)', border: '1px dashed var(--color-line)' }}>
+                  <Ticket size={16} style={{ color: 'var(--color-ink-muted)' }} className="mt-0.5 shrink-0" />
+                  <div className="min-w-0 text-[0.8rem]">
+                    <div className="font-semibold">{nudge.name}</div>
+                    <div style={{ color: 'var(--color-ink-muted)' }}>
+                      Tambah {formatRp(nudge.needed)} lagi untuk diskon{' '}
+                      {nudge.discountType === 'pct' ? `${nudge.discountValue}%` : formatRp(nudge.discountValue)} (min. {formatRp(nudge.minSpend)})
+                    </div>
                   </div>
                 </div>
               )}

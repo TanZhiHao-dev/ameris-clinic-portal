@@ -207,6 +207,11 @@ function Overview() {
                     <div className="mt-0.5 truncate text-[0.8rem]" style={{ color: 'rgba(246,237,220,0.72)' }}>
                       {scope}
                     </div>
+                    {v.minSpend > 0 && (
+                      <div className="mt-0.5 text-[0.72rem]" style={{ color: 'rgba(246,237,220,0.6)' }}>
+                        Min. transaksi {formatRp(v.minSpend)}
+                      </div>
+                    )}
                     {v.validUntil && (
                       <div className="mt-0.5 text-[0.72rem]" style={{ color: 'var(--color-gold-light)' }}>
                         {t('ov.voucherUntil', { date: formatDateId(v.validUntil) })}

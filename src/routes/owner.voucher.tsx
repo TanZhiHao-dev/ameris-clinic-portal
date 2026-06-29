@@ -92,6 +92,9 @@ function VoucherAdmin() {
                   </td>
                   <td data-label="Diskon" className="px-3 py-4">
                     <span className="mono font-bold gold-text">{discountLabel(v)}</span>
+                    {v.minSpend > 0 && (
+                      <div className="text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>min {fmtRp(v.minSpend)}</div>
+                    )}
                   </td>
                   <td data-label="Audiens" className="px-3 py-4">
                     {AUDIENCE[v.audience]}
@@ -180,6 +183,7 @@ function VoucherDialog({
     audience: (voucher?.audience ?? 'new_user') as 'new_user' | 'all' | 'specific',
     appliesToAllNormal: voucher?.appliesToAllNormal ?? false,
     newUserWindowDays: String(voucher?.newUserWindowDays ?? 7),
+    minSpend: voucher?.minSpend ? String(voucher.minSpend) : '',
     validFrom: voucher?.validFrom ?? '',
     validUntil: voucher?.validUntil ?? '',
     maxUsesPerUser: String(voucher?.maxUsesPerUser ?? 1),
@@ -206,6 +210,7 @@ function VoucherDialog({
         audience: form.audience,
         appliesToAllNormal: form.appliesToAllNormal,
         newUserWindowDays: Math.min(365, Math.max(1, parseInt(form.newUserWindowDays.replace(/\D/g, '') || '7', 10))),
+        minSpend: Math.max(0, parseInt(form.minSpend.replace(/\D/g, '') || '0', 10)),
         validFrom: form.validFrom || undefined,
         validUntil: form.validUntil || undefined,
         maxUsesPerUser: Math.max(1, parseInt(form.maxUsesPerUser.replace(/\D/g, '') || '1', 10)),
@@ -278,6 +283,24 @@ function VoucherDialog({
               </div>
             </label>
           </div>
+
+          {/* Minimum transaction */}
+          <label className="block">
+            <span className="text-sm font-semibold">Minimum transaksi (opsional)</span>
+            <div className="mt-1 flex items-center gap-1 rounded-xl border px-3" style={{ borderColor: 'var(--color-line)', background: 'var(--color-cream)', maxWidth: '16rem' }}>
+              <span className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>Rp</span>
+              <input
+                className="mono w-full bg-transparent py-2.5 text-sm font-bold outline-none"
+                inputMode="numeric"
+                placeholder="0 = tanpa minimum"
+                value={form.minSpend}
+                onChange={(e) => set({ minSpend: e.target.value })}
+              />
+            </div>
+            <span className="mt-1 block text-[0.74rem]" style={{ color: 'var(--color-ink-muted)' }}>
+              Voucher hanya terpakai jika total treatment pasien mencapai nominal ini.
+            </span>
+          </label>
 
           {/* Audience */}
           <div>

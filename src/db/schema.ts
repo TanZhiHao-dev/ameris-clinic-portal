@@ -175,6 +175,9 @@ export const vouchers = pgTable('vouchers', {
   validFrom: timestamp('valid_from'),
   validUntil: timestamp('valid_until'),
   maxUsesPerUser: integer('max_uses_per_user').notNull().default(1),
+  // Optional minimum cart subtotal (Rp) required before the discount applies.
+  // 0 = no minimum.
+  minSpend: integer('min_spend').notNull().default(0),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })

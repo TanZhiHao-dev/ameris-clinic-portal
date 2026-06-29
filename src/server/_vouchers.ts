@@ -79,7 +79,16 @@ export async function voucherTreatmentScope(v: VoucherRow): Promise<Set<string> 
   return new Set(rows.map((r) => r.treatmentId))
 }
 
-export function voucherDiscountFor(
+// Full cart subtotal (every selected line at the price actually paid — promo
+// prices included). This is what the voucher's minimum-spend is measured against.
+export function cartSubtotal(lines: VoucherLine[]): number {
+  return lines.reduce((s, l) => s + l.unit * l.qty, 0)
+}
+
+// Pure: rupiah discount for the given cart lines, IGNORING the minimum-spend
+// gate. Promo lines are excluded; the discount only ever touches normal-priced
+// eligible items. Used directly for the "spend a bit more to unlock" nudge.
+export function rawVoucherDiscount(
   v: VoucherRow,
   scope: Set<string> | 'all',
   lines: VoucherLine[],
@@ -92,6 +101,17 @@ export function voucherDiscountFor(
   if (v.discountType === 'amount') return Math.min(v.discountValue, sub)
   const pct = Math.min(Math.max(v.discountValue, 0), 100)
   return Math.floor((sub * pct) / 100)
+}
+
+// Pure: the discount actually applied — zero until the cart subtotal reaches the
+// voucher's minimum spend (minSpend = 0 means no minimum).
+export function voucherDiscountFor(
+  v: VoucherRow,
+  scope: Set<string> | 'all',
+  lines: VoucherLine[],
+): number {
+  if (v.minSpend > 0 && cartSubtotal(lines) < v.minSpend) return 0
+  return rawVoucherDiscount(v, scope, lines)
 }
 
 export async function buildVoucherLines(

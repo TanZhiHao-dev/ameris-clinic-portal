@@ -17,7 +17,8 @@ import {
   fmtDateWIB,
   listUsableVouchers,
   voucherTreatmentScope,
-  voucherDiscountFor,
+  rawVoucherDiscount,
+  cartSubtotal,
   buildVoucherLines,
 } from './_vouchers'
 
@@ -31,19 +32,35 @@ export const previewBestVoucher = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const su = await requireUser()
     const [u] = await db.select().from(user).where(eq(user.id, su.id)).limit(1)
-    const empty = { subtotal: 0, discount: 0, total: 0, voucher: null as null | { id: string; name: string; discountType: 'pct' | 'amount'; discountValue: number } }
+    const empty = {
+      subtotal: 0,
+      discount: 0,
+      total: 0,
+      voucher: null as null | { id: string; name: string; discountType: 'pct' | 'amount'; discountValue: number; minSpend: number },
+      // A voucher that WOULD apply if the patient spent a bit more (blocked only
+      // by its minimum spend). Shown as an upsell nudge when nothing applies.
+      nudge: null as null | { name: string; needed: number; minSpend: number; discountType: 'pct' | 'amount'; discountValue: number },
+    }
     if (!u) return empty
 
     const lines = await buildVoucherLines(data.items)
-    const subtotal = lines.reduce((s, l) => s + l.unit * l.qty, 0)
+    const subtotal = cartSubtotal(lines)
     if (lines.length === 0) return { ...empty, subtotal, total: subtotal }
 
     const usable = await listUsableVouchers(u)
     let best: { v: VoucherRow; discount: number } | null = null
+    let nudge: { v: VoucherRow; needed: number } | null = null
     for (const v of usable) {
       const scope = await voucherTreatmentScope(v)
-      const discount = voucherDiscountFor(v, scope, lines)
-      if (discount > 0 && discount > (best?.discount ?? 0)) best = { v, discount }
+      const raw = rawVoucherDiscount(v, scope, lines)
+      if (raw <= 0) continue
+      const meetsMin = v.minSpend <= 0 || subtotal >= v.minSpend
+      if (meetsMin) {
+        if (raw > (best?.discount ?? 0)) best = { v, discount: raw }
+      } else {
+        const needed = v.minSpend - subtotal
+        if (!nudge || needed < nudge.needed) nudge = { v, needed }
+      }
     }
     const discount = best?.discount ?? 0
     return {
@@ -56,6 +73,17 @@ export const previewBestVoucher = createServerFn({ method: 'POST' })
             name: best.v.name,
             discountType: best.v.discountType as 'pct' | 'amount',
             discountValue: best.v.discountValue,
+            minSpend: best.v.minSpend,
+          }
+        : null,
+      // Only surface the nudge when no voucher applied, to avoid clutter.
+      nudge: !best && nudge
+        ? {
+            name: nudge.v.name,
+            needed: nudge.needed,
+            minSpend: nudge.v.minSpend,
+            discountType: nudge.v.discountType as 'pct' | 'amount',
+            discountValue: nudge.v.discountValue,
           }
         : null,
     }
@@ -80,6 +108,7 @@ export const myVouchers = createServerFn({ method: 'GET' }).handler(async () => 
     discountValue: number
     appliesToAll: boolean
     treatmentNames: string[]
+    minSpend: number
     validUntil: string
   }[] = []
   for (const v of usable) {
@@ -99,6 +128,7 @@ export const myVouchers = createServerFn({ method: 'GET' }).handler(async () => 
       discountValue: v.discountValue,
       appliesToAll: scope === 'all',
       treatmentNames,
+      minSpend: v.minSpend,
       validUntil: fmtDateWIB(v.validUntil),
     })
   }
@@ -113,6 +143,7 @@ const voucherInput = z.object({
   audience: z.enum(['new_user', 'all', 'specific']),
   appliesToAllNormal: z.boolean(),
   newUserWindowDays: z.number().int().positive().max(365).optional(),
+  minSpend: z.number().int().nonnegative().optional(),
   validFrom: z.string().optional(),
   validUntil: z.string().optional(),
   maxUsesPerUser: z.number().int().positive().optional(),
@@ -154,6 +185,7 @@ export const listVouchersAdmin = createServerFn({ method: 'GET' }).handler(async
     audience: v.audience as 'new_user' | 'all' | 'specific',
     appliesToAllNormal: v.appliesToAllNormal,
     newUserWindowDays: v.newUserWindowDays,
+    minSpend: v.minSpend,
     validFrom: fmtDateWIB(v.validFrom),
     validUntil: fmtDateWIB(v.validUntil),
     maxUsesPerUser: v.maxUsesPerUser,
@@ -180,6 +212,7 @@ export const createVoucher = createServerFn({ method: 'POST' })
         audience: data.audience,
         appliesToAllNormal: data.appliesToAllNormal,
         newUserWindowDays: data.newUserWindowDays ?? 7,
+        minSpend: data.minSpend ?? 0,
         validFrom: parseDate(data.validFrom),
         validUntil: parseDate(data.validUntil, true),
         maxUsesPerUser: data.maxUsesPerUser ?? 1,
@@ -204,6 +237,7 @@ export const updateVoucher = createServerFn({ method: 'POST' })
           audience: data.audience,
           appliesToAllNormal: data.appliesToAllNormal,
           newUserWindowDays: data.newUserWindowDays ?? 7,
+          minSpend: data.minSpend ?? 0,
           validFrom: parseDate(data.validFrom),
           validUntil: parseDate(data.validUntil, true),
           maxUsesPerUser: data.maxUsesPerUser ?? 1,

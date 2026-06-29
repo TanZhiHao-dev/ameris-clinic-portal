@@ -64,6 +64,13 @@
       "when": 1782710397031,
       "tag": "0008_steady_wendigo",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1782731175289,
+      "tag": "0009_panoramic_senator_kelly",
+      "breakpoints": true
     }
   ]
 }
