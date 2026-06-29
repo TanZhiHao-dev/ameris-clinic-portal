@@ -195,12 +195,13 @@ function Overview() {
                   className="relative flex items-center gap-4 overflow-hidden rounded-2xl p-5"
                   style={{ background: 'var(--color-espresso)', color: '#f6eddc' }}
                 >
-                  {/* perforated edge accent */}
+                  {/* Discount badge — auto-width so a long Rp nominal never
+                      overflows; stays square-ish for short "20%" labels. */}
                   <div
-                    className="grid h-14 w-14 shrink-0 place-items-center rounded-xl"
+                    className="flex h-14 min-w-[3.5rem] shrink-0 items-center justify-center rounded-xl px-3"
                     style={{ background: 'var(--grad-gold)', color: '#3a2c0f' }}
                   >
-                    <span className="mono text-lg font-extrabold leading-none">{amount}</span>
+                    <span className="mono text-base font-extrabold leading-none whitespace-nowrap">{amount}</span>
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="font-bold" style={{ color: '#faf3e6' }}>{v.name}</div>
