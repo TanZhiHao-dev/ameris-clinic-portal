@@ -7,11 +7,29 @@ import { user } from '#/db/auth-schema'
 import { requireOwner } from './_session'
 import { assemble, attachNames } from './_appointments'
 
-// Demo reference "today" (matches the seeded schedule).
-const TODAY = '2026-06-20'
+// Clinic timezone is WIB (UTC+7). Compute "today" in WIB so it's correct on a
+// UTC production server (booking dates are stored as WIB calendar dates).
+const dateFmtWIB = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Jakarta',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+function todayWIB(): string {
+  return dateFmtWIB.format(new Date())
+}
+// Absolute instant for WIB midnight of a YYYY-MM-DD string (for day arithmetic).
+function wibMidnight(ymd: string): number {
+  return new Date(ymd + 'T00:00:00+07:00').getTime()
+}
+
+const DAY_MS = 86_400_000
+const DOW = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
 
 export const ownerDashboard = createServerFn({ method: 'GET' }).handler(async () => {
   await requireOwner()
+  const TODAY = todayWIB()
   const allBks = await db.select().from(bookings)
   const all = await attachNames(await assemble(allBks))
 
@@ -35,37 +53,54 @@ export const ownerDashboard = createServerFn({ method: 'GET' }).handler(async ()
   }
 })
 
-const RANGES: Record<string, { label: string; data: { label: string; value: number }[] }> = {
-  '7h': {
-    label: '7 Hari',
-    data: [
-      { label: 'Sen', value: 2_100_000 }, { label: 'Sel', value: 3_400_000 },
-      { label: 'Rab', value: 1_800_000 }, { label: 'Kam', value: 4_200_000 },
-      { label: 'Jum', value: 3_050_000 }, { label: 'Sab', value: 6_300_000 },
-      { label: 'Min', value: 2_700_000 },
-    ],
-  },
-  '4w': {
-    label: '4 Minggu',
-    data: [
-      { label: 'Mg 1', value: 14_200_000 }, { label: 'Mg 2', value: 18_600_000 },
-      { label: 'Mg 3', value: 12_900_000 }, { label: 'Mg 4', value: 23_550_000 },
-    ],
-  },
-  '6m': {
-    label: '6 Bulan',
-    data: [
-      { label: 'Jan', value: 12_400_000 }, { label: 'Feb', value: 34_800_000 },
-      { label: 'Mar', value: 41_200_000 }, { label: 'Apr', value: 38_500_000 },
-      { label: 'Mei', value: 52_300_000 }, { label: 'Jun', value: 47_900_000 },
-    ],
-  },
-}
-
+// Revenue series computed from real settled (Lunas) bookings, attributed to the
+// appointment date. Empty/zero when there are no paid bookings yet.
 export const ownerRevenue = createServerFn({ method: 'GET' })
   .validator(z.object({ range: z.enum(['7h', '4w', '6m']) }))
   .handler(async ({ data }) => {
     await requireOwner()
-    const r = RANGES[data.range]
-    return { data: r.data, total: r.data.reduce((s, p) => s + p.value, 0) }
+    const allBks = await db.select().from(bookings)
+    const all = await assemble(allBks)
+    const paid = all.filter((b) => b.payStatus === 'Lunas' && b.status !== 'Batal')
+    const byDate = new Map<string, number>()
+    for (const b of paid) byDate.set(b.date, (byDate.get(b.date) ?? 0) + b.total)
+
+    const today = todayWIB()
+    const anchor = wibMidnight(today)
+    const out: { label: string; value: number }[] = []
+
+    if (data.range === '7h') {
+      // Last 7 days, one bucket per day.
+      for (let i = 6; i >= 0; i--) {
+        const ds = dateFmtWIB.format(new Date(anchor - i * DAY_MS))
+        const dow = new Date(ds + 'T12:00:00Z').getUTCDay()
+        out.push({ label: DOW[dow], value: byDate.get(ds) ?? 0 })
+      }
+    } else if (data.range === '4w') {
+      // Last 4 weeks (7-day buckets), Mg 1 = oldest, Mg 4 = most recent.
+      for (let k = 3; k >= 0; k--) {
+        let value = 0
+        for (let d = 0; d < 7; d++) {
+          const ds = dateFmtWIB.format(new Date(anchor - (k * 7 + d) * DAY_MS))
+          value += byDate.get(ds) ?? 0
+        }
+        out.push({ label: `Mg ${4 - k}`, value })
+      }
+    } else {
+      // Last 6 calendar months including the current month.
+      const [yy, mm] = today.split('-').map(Number) // mm: 1-12
+      for (let i = 5; i >= 0; i--) {
+        let m = mm - 1 - i
+        let y = yy
+        while (m < 0) {
+          m += 12
+          y -= 1
+        }
+        const prefix = `${y}-${String(m + 1).padStart(2, '0')}`
+        let value = 0
+        for (const [ds, v] of byDate) if (ds.startsWith(prefix)) value += v
+        out.push({ label: MON[m], value })
+      }
+    }
+    return { data: out, total: out.reduce((s, p) => s + p.value, 0) }
   })
