@@ -25,6 +25,7 @@ import { Route as OwnerIndexRouteImport } from './routes/owner.index'
 import { Route as DokterIndexRouteImport } from './routes/dokter.index'
 import { Route as AkunIndexRouteImport } from './routes/akun.index'
 import { Route as TreatmentIdRouteImport } from './routes/treatment.$id'
+import { Route as OwnerVoucherRouteImport } from './routes/owner.voucher'
 import { Route as OwnerTreatmentRouteImport } from './routes/owner.treatment'
 import { Route as OwnerTransaksiRouteImport } from './routes/owner.transaksi'
 import { Route as OwnerProfilRouteImport } from './routes/owner.profil'
@@ -129,6 +130,11 @@ const TreatmentIdRoute = TreatmentIdRouteImport.update({
   id: '/treatment/$id',
   path: '/treatment/$id',
   getParentRoute: () => rootRouteImport,
+} as any)
+const OwnerVoucherRoute = OwnerVoucherRouteImport.update({
+  id: '/voucher',
+  path: '/voucher',
+  getParentRoute: () => OwnerRoute,
 } as any)
 const OwnerTreatmentRoute = OwnerTreatmentRouteImport.update({
   id: '/treatment',
@@ -277,6 +283,7 @@ export interface FileRoutesByFullPath {
   '/owner/profil': typeof OwnerProfilRoute
   '/owner/transaksi': typeof OwnerTransaksiRoute
   '/owner/treatment': typeof OwnerTreatmentRoute
+  '/owner/voucher': typeof OwnerVoucherRoute
   '/treatment/$id': typeof TreatmentIdRoute
   '/akun/': typeof AkunIndexRoute
   '/dokter/': typeof DokterIndexRoute
@@ -316,6 +323,7 @@ export interface FileRoutesByTo {
   '/owner/profil': typeof OwnerProfilRoute
   '/owner/transaksi': typeof OwnerTransaksiRoute
   '/owner/treatment': typeof OwnerTreatmentRoute
+  '/owner/voucher': typeof OwnerVoucherRoute
   '/treatment/$id': typeof TreatmentIdRoute
   '/akun': typeof AkunIndexRoute
   '/dokter': typeof DokterIndexRoute
@@ -359,6 +367,7 @@ export interface FileRoutesById {
   '/owner/profil': typeof OwnerProfilRoute
   '/owner/transaksi': typeof OwnerTransaksiRoute
   '/owner/treatment': typeof OwnerTreatmentRoute
+  '/owner/voucher': typeof OwnerVoucherRoute
   '/treatment/$id': typeof TreatmentIdRoute
   '/akun/': typeof AkunIndexRoute
   '/dokter/': typeof DokterIndexRoute
@@ -403,6 +412,7 @@ export interface FileRouteTypes {
     | '/owner/profil'
     | '/owner/transaksi'
     | '/owner/treatment'
+    | '/owner/voucher'
     | '/treatment/$id'
     | '/akun/'
     | '/dokter/'
@@ -442,6 +452,7 @@ export interface FileRouteTypes {
     | '/owner/profil'
     | '/owner/transaksi'
     | '/owner/treatment'
+    | '/owner/voucher'
     | '/treatment/$id'
     | '/akun'
     | '/dokter'
@@ -484,6 +495,7 @@ export interface FileRouteTypes {
     | '/owner/profil'
     | '/owner/transaksi'
     | '/owner/treatment'
+    | '/owner/voucher'
     | '/treatment/$id'
     | '/akun/'
     | '/dokter/'
@@ -636,6 +648,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/treatment/$id'
       preLoaderRoute: typeof TreatmentIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/owner/voucher': {
+      id: '/owner/voucher'
+      path: '/voucher'
+      fullPath: '/owner/voucher'
+      preLoaderRoute: typeof OwnerVoucherRouteImport
+      parentRoute: typeof OwnerRoute
     }
     '/owner/treatment': {
       id: '/owner/treatment'
@@ -852,6 +871,7 @@ interface OwnerRouteChildren {
   OwnerProfilRoute: typeof OwnerProfilRoute
   OwnerTransaksiRoute: typeof OwnerTransaksiRoute
   OwnerTreatmentRoute: typeof OwnerTreatmentRoute
+  OwnerVoucherRoute: typeof OwnerVoucherRoute
   OwnerIndexRoute: typeof OwnerIndexRoute
   OwnerDokterIdRoute: typeof OwnerDokterIdRoute
   OwnerPasienIdRoute: typeof OwnerPasienIdRoute
@@ -866,6 +886,7 @@ const OwnerRouteChildren: OwnerRouteChildren = {
   OwnerProfilRoute: OwnerProfilRoute,
   OwnerTransaksiRoute: OwnerTransaksiRoute,
   OwnerTreatmentRoute: OwnerTreatmentRoute,
+  OwnerVoucherRoute: OwnerVoucherRoute,
   OwnerIndexRoute: OwnerIndexRoute,
   OwnerDokterIdRoute: OwnerDokterIdRoute,
   OwnerPasienIdRoute: OwnerPasienIdRoute,

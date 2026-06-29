@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowRight,
   CalendarCheck,
@@ -12,12 +12,14 @@ import {
   MapPin,
   ShieldCheck,
   ShoppingBag,
+  Ticket,
 } from 'lucide-react'
 import { PageShell } from '../components/app/PageShell'
 import { BankTransferInstructions } from '../components/app/BankTransferInstructions'
 import { useCart, type CartItem } from '../lib/cart'
 import { clinic, formatRp, loyaltyPointsFor, treatments } from '../data/clinic'
 import { createBooking } from '../server/bookings'
+import { previewBestVoucher } from '../server/vouchers'
 import { useMidtransPay, type PayOutcome } from '../lib/useMidtransPay'
 import { getVisual } from '../components/landing/TreatmentThumb'
 
@@ -42,7 +44,9 @@ const monthLabel = (iso: string) =>
 type Confirmation = {
   id: string
   items: CartItem[]
-  total: number
+  total: number // authoritative total from the server (net of any voucher)
+  discount: number
+  voucherName: string | null
   date: string
   time: string
   payment: 'online' | 'klinik' | 'transfer'
@@ -84,8 +88,24 @@ function BookingPage() {
   }, [monday, week, today])
 
   const ready = date && time && items.length > 0
+
+  // Auto-detect the best voucher for the current cart + signed-in user. Returns
+  // null when none applies or the user isn't signed in (query error is ignored).
+  const itemsKey = items.map((i) => `${i.id}:${i.qty}`).join(',')
+  const { data: preview } = useQuery({
+    queryKey: ['best-voucher', itemsKey],
+    queryFn: () => previewBestVoucher({ data: { items: items.map((i) => ({ treatmentId: i.id, qty: i.qty })) } }),
+    enabled: hydrated && items.length > 0,
+    retry: false,
+  })
+  const voucher = preview?.voucher ?? null
+  const discount = preview?.discount ?? 0
+  // Prefer authoritative server numbers; fall back to the cart estimate while loading.
+  const displaySubtotal = preview?.subtotal ?? subtotal
+  const discountedTotal = preview?.total ?? Math.max(0, subtotal - discount)
+
   const payNow =
-    payment === 'klinik' ? 0 : payment === 'transfer' ? subtotal : plan === 'dp' ? Math.round(subtotal / 2) : subtotal
+    payment === 'klinik' ? 0 : payment === 'transfer' ? discountedTotal : plan === 'dp' ? Math.round(discountedTotal / 2) : discountedTotal
 
   const createMut = useMutation({
     mutationFn: (v: Parameters<typeof createBooking>[0]['data']) =>
@@ -101,11 +121,12 @@ function BookingPage() {
       bookingTime: time,
       paymentMethod: payment === 'online' ? 'Online' : payment === 'transfer' ? 'Transfer' : 'Offline',
       paymentPlan: payment === 'online' ? plan : 'full',
+      voucherId: voucher?.id,
     })
     // Online → open Midtrans Snap (or the sandbox dialog). Transfer Bank shows
     // manual instructions; Offline pays at the clinic — neither hits a gateway.
     const outcome = payment === 'online' ? await pay(res.id) : null
-    setDone({ id: res.id, items: [...items], total: subtotal, date, time, payment, payOutcome: outcome })
+    setDone({ id: res.id, items: [...items], total: res.total, discount: res.discount, voucherName: res.discount > 0 ? voucher?.name ?? null : null, date, time, payment, payOutcome: outcome })
     clear()
     qc.invalidateQueries() // refresh my-bookings / upcoming after checkout
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -176,6 +197,12 @@ function BookingPage() {
                     <span className="mono">{formatRp(i.price * i.qty)}</span>
                   </div>
                 ))}
+                {done.discount > 0 && (
+                  <div className="flex justify-between py-1 text-sm" style={{ color: 'var(--color-gold-deep)' }}>
+                    <span>Voucher{done.voucherName ? ` · ${done.voucherName}` : ''}</span>
+                    <span className="mono">−{formatRp(done.discount)}</span>
+                  </div>
+                )}
                 <div className="my-4 hairline-gold" />
                 <div className="flex items-end justify-between">
                   <span className="font-bold">Total</span>
@@ -382,14 +409,36 @@ function BookingPage() {
                 </div>
                 <div className="flex justify-between">
                   <dt style={{ color: 'var(--color-ink-muted)' }}>Estimasi poin</dt>
-                  <dd className="mono font-semibold" style={{ color: 'var(--color-gold-deep)' }}>+{loyaltyPointsFor(subtotal)}</dd>
+                  <dd className="mono font-semibold" style={{ color: 'var(--color-gold-deep)' }}>+{loyaltyPointsFor(discountedTotal)}</dd>
                 </div>
               </dl>
 
+              {voucher && discount > 0 && (
+                <div className="mt-4 flex items-start gap-2 rounded-xl px-3 py-2.5" style={{ background: 'rgba(195,154,68,0.1)', border: '1px solid var(--color-gold)' }}>
+                  <Ticket size={16} style={{ color: 'var(--color-gold-deep)' }} className="mt-0.5 shrink-0" />
+                  <div className="min-w-0 text-[0.8rem]">
+                    <div className="font-semibold" style={{ color: 'var(--color-gold-deep)' }}>Voucher diterapkan</div>
+                    <div style={{ color: 'var(--color-ink-muted)' }}>{voucher.name} · hemat {formatRp(discount)}</div>
+                  </div>
+                </div>
+              )}
+
               <div className="my-4 hairline-gold" />
+              {discount > 0 && (
+                <div className="mb-2 flex flex-col gap-1 text-sm">
+                  <div className="flex justify-between" style={{ color: 'var(--color-ink-muted)' }}>
+                    <span>Subtotal</span>
+                    <span className="mono">{formatRp(displaySubtotal)}</span>
+                  </div>
+                  <div className="flex justify-between" style={{ color: 'var(--color-gold-deep)' }}>
+                    <span>Diskon voucher</span>
+                    <span className="mono">−{formatRp(discount)}</span>
+                  </div>
+                </div>
+              )}
               <div className="flex items-end justify-between">
                 <span className="font-bold">Total</span>
-                <span className="mono text-2xl font-extrabold gold-text">{formatRp(subtotal)}</span>
+                <span className="mono text-2xl font-extrabold gold-text">{formatRp(discountedTotal)}</span>
               </div>
               <div className="mt-1 flex items-center justify-between text-[0.8rem]" style={{ color: 'var(--color-ink-muted)' }}>
                 <span>Bayar sekarang</span>
@@ -412,7 +461,8 @@ function BookingPage() {
         <div className="shell-x flex items-center justify-between gap-3 py-3">
           <div>
             <div className="text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>Total</div>
-            <div className="mono text-lg font-extrabold gold-text">{formatRp(subtotal)}</div>
+            <div className="mono text-lg font-extrabold gold-text">{formatRp(discountedTotal)}</div>
+            {discount > 0 && <div className="text-[0.66rem]" style={{ color: 'var(--color-gold-deep)' }}>Voucher −{formatRp(discount)}</div>}
           </div>
           <button type="button" className="btn btn-gold flex-1 disabled:cursor-not-allowed disabled:opacity-50" disabled={!ready || submitting} onClick={confirm}>
             {submitting ? 'Memproses…' : ready ? 'Konfirmasi' : 'Pilih tanggal & jam'} {ready && !submitting && <ArrowRight size={18} />}

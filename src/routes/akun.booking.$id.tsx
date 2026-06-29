@@ -145,6 +145,12 @@ function TicketPage() {
                   <span className="mono shrink-0">{formatRp(it.price)}</span>
                 </div>
               ))}
+              {appt.discount > 0 && (
+                <div className="flex justify-between py-1 text-sm" style={{ color: 'var(--color-gold-deep)' }}>
+                  <span className="pr-2">Voucher diskon</span>
+                  <span className="mono shrink-0">−{formatRp(appt.discount)}</span>
+                </div>
+              )}
             </div>
 
             <div className="my-2 hairline-gold" />

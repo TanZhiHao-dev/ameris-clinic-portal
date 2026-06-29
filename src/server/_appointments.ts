@@ -35,7 +35,8 @@ export async function assemble(bks: (typeof bookings.$inferSelect)[]) {
       payStatus: txn?.paymentStatus ?? 'Pending',
       paymentPlan: txn?.paymentPlan ?? 'full',
       paidAt: txn?.paidAt ? txn.paidAt.toISOString() : null,
-      total: b.total,
+      total: b.total, // already net of any voucher discount
+      discount: b.discountAmount ?? 0,
     }
   })
 }

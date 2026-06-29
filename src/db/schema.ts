@@ -57,7 +57,11 @@ export const bookings = pgTable('bookings', {
   bookingDate: text('booking_date').notNull(), // YYYY-MM-DD (local)
   bookingTime: text('booking_time').notNull(), // HH:MM
   status: text('status').notNull().default('Menunggu'),
-  total: integer('total').notNull().default(0),
+  total: integer('total').notNull().default(0), // authoritative total AFTER any voucher discount
+  // Voucher applied at checkout (plain text — no FK, so deleting a voucher never
+  // touches historical bookings). discountAmount = rupiah taken off the subtotal.
+  voucherId: text('voucher_id'),
+  discountAmount: integer('discount_amount').notNull().default(0),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
@@ -147,4 +151,67 @@ export const appSettings = pgTable('app_settings', {
   key: text('key').primaryKey(),
   value: text('value'),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+// ── Vouchers ──
+// Owner-created discounts auto-applied at checkout to eligible users. Never stack
+// with promo prices (promo items are excluded from the discount). Discount is
+// computed authoritatively server-side and recorded in voucher_redemptions.
+export type VoucherDiscountType = 'pct' | 'amount'
+export type VoucherAudience = 'new_user' | 'all' | 'specific'
+
+export const vouchers = pgTable('vouchers', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  discountType: text('discount_type').notNull().default('pct'), // 'pct' | 'amount'
+  discountValue: integer('discount_value').notNull().default(0), // 20 = 20% ; 50000 = Rp50.000
+  audience: text('audience').notNull().default('all'), // 'new_user' | 'all' | 'specific'
+  // true → applies to every non-promo treatment; false → only the treatments
+  // listed in voucher_treatments.
+  appliesToAllNormal: boolean('applies_to_all_normal').notNull().default(false),
+  // 'new_user' eligibility window: valid while now <= user.createdAt + N days.
+  newUserWindowDays: integer('new_user_window_days').notNull().default(7),
+  // Optional absolute calendar window (applies to every audience when set).
+  validFrom: timestamp('valid_from'),
+  validUntil: timestamp('valid_until'),
+  maxUsesPerUser: integer('max_uses_per_user').notNull().default(1),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// Treatments a voucher applies to (the owner's "pilihan"). Ignored when the
+// voucher has appliesToAllNormal = true.
+export const voucherTreatments = pgTable('voucher_treatments', {
+  id: text('id').primaryKey(),
+  voucherId: text('voucher_id')
+    .notNull()
+    .references(() => vouchers.id, { onDelete: 'cascade' }),
+  treatmentId: text('treatment_id')
+    .notNull()
+    .references(() => treatments.id, { onDelete: 'cascade' }),
+})
+
+// Specific users allowed to use a voucher (only for audience = 'specific').
+export const voucherUsers = pgTable('voucher_users', {
+  id: text('id').primaryKey(),
+  voucherId: text('voucher_id')
+    .notNull()
+    .references(() => vouchers.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+})
+
+// One row per redemption — enforces maxUsesPerUser and provides an audit trail.
+export const voucherRedemptions = pgTable('voucher_redemptions', {
+  id: text('id').primaryKey(),
+  voucherId: text('voucher_id')
+    .notNull()
+    .references(() => vouchers.id, { onDelete: 'cascade' }),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  bookingId: text('booking_id'), // plain text — booking lifecycle is independent
+  amountDiscounted: integer('amount_discounted').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 })

@@ -106,9 +106,11 @@ export async function settlePayment(args: {
   const isPaid = PAID.has(transactionStatus) && fraudStatus !== 'deny' && fraudStatus !== 'challenge'
 
   if (isPaid) {
-    // Validate amount matches stored transaction to prevent partial-payment attacks.
-    if (grossAmount && Math.round(parseFloat(grossAmount)) !== txn.amount) {
-      throw new Error(`Amount mismatch: expected ${txn.amount}, got ${grossAmount}`)
+    // Validate amount matches what we actually charged. DP plans are billed at
+    // half the booking total, so the expected gateway amount differs by plan.
+    const expectedGross = (txn.paymentPlan ?? 'full') === 'dp' ? Math.round(txn.amount / 2) : txn.amount
+    if (grossAmount && Math.round(parseFloat(grossAmount)) !== expectedGross) {
+      throw new Error(`Amount mismatch: expected ${expectedGross}, got ${grossAmount}`)
     }
     // 'full' plan → fully paid (Lunas); 'dp' → DP recorded, balance settled at
     // the clinic on completion (keeps the existing Pending → Lunas model).

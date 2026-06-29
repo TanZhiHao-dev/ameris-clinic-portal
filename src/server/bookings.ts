@@ -2,11 +2,12 @@ import { createServerFn } from '@tanstack/react-start'
 import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '#/db'
-import { bookingItems, bookings, loyaltyTransactions, transactions, treatments } from '#/db/schema'
+import { bookingItems, bookings, loyaltyTransactions, transactions, treatments, voucherRedemptions } from '#/db/schema'
 import { user } from '#/db/auth-schema'
 import { loyaltyPointsFor } from '#/data/clinic'
 import { requireOwner, requireStaff, requireUser } from './_session'
 import { assemble } from './_appointments'
+import { loadUsableVoucher, voucherDiscountFor, voucherTreatmentScope } from './vouchers'
 
 const SLOTS = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00']
 
@@ -19,6 +20,7 @@ export const createBooking = createServerFn({ method: 'POST' })
       bookingTime: z.string(),
       paymentMethod: z.enum(['Online', 'Offline', 'Transfer']),
       paymentPlan: z.enum(['full', 'dp']).optional(),
+      voucherId: z.string().optional(),
     }),
   )
   .handler(async ({ data }) => {
@@ -27,15 +29,16 @@ export const createBooking = createServerFn({ method: 'POST' })
     const catalog = await db.select().from(treatments).where(inArray(treatments.id, ids))
     const byId = new Map(catalog.map((t) => [t.id, t]))
 
-    let total = 0
+    let subtotal = 0
     const rows = data.items.map((i) => {
       const t = byId.get(i.treatmentId)
       if (!t) throw new Error(`Treatment ${i.treatmentId} tidak ditemukan.`)
       // Authoritative price: charge the promo price when the treatment is on a
       // valid promo, regardless of what the client sent.
-      const unit = t.isPromo && t.promoNow != null && t.promoNow < t.price ? t.promoNow : t.price
-      total += unit * i.qty
-      return { treatmentId: t.id, name: t.name, price: unit, qty: i.qty }
+      const promoApplied = t.isPromo && t.promoNow != null && t.promoNow < t.price
+      const unit = promoApplied ? t.promoNow! : t.price
+      subtotal += unit * i.qty
+      return { treatmentId: t.id, name: t.name, price: unit, qty: i.qty, promoApplied }
     })
 
     const today = new Date().toISOString().slice(0, 10)
@@ -49,33 +52,80 @@ export const createBooking = createServerFn({ method: 'POST' })
     if (takenSlot) throw new Error('Slot sudah terisi, pilih waktu lain.')
 
     const id = 'AMR-' + crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()
-    await db.insert(bookings).values({
-      id,
-      userId: u.id,
-      bookingDate: data.bookingDate,
-      bookingTime: data.bookingTime,
-      status: 'Menunggu',
-      total,
-    })
-    await db.insert(bookingItems).values(
-      rows.map((r) => ({
+
+    // ── Voucher (optional). Discount is computed authoritatively here; the
+    // client-sent price is never trusted. Promo lines are excluded. The voucher
+    // is consumed atomically so it can never exceed its per-user cap. ──
+    let discount = 0
+    let appliedVoucherId: string | null = null
+    let redemptionId: string | null = null
+    if (data.voucherId) {
+      const [urow] = await db.select().from(user).where(eq(user.id, u.id)).limit(1)
+      const voucher = urow ? await loadUsableVoucher(data.voucherId, urow) : null
+      if (voucher) {
+        const scope = await voucherTreatmentScope(voucher)
+        const d = voucherDiscountFor(
+          voucher,
+          scope,
+          rows.map((r) => ({ treatmentId: r.treatmentId, unit: r.price, qty: r.qty, promoApplied: r.promoApplied })),
+        )
+        if (d > 0) {
+          redemptionId = crypto.randomUUID()
+          await db.insert(voucherRedemptions).values({
+            id: redemptionId, voucherId: voucher.id, userId: u.id, bookingId: id, amountDiscounted: d,
+          })
+          // Verify we didn't race past the cap; if so, undo and drop the discount.
+          const used = await db
+            .select({ id: voucherRedemptions.id })
+            .from(voucherRedemptions)
+            .where(and(eq(voucherRedemptions.voucherId, voucher.id), eq(voucherRedemptions.userId, u.id)))
+          if (used.length > voucher.maxUsesPerUser) {
+            await db.delete(voucherRedemptions).where(eq(voucherRedemptions.id, redemptionId))
+            redemptionId = null
+          } else {
+            discount = d
+            appliedVoucherId = voucher.id
+          }
+        }
+      }
+    }
+    const total = Math.max(0, subtotal - discount)
+
+    try {
+      await db.insert(bookings).values({
+        id,
+        userId: u.id,
+        bookingDate: data.bookingDate,
+        bookingTime: data.bookingTime,
+        status: 'Menunggu',
+        total,
+        voucherId: appliedVoucherId,
+        discountAmount: discount,
+      })
+      await db.insert(bookingItems).values(
+        rows.map((r) => ({
+          id: crypto.randomUUID(),
+          bookingId: id,
+          treatmentId: r.treatmentId,
+          nameAtBooking: r.name,
+          priceAtBooking: r.price,
+          qty: r.qty,
+        })),
+      )
+      await db.insert(transactions).values({
         id: crypto.randomUUID(),
         bookingId: id,
-        treatmentId: r.treatmentId,
-        nameAtBooking: r.name,
-        priceAtBooking: r.price,
-        qty: r.qty,
-      })),
-    )
-    await db.insert(transactions).values({
-      id: crypto.randomUUID(),
-      bookingId: id,
-      amount: total,
-      paymentMethod: data.paymentMethod,
-      paymentStatus: 'Pending',
-      paymentPlan: data.paymentPlan ?? 'full',
-    })
-    return { id, total, date: data.bookingDate, time: data.bookingTime, status: 'Menunggu' as const }
+        amount: total,
+        paymentMethod: data.paymentMethod,
+        paymentStatus: 'Pending',
+        paymentPlan: data.paymentPlan ?? 'full',
+      })
+    } catch (e) {
+      // Don't leave a consumed voucher behind if booking creation failed.
+      if (redemptionId) await db.delete(voucherRedemptions).where(eq(voucherRedemptions.id, redemptionId))
+      throw e
+    }
+    return { id, total, subtotal, discount, date: data.bookingDate, time: data.bookingTime, status: 'Menunggu' as const }
   })
 
 // ── Patient: my bookings ──
@@ -115,6 +165,13 @@ export const cancelMyBooking = createServerFn({ method: 'POST' })
     if (!b) throw new Error('Booking tidak ditemukan.')
     if (b.status === 'Selesai' || b.status === 'Batal') throw new Error('Booking tidak bisa dibatalkan.')
     await db.update(bookings).set({ status: 'Batal' }).where(eq(bookings.id, data.id))
+    // Free the voucher so a cancelled booking doesn't permanently consume a
+    // one-time voucher (re-use is still gated by its window / audience / cap).
+    if (b.voucherId) {
+      await db
+        .delete(voucherRedemptions)
+        .where(and(eq(voucherRedemptions.bookingId, data.id), eq(voucherRedemptions.userId, u.id)))
+    }
     return { ok: true, status: 'Batal' as const }
   })
 
