@@ -15,3 +15,10 @@ todos.json
 # local PGlite data
 .data/
 .env
+
+# personal / cross-project working files (not part of the portal)
+.claude/launch.json
+scripts/
+JDS-Landing-Page-PRD.md
+JDS-Landing-Page-PRD.pdf
+strix-scan.log
