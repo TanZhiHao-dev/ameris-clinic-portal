@@ -533,6 +533,14 @@ const dict = {
   'ov.glowTitle': { id: 'Siap untuk glow up berikutnya?', en: 'Ready for your next glow up?' },
   'ov.glowBody': { id: 'Pesan treatment favoritmu sekarang.', en: 'Book your favourite treatment now.' },
   'ov.bookTreatment': { id: 'Booking treatment', en: 'Book a treatment' },
+  'ov.vouchers': { id: 'Voucher kamu', en: 'Your vouchers' },
+  'ov.voucherAllTreatments': { id: 'Semua treatment', en: 'All treatments' },
+  'ov.voucherUntil': { id: 'Berlaku s/d {date}', en: 'Valid until {date}' },
+  'ov.voucherUse': { id: 'Pakai sekarang', en: 'Use now' },
+  'ov.voucherHint': {
+    id: 'Diskon otomatis terpasang saat checkout.',
+    en: 'Discount is applied automatically at checkout.',
+  },
 
   // ── My bookings (/akun/booking) ───────────────────────────────────
   'mb.title': { id: 'Booking saya', en: 'My bookings' },

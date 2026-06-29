@@ -3,6 +3,7 @@ import { desc, eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '#/db'
 import {
+  treatments,
   vouchers,
   voucherTreatments,
   voucherUsers,
@@ -59,6 +60,50 @@ export const previewBestVoucher = createServerFn({ method: 'POST' })
         : null,
     }
   })
+
+// ── Customer: list all vouchers the signed-in patient currently holds ──
+// Used by the patient dashboard so users can see what they've been granted,
+// independent of any cart. The actual discount is still computed at checkout.
+export const myVouchers = createServerFn({ method: 'GET' }).handler(async () => {
+  const su = await requireUser()
+  const [u] = await db.select().from(user).where(eq(user.id, su.id)).limit(1)
+  if (!u) return []
+
+  const usable = await listUsableVouchers(u)
+  if (usable.length === 0) return []
+
+  // Resolve treatment names for vouchers scoped to specific treatments.
+  const out: {
+    id: string
+    name: string
+    discountType: 'pct' | 'amount'
+    discountValue: number
+    appliesToAll: boolean
+    treatmentNames: string[]
+    validUntil: string
+  }[] = []
+  for (const v of usable) {
+    const scope = await voucherTreatmentScope(v)
+    let treatmentNames: string[] = []
+    if (scope !== 'all' && scope.size > 0) {
+      const rows = await db
+        .select({ name: treatments.name })
+        .from(treatments)
+        .where(inArray(treatments.id, Array.from(scope)))
+      treatmentNames = rows.map((r) => r.name)
+    }
+    out.push({
+      id: v.id,
+      name: v.name,
+      discountType: v.discountType as 'pct' | 'amount',
+      discountValue: v.discountValue,
+      appliesToAll: scope === 'all',
+      treatmentNames,
+      validUntil: fmtDateWIB(v.validUntil),
+    })
+  }
+  return out
+})
 
 // ── Owner: management ──
 const voucherInput = z.object({

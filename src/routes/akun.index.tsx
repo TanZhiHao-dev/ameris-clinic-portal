@@ -25,6 +25,7 @@ import { listMyBookings, upcomingMyBooking } from '../server/bookings'
 import { listPromos } from '../server/treatments'
 import { loyaltySummary } from '../server/loyalty'
 import { myNotifications } from '../server/account'
+import { myVouchers } from '../server/vouchers'
 import { useI18n } from '../lib/i18n'
 import type { DictKey } from '../lib/i18n-dict'
 
@@ -79,6 +80,10 @@ function Overview() {
   const { data: promos = [] } = useQuery({
     queryKey: ['promos'],
     queryFn: () => listPromos(),
+  })
+  const { data: vouchers = [] } = useQuery({
+    queryKey: ['my-vouchers'],
+    queryFn: () => myVouchers(),
   })
 
   const done = bookings.filter((a) => a.status === 'Selesai').length
@@ -166,6 +171,57 @@ function Overview() {
           <div className="mt-2 text-[0.8rem]" style={{ color: 'var(--color-ink-muted)' }}>{t('ov.totalVisits')}</div>
         </div>
       </div>
+
+      {/* Vouchers held by this patient (PRD: Voucher) */}
+      {vouchers.length > 0 && (
+        <div className="mt-6">
+          <div className="flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-xl">
+              <Ticket size={20} style={{ color: 'var(--color-gold-deep)' }} /> {t('ov.vouchers')}
+            </h2>
+            <span className="text-[0.78rem]" style={{ color: 'var(--color-ink-muted)' }}>
+              {t('ov.voucherHint')}
+            </span>
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {vouchers.map((v) => {
+              const amount = v.discountType === 'pct' ? `${v.discountValue}%` : formatRp(v.discountValue)
+              const scope = v.appliesToAll
+                ? t('ov.voucherAllTreatments')
+                : v.treatmentNames.join(', ')
+              return (
+                <div
+                  key={v.id}
+                  className="relative flex items-center gap-4 overflow-hidden rounded-2xl p-5"
+                  style={{ background: 'var(--color-espresso)', color: '#f6eddc' }}
+                >
+                  {/* perforated edge accent */}
+                  <div
+                    className="grid h-14 w-14 shrink-0 place-items-center rounded-xl"
+                    style={{ background: 'var(--grad-gold)', color: '#3a2c0f' }}
+                  >
+                    <span className="mono text-lg font-extrabold leading-none">{amount}</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold" style={{ color: '#faf3e6' }}>{v.name}</div>
+                    <div className="mt-0.5 truncate text-[0.8rem]" style={{ color: 'rgba(246,237,220,0.72)' }}>
+                      {scope}
+                    </div>
+                    {v.validUntil && (
+                      <div className="mt-0.5 text-[0.72rem]" style={{ color: 'var(--color-gold-light)' }}>
+                        {t('ov.voucherUntil', { date: formatDateId(v.validUntil) })}
+                      </div>
+                    )}
+                  </div>
+                  <Link to="/treatment" className="btn btn-gold shrink-0 px-4 py-2 text-sm">
+                    {t('ov.voucherUse')}
+                  </Link>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Main grid */}
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
