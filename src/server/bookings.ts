@@ -7,7 +7,7 @@ import { user } from '#/db/auth-schema'
 import { loyaltyPointsFor } from '#/data/clinic'
 import { requireOwner, requireStaff, requireUser } from './_session'
 import { assemble } from './_appointments'
-import { loadUsableVoucher, voucherDiscountFor, voucherTreatmentScope } from './vouchers'
+import { loadUsableVoucher, voucherDiscountFor, voucherTreatmentScope } from './_vouchers'
 
 const SLOTS = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00']
 
