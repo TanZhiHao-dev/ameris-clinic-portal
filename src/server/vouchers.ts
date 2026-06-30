@@ -18,6 +18,9 @@ import {
   listUsableVouchers,
   voucherTreatmentScope,
   rawVoucherDiscount,
+  voucherDiscountFor,
+  voucherTargetOptions,
+  bestTargetId,
   cartSubtotal,
   buildVoucherLines,
 } from './_vouchers'
@@ -27,6 +30,8 @@ export const previewBestVoucher = createServerFn({ method: 'POST' })
   .validator(
     z.object({
       items: z.array(z.object({ treatmentId: z.string(), qty: z.number().int().positive() })).min(1),
+      // Patient's chosen target for 'one_treatment' vouchers (ignored otherwise).
+      targetTreatmentId: z.string().optional(),
     }),
   )
   .handler(async ({ data }) => {
@@ -36,7 +41,10 @@ export const previewBestVoucher = createServerFn({ method: 'POST' })
       subtotal: 0,
       discount: 0,
       total: 0,
-      voucher: null as null | { id: string; name: string; discountType: 'pct' | 'amount'; discountValue: number; minSpend: number },
+      voucher: null as null | { id: string; name: string; discountType: 'pct' | 'amount'; discountValue: number; minSpend: number; applyScope: 'cart' | 'one_treatment' },
+      // For 'one_treatment' vouchers: the treatments the discount can land on.
+      targets: [] as { treatmentId: string; name: string; discount: number }[],
+      targetTreatmentId: null as string | null,
       // A voucher that WOULD apply if the patient spent a bit more (blocked only
       // by its minimum spend). Shown as an upsell nudge when nothing applies.
       nudge: null as null | { name: string; needed: number; minSpend: number; discountType: 'pct' | 'amount'; discountValue: number },
@@ -48,21 +56,42 @@ export const previewBestVoucher = createServerFn({ method: 'POST' })
     if (lines.length === 0) return { ...empty, subtotal, total: subtotal }
 
     const usable = await listUsableVouchers(u)
-    let best: { v: VoucherRow; discount: number } | null = null
+    let best: { v: VoucherRow; scope: Set<string> | 'all'; discount: number } | null = null
     let nudge: { v: VoucherRow; needed: number } | null = null
     for (const v of usable) {
       const scope = await voucherTreatmentScope(v)
-      const raw = rawVoucherDiscount(v, scope, lines)
+      const raw = rawVoucherDiscount(v, scope, lines) // best-case (one_treatment → best target)
       if (raw <= 0) continue
       const meetsMin = v.minSpend <= 0 || subtotal >= v.minSpend
       if (meetsMin) {
-        if (raw > (best?.discount ?? 0)) best = { v, discount: raw }
+        if (raw > (best?.discount ?? 0)) best = { v, scope, discount: raw }
       } else {
         const needed = v.minSpend - subtotal
         if (!nudge || needed < nudge.needed) nudge = { v, needed }
       }
     }
-    const discount = best?.discount ?? 0
+
+    let targets: { treatmentId: string; name: string; discount: number }[] = []
+    let targetTreatmentId: string | null = null
+    let discount = best?.discount ?? 0
+
+    // For a 'one_treatment' voucher, expose the eligible treatments + honor the
+    // patient's pick (default = the biggest-saving treatment).
+    if (best && best.v.applyScope === 'one_treatment') {
+      const opts = voucherTargetOptions(best.v, best.scope, lines)
+      const names = opts.length
+        ? await db.select({ id: treatments.id, name: treatments.name }).from(treatments).where(inArray(treatments.id, opts.map((o) => o.treatmentId)))
+        : []
+      const nameById = new Map(names.map((n) => [n.id, n.name]))
+      targets = opts.map((o) => ({ treatmentId: o.treatmentId, name: nameById.get(o.treatmentId) ?? '', discount: o.discount }))
+      const wanted =
+        data.targetTreatmentId && opts.some((o) => o.treatmentId === data.targetTreatmentId)
+          ? data.targetTreatmentId
+          : bestTargetId(best.v, best.scope, lines)
+      targetTreatmentId = wanted
+      discount = voucherDiscountFor(best.v, best.scope, lines, wanted)
+    }
+
     return {
       subtotal,
       discount,
@@ -74,8 +103,11 @@ export const previewBestVoucher = createServerFn({ method: 'POST' })
             discountType: best.v.discountType as 'pct' | 'amount',
             discountValue: best.v.discountValue,
             minSpend: best.v.minSpend,
+            applyScope: (best.v.applyScope === 'one_treatment' ? 'one_treatment' : 'cart') as 'cart' | 'one_treatment',
           }
         : null,
+      targets,
+      targetTreatmentId,
       // Only surface the nudge when no voucher applied, to avoid clutter.
       nudge: !best && nudge
         ? {
@@ -142,6 +174,7 @@ const voucherInput = z.object({
   discountValue: z.number().int().positive(),
   audience: z.enum(['new_user', 'all', 'specific']),
   appliesToAllNormal: z.boolean(),
+  applyScope: z.enum(['cart', 'one_treatment']).optional(),
   newUserWindowDays: z.number().int().positive().max(365).optional(),
   minSpend: z.number().int().nonnegative().optional(),
   validFrom: z.string().optional(),
@@ -184,6 +217,7 @@ export const listVouchersAdmin = createServerFn({ method: 'GET' }).handler(async
     discountValue: v.discountValue,
     audience: v.audience as 'new_user' | 'all' | 'specific',
     appliesToAllNormal: v.appliesToAllNormal,
+    applyScope: (v.applyScope === 'one_treatment' ? 'one_treatment' : 'cart') as 'cart' | 'one_treatment',
     newUserWindowDays: v.newUserWindowDays,
     minSpend: v.minSpend,
     validFrom: fmtDateWIB(v.validFrom),
@@ -211,6 +245,7 @@ export const createVoucher = createServerFn({ method: 'POST' })
         discountValue: data.discountValue,
         audience: data.audience,
         appliesToAllNormal: data.appliesToAllNormal,
+        applyScope: data.applyScope ?? 'cart',
         newUserWindowDays: data.newUserWindowDays ?? 7,
         minSpend: data.minSpend ?? 0,
         validFrom: parseDate(data.validFrom),
@@ -236,6 +271,7 @@ export const updateVoucher = createServerFn({ method: 'POST' })
           discountValue: data.discountValue,
           audience: data.audience,
           appliesToAllNormal: data.appliesToAllNormal,
+          applyScope: data.applyScope ?? 'cart',
           newUserWindowDays: data.newUserWindowDays ?? 7,
           minSpend: data.minSpend ?? 0,
           validFrom: parseDate(data.validFrom),

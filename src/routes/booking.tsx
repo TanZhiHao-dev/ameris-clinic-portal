@@ -66,6 +66,8 @@ function BookingPage() {
   const [payment, setPayment] = useState<'online' | 'klinik' | 'transfer'>('transfer')
   const [plan, setPlan] = useState<'full' | 'dp'>('full')
   const [done, setDone] = useState<Confirmation | null>(null)
+  // Patient's chosen treatment for a 'one_treatment' voucher (null = server picks best).
+  const [voucherTarget, setVoucherTarget] = useState<string | null>(null)
 
   useEffect(() => {
     const now = new Date()
@@ -92,15 +94,22 @@ function BookingPage() {
   // Auto-detect the best voucher for the current cart + signed-in user. Returns
   // null when none applies or the user isn't signed in (query error is ignored).
   const itemsKey = items.map((i) => `${i.id}:${i.qty}`).join(',')
+  // Cart changes → let the server re-pick the best target.
+  useEffect(() => { setVoucherTarget(null) }, [itemsKey])
   const { data: preview } = useQuery({
-    queryKey: ['best-voucher', itemsKey],
-    queryFn: () => previewBestVoucher({ data: { items: items.map((i) => ({ treatmentId: i.id, qty: i.qty })) } }),
+    queryKey: ['best-voucher', itemsKey, voucherTarget],
+    queryFn: () =>
+      previewBestVoucher({
+        data: { items: items.map((i) => ({ treatmentId: i.id, qty: i.qty })), targetTreatmentId: voucherTarget ?? undefined },
+      }),
     enabled: hydrated && items.length > 0,
     retry: false,
   })
   const voucher = preview?.voucher ?? null
   const nudge = preview?.nudge ?? null
   const discount = preview?.discount ?? 0
+  const targets = preview?.targets ?? []
+  const appliedTarget = preview?.targetTreatmentId ?? null
   // Prefer authoritative server numbers; fall back to the cart estimate while loading.
   const displaySubtotal = preview?.subtotal ?? subtotal
   const discountedTotal = preview?.total ?? Math.max(0, subtotal - discount)
@@ -123,6 +132,8 @@ function BookingPage() {
       paymentMethod: payment === 'online' ? 'Online' : payment === 'transfer' ? 'Transfer' : 'Offline',
       paymentPlan: payment === 'online' ? plan : 'full',
       voucherId: voucher?.id,
+      voucherTargetTreatmentId:
+        voucher?.applyScope === 'one_treatment' ? appliedTarget ?? undefined : undefined,
     })
     // Online → open Midtrans Snap (or the sandbox dialog). Transfer Bank shows
     // manual instructions; Offline pays at the clinic — neither hits a gateway.
@@ -419,15 +430,43 @@ function BookingPage() {
               </dl>
 
               {voucher && discount > 0 && (
-                <div className="mt-4 flex items-start gap-2 rounded-xl px-3 py-2.5" style={{ background: 'rgba(195,154,68,0.1)', border: '1px solid var(--color-gold)' }}>
-                  <Ticket size={16} style={{ color: 'var(--color-gold-deep)' }} className="mt-0.5 shrink-0" />
-                  <div className="min-w-0 text-[0.8rem]">
-                    <div className="font-semibold" style={{ color: 'var(--color-gold-deep)' }}>Voucher diterapkan</div>
-                    <div style={{ color: 'var(--color-ink-muted)' }}>
-                      {voucher.name} · hemat {formatRp(discount)}
-                      {voucher.minSpend > 0 && ` · min. ${formatRp(voucher.minSpend)}`}
+                <div className="mt-4 rounded-xl px-3 py-2.5" style={{ background: 'rgba(195,154,68,0.1)', border: '1px solid var(--color-gold)' }}>
+                  <div className="flex items-start gap-2">
+                    <Ticket size={16} style={{ color: 'var(--color-gold-deep)' }} className="mt-0.5 shrink-0" />
+                    <div className="min-w-0 text-[0.8rem]">
+                      <div className="font-semibold" style={{ color: 'var(--color-gold-deep)' }}>Voucher diterapkan</div>
+                      <div style={{ color: 'var(--color-ink-muted)' }}>
+                        {voucher.name} · hemat {formatRp(discount)}
+                        {voucher.minSpend > 0 && ` · min. ${formatRp(voucher.minSpend)}`}
+                      </div>
                     </div>
                   </div>
+
+                  {/* 'one_treatment' voucher → let the patient pick which treatment it lands on */}
+                  {voucher.applyScope === 'one_treatment' && targets.length > 0 && (
+                    <div className="mt-2.5">
+                      <div className="text-[0.72rem] font-semibold" style={{ color: 'var(--color-gold-deep)' }}>
+                        {targets.length > 1 ? 'Pilih treatment untuk diskon:' : 'Diterapkan ke:'}
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {targets.map((t) => {
+                          const active = t.treatmentId === appliedTarget
+                          return (
+                            <button
+                              key={t.treatmentId}
+                              type="button"
+                              onClick={() => setVoucherTarget(t.treatmentId)}
+                              disabled={targets.length <= 1}
+                              className="rounded-full px-2.5 py-1 text-[0.74rem] font-semibold transition disabled:cursor-default"
+                              style={active ? { background: 'var(--grad-gold)', color: '#3a2c0f' } : { background: 'var(--color-shell)', color: 'var(--color-ink)', border: '1px solid var(--color-line)' }}
+                            >
+                              {t.name} <span className="opacity-70">−{formatRp(t.discount)}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

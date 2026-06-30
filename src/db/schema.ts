@@ -175,6 +175,10 @@ export const vouchers = pgTable('vouchers', {
   // true → applies to every non-promo treatment; false → only the treatments
   // listed in voucher_treatments.
   appliesToAllNormal: boolean('applies_to_all_normal').notNull().default(false),
+  // How the discount lands across the cart:
+  //   'cart'          → across all eligible (in-scope, non-promo) lines (default)
+  //   'one_treatment' → a single treatment the patient picks at checkout
+  applyScope: text('apply_scope').notNull().default('cart'),
   // 'new_user' eligibility window: valid while now <= user.createdAt + N days.
   newUserWindowDays: integer('new_user_window_days').notNull().default(7),
   // Optional absolute calendar window (applies to every audience when set).

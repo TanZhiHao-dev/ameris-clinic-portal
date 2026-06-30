@@ -142,7 +142,9 @@
       "Bash(gh repo *)",
       "Bash(git add *)",
       "Bash(git commit -q -m 'Add Coolify/Docker deployment setup *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(claude skill *)",
+      "Bash(xargs cat)"
     ]
   }
 }

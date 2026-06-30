@@ -85,22 +85,65 @@ export function cartSubtotal(lines: VoucherLine[]): number {
   return lines.reduce((s, l) => s + l.unit * l.qty, 0)
 }
 
-// Pure: rupiah discount for the given cart lines, IGNORING the minimum-spend
-// gate. Promo lines are excluded; the discount only ever touches normal-priced
-// eligible items. Used directly for the "spend a bit more to unlock" nudge.
+const clampPct = (n: number) => Math.min(Math.max(n, 0), 100)
+
+// Eligible (in-scope, non-promo) cart lines — the only lines a voucher can touch.
+function eligibleLines(scope: Set<string> | 'all', lines: VoucherLine[]): VoucherLine[] {
+  return lines.filter((l) => !l.promoApplied && (scope === 'all' || scope.has(l.treatmentId)))
+}
+
+// Discount a voucher yields against a single line (used in 'one_treatment' mode).
+function lineDiscount(v: VoucherRow, line: VoucherLine): number {
+  const sub = line.unit * line.qty
+  if (sub <= 0) return 0
+  if (v.discountType === 'amount') return Math.min(v.discountValue, sub)
+  return Math.floor((sub * clampPct(v.discountValue)) / 100)
+}
+
+// 'one_treatment' targets: each eligible line + the discount it would yield.
+export function voucherTargetOptions(
+  v: VoucherRow,
+  scope: Set<string> | 'all',
+  lines: VoucherLine[],
+): { treatmentId: string; discount: number }[] {
+  return eligibleLines(scope, lines)
+    .map((l) => ({ treatmentId: l.treatmentId, discount: lineDiscount(v, l) }))
+    .filter((o) => o.discount > 0)
+}
+
+// Default target (max saving) for a 'one_treatment' voucher; null if none apply.
+export function bestTargetId(
+  v: VoucherRow,
+  scope: Set<string> | 'all',
+  lines: VoucherLine[],
+): string | null {
+  const opts = voucherTargetOptions(v, scope, lines)
+  if (opts.length === 0) return null
+  return opts.reduce((a, b) => (b.discount > a.discount ? b : a)).treatmentId
+}
+
+// Pure: rupiah discount for the cart, IGNORING the minimum-spend gate. Respects
+// applyScope: 'cart' = across all eligible lines; 'one_treatment' = one chosen
+// line (best-saving line when no/invalid target given). Promo lines excluded.
 export function rawVoucherDiscount(
   v: VoucherRow,
   scope: Set<string> | 'all',
   lines: VoucherLine[],
+  targetTreatmentId?: string | null,
 ): number {
-  const eligible = lines.filter(
-    (l) => !l.promoApplied && (scope === 'all' || scope.has(l.treatmentId)),
-  )
+  if (v.applyScope === 'one_treatment') {
+    const opts = voucherTargetOptions(v, scope, lines)
+    if (opts.length === 0) return 0
+    const chosen =
+      (targetTreatmentId && opts.find((o) => o.treatmentId === targetTreatmentId)) ||
+      opts.reduce((a, b) => (b.discount > a.discount ? b : a))
+    return chosen.discount
+  }
+  const eligible = eligibleLines(scope, lines)
   const sub = eligible.reduce((s, l) => s + l.unit * l.qty, 0)
   if (sub <= 0) return 0
   if (v.discountType === 'amount') return Math.min(v.discountValue, sub)
-  const pct = Math.min(Math.max(v.discountValue, 0), 100)
-  return Math.floor((sub * pct) / 100)
+  return Math.floor((sub * clampPct(v.discountValue)) / 100)
 }
 
 // Pure: the discount actually applied — zero until the cart subtotal reaches the
@@ -109,9 +152,10 @@ export function voucherDiscountFor(
   v: VoucherRow,
   scope: Set<string> | 'all',
   lines: VoucherLine[],
+  targetTreatmentId?: string | null,
 ): number {
   if (v.minSpend > 0 && cartSubtotal(lines) < v.minSpend) return 0
-  return rawVoucherDiscount(v, scope, lines)
+  return rawVoucherDiscount(v, scope, lines, targetTreatmentId)
 }
 
 export async function buildVoucherLines(

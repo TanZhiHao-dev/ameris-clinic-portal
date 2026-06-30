@@ -1,0 +1,1 @@
+ALTER TABLE "vouchers" ADD COLUMN "apply_scope" text DEFAULT 'cart' NOT NULL;

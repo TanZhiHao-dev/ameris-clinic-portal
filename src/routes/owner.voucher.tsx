@@ -88,6 +88,7 @@ function VoucherAdmin() {
                     <div className="font-semibold">{v.name}</div>
                     <div className="text-[0.74rem]" style={{ color: 'var(--color-ink-muted)' }}>
                       {v.appliesToAllNormal ? 'Semua treatment normal' : `${v.treatmentIds.length} treatment terpilih`}
+                      {v.applyScope === 'one_treatment' ? ' · pasien pilih 1' : ''}
                     </div>
                   </td>
                   <td data-label="Diskon" className="px-3 py-4">
@@ -182,6 +183,7 @@ function VoucherDialog({
     discountValue: voucher ? String(voucher.discountValue) : '',
     audience: (voucher?.audience ?? 'new_user') as 'new_user' | 'all' | 'specific',
     appliesToAllNormal: voucher?.appliesToAllNormal ?? false,
+    applyScope: (voucher?.applyScope ?? 'cart') as 'cart' | 'one_treatment',
     newUserWindowDays: String(voucher?.newUserWindowDays ?? 7),
     minSpend: voucher?.minSpend ? String(voucher.minSpend) : '',
     validFrom: voucher?.validFrom ?? '',
@@ -209,6 +211,7 @@ function VoucherDialog({
         discountValue: Math.max(1, parseInt(form.discountValue.replace(/\D/g, '') || '0', 10)),
         audience: form.audience,
         appliesToAllNormal: form.appliesToAllNormal,
+        applyScope: form.applyScope,
         newUserWindowDays: Math.min(365, Math.max(1, parseInt(form.newUserWindowDays.replace(/\D/g, '') || '7', 10))),
         minSpend: Math.max(0, parseInt(form.minSpend.replace(/\D/g, '') || '0', 10)),
         validFrom: form.validFrom || undefined,
@@ -392,6 +395,29 @@ function VoucherDialog({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Apply scope — how the discount lands across the cart */}
+          <div>
+            <span className="text-sm font-semibold">Cara diskon diterapkan *</span>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {([
+                ['cart', 'Seluruh keranjang', 'Diskon dihitung dari semua treatment yang memenuhi syarat sekaligus.'],
+                ['one_treatment', 'Satu treatment (pasien pilih)', 'Pasien memilih 1 treatment yang dikenai diskon saat checkout.'],
+              ] as const).map(([val, label, desc]) => (
+                <label
+                  key={val}
+                  className="flex cursor-pointer items-start gap-2 rounded-xl border px-3 py-2.5"
+                  style={{ borderColor: form.applyScope === val ? 'var(--color-gold)' : 'var(--color-line)' }}
+                >
+                  <input type="radio" name="applyScope" className="mt-0.5" checked={form.applyScope === val} onChange={() => set({ applyScope: val })} />
+                  <span>
+                    <span className="block text-sm font-semibold">{label}</span>
+                    <span className="block text-[0.74rem]" style={{ color: 'var(--color-ink-muted)' }}>{desc}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* Validity dates */}

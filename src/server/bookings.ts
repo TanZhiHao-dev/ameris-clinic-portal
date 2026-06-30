@@ -21,6 +21,9 @@ export const createBooking = createServerFn({ method: 'POST' })
       paymentMethod: z.enum(['Online', 'Offline', 'Transfer']),
       paymentPlan: z.enum(['full', 'dp']).optional(),
       voucherId: z.string().optional(),
+      // Chosen target for a 'one_treatment' voucher (server re-validates / falls
+      // back to the best target). Ignored for cart-wide vouchers.
+      voucherTargetTreatmentId: z.string().optional(),
     }),
   )
   .handler(async ({ data }) => {
@@ -73,6 +76,7 @@ export const createBooking = createServerFn({ method: 'POST' })
           voucher,
           scope,
           rows.map((r) => ({ treatmentId: r.treatmentId, unit: r.price, qty: r.qty, promoApplied: r.promoApplied })),
+          data.voucherTargetTreatmentId,
         )
         if (d > 0) {
           redemptionId = crypto.randomUUID()
