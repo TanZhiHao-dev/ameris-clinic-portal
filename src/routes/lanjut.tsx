@@ -3,30 +3,44 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Brand } from '../components/landing/Brand'
 import { authClient } from '../lib/auth-client'
 import { profileNeedsCompletion } from '../lib/profile'
+import { safeInternalPath } from '../lib/redirect'
 import { useI18n } from '../lib/i18n'
 
 // Post-login landing. OAuth (Google) redirects here after sign-in; we then route
 // to the role-appropriate console. Email+password login routes by role inline,
 // but a social callbackURL is fixed, so this is where Google sign-ins get sorted.
-export const Route = createFileRoute('/lanjut')({ component: PostLogin })
+// ?redirect= (from the booking gate) survives the Google round-trip via /masuk.
+export const Route = createFileRoute('/lanjut')({
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
+    redirect: typeof search.redirect === 'string' ? search.redirect : undefined,
+  }),
+  component: PostLogin,
+})
 
 function PostLogin() {
   const navigate = useNavigate()
+  const { redirect } = Route.useSearch()
   const { data: session, isPending } = authClient.useSession()
   const { t } = useI18n()
 
   useEffect(() => {
     if (isPending) return
+    const backTo = safeInternalPath(redirect)
     if (!session) {
-      navigate({ to: '/masuk', replace: true })
+      navigate({ to: '/masuk', search: { redirect: backTo }, replace: true })
       return
     }
     const role = (session.user as { role?: string }).role
     if (role === 'owner') { navigate({ to: '/owner', replace: true }); return }
     if (role === 'dokter') { navigate({ to: '/dokter', replace: true }); return }
-    // Patient: send to onboarding first if name / WhatsApp / birth date missing.
-    navigate({ to: profileNeedsCompletion(session.user) ? '/lengkapi-profil' : '/akun', replace: true })
-  }, [isPending, session, navigate])
+    // Patient: onboarding first if name / WhatsApp / birth date missing — the
+    // redirect target rides along so they still land back (e.g. on /booking).
+    if (profileNeedsCompletion(session.user)) {
+      navigate({ to: '/lengkapi-profil', search: { redirect: backTo }, replace: true })
+      return
+    }
+    navigate({ to: (backTo ?? '/akun') as '/', replace: true })
+  }, [isPending, session, navigate, redirect])
 
   return (
     <div className="grid min-h-screen place-items-center" style={{ background: 'var(--color-cream)' }}>

@@ -1,10 +1,12 @@
-import { HeadContent, Scripts, createRootRouteWithContext } from '@tanstack/react-router'
+import { useEffect } from 'react'
+import { HeadContent, Scripts, createRootRouteWithContext, useRouter } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import type { QueryClient } from '@tanstack/react-query'
 
 import { CartProvider } from '../lib/cart'
 import { I18nProvider } from '../lib/i18n'
+import { initAnalytics, trackPageView } from '../lib/analytics'
 import appCss from '../styles.css?url'
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -58,6 +60,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   shellComponent: RootDocument,
 })
 
+// GA4 bootstrap + SPA page views. Renders nothing; no-ops entirely when
+// VITE_GA_MEASUREMENT_ID is unset (see lib/analytics.ts).
+function Analytics() {
+  const router = useRouter()
+  useEffect(() => {
+    initAnalytics()
+    trackPageView(window.location.pathname)
+    return router.subscribe('onResolved', ({ fromLocation, toLocation }) => {
+      if (fromLocation?.pathname !== toLocation.pathname) trackPageView(toLocation.pathname)
+    })
+  }, [router])
+  return null
+}
+
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="id">
@@ -68,6 +84,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <I18nProvider>
           <CartProvider>{children}</CartProvider>
         </I18nProvider>
+        <Analytics />
         <TanStackDevtools
           config={{
             position: 'bottom-right',

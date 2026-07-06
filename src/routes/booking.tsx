@@ -1,7 +1,8 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  AlertTriangle,
   ArrowRight,
   CalendarCheck,
   CheckCircle2,
@@ -9,6 +10,7 @@ import {
   ChevronRight,
   CreditCard,
   Landmark,
+  LogIn,
   MapPin,
   ShieldCheck,
   ShoppingBag,
@@ -17,8 +19,10 @@ import {
 import { PageShell } from '../components/app/PageShell'
 import { BankTransferInstructions } from '../components/app/BankTransferInstructions'
 import { useCart, type CartItem } from '../lib/cart'
+import { useSession } from '../lib/auth-client'
+import { gaItems, track } from '../lib/analytics'
 import { clinic, formatRp, loyaltyPointsFor, treatments } from '../data/clinic'
-import { createBooking } from '../server/bookings'
+import { createBooking, slotAvailability } from '../server/bookings'
 import { previewBestVoucher } from '../server/vouchers'
 import { useMidtransPay, type PayOutcome } from '../lib/useMidtransPay'
 import { getVisual } from '../components/landing/TreatmentThumb'
@@ -31,11 +35,6 @@ const MAX_WEEK = 4
 
 const pad = (n: number) => String(n).padStart(2, '0')
 const localIso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-const slotFull = (iso: string, idx: number) => {
-  let h = 0
-  for (const c of iso) h = (h * 31 + c.charCodeAt(0)) >>> 0
-  return (h + idx * 5) % 7 === 0
-}
 const prettyDate = (iso: string) =>
   new Date(iso + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })
 const monthLabel = (iso: string) =>
@@ -57,6 +56,10 @@ function BookingPage() {
   const { items, subtotal, clear, hydrated } = useCart()
   const qc = useQueryClient()
   const { pay, dialog, busy } = useMidtransPay()
+  // createBooking() requires a signed-in user; gate the confirm CTA client-side
+  // so guests get a clear "masuk dulu" path instead of a silent server 401.
+  const { data: session, isPending: sessionPending } = useSession()
+  const guest = !sessionPending && !session
 
   const [today, setToday] = useState('')
   const [monday, setMonday] = useState<Date | null>(null)
@@ -66,6 +69,7 @@ function BookingPage() {
   const [payment, setPayment] = useState<'online' | 'klinik' | 'transfer'>('transfer')
   const [plan, setPlan] = useState<'full' | 'dp'>('full')
   const [done, setDone] = useState<Confirmation | null>(null)
+  const [errMsg, setErrMsg] = useState('')
   // Patient's chosen treatment for a 'one_treatment' voucher (null = server picks best).
   const [voucherTarget, setVoucherTarget] = useState<string | null>(null)
 
@@ -89,7 +93,41 @@ function BookingPage() {
     })
   }, [monday, week, today])
 
+  // Real availability for the selected date (replaces the old fake hash-based
+  // "full" markers). Short staleTime + refetch-on-focus keeps it honest while
+  // the patient hesitates; the server still re-checks at submit for races.
+  const slotsQ = useQuery({
+    queryKey: ['slot-availability', date],
+    queryFn: () => slotAvailability({ data: { date } }),
+    enabled: !!date,
+    staleTime: 15_000,
+    refetchOnWindowFocus: true,
+  })
+  const takenSet = useMemo(
+    () => new Set((slotsQ.data?.slots ?? []).filter((s) => !s.available).map((s) => s.time)),
+    [slotsQ.data],
+  )
+  const allFull = !!slotsQ.data && slotsQ.data.slots.every((s) => !s.available)
+  // A refetch can reveal that the picked time was just taken — unpick it.
+  useEffect(() => {
+    if (time && takenSet.has(time)) setTime('')
+  }, [takenSet, time])
+
   const ready = date && time && items.length > 0
+
+  // Funnel events — one hit per visit, not per re-render.
+  const trackedCheckout = useRef(false)
+  useEffect(() => {
+    if (trackedCheckout.current || !hydrated || items.length === 0) return
+    trackedCheckout.current = true
+    track('begin_checkout', { currency: 'IDR', value: subtotal, items: gaItems(items) })
+  }, [hydrated, items, subtotal])
+  const trackedGate = useRef(false)
+  useEffect(() => {
+    if (trackedGate.current || !guest || !hydrated || items.length === 0) return
+    trackedGate.current = true
+    track('login_gate_shown', { page: 'booking' })
+  }, [guest, hydrated, items.length])
 
   // Auto-detect the best voucher for the current cart + signed-in user. Returns
   // null when none applies or the user isn't signed in (query error is ignored).
@@ -124,16 +162,42 @@ function BookingPage() {
   const submitting = createMut.isPending || busy
 
   const confirm = async () => {
-    if (!ready) return
-    const res = await createMut.mutateAsync({
-      items: items.map((i) => ({ treatmentId: i.id, qty: i.qty })),
-      bookingDate: date,
-      bookingTime: time,
-      paymentMethod: payment === 'online' ? 'Online' : payment === 'transfer' ? 'Transfer' : 'Offline',
-      paymentPlan: payment === 'online' ? plan : 'full',
-      voucherId: voucher?.id,
-      voucherTargetTreatmentId:
-        voucher?.applyScope === 'one_treatment' ? appliedTarget ?? undefined : undefined,
+    if (!ready || submitting) return
+    setErrMsg('')
+    let res
+    try {
+      res = await createMut.mutateAsync({
+        items: items.map((i) => ({ treatmentId: i.id, qty: i.qty })),
+        bookingDate: date,
+        bookingTime: time,
+        paymentMethod: payment === 'online' ? 'Online' : payment === 'transfer' ? 'Transfer' : 'Offline',
+        paymentPlan: payment === 'online' ? plan : 'full',
+        voucherId: voucher?.id,
+        voucherTargetTreatmentId:
+          voucher?.applyScope === 'one_treatment' ? appliedTarget ?? undefined : undefined,
+      })
+    } catch (e) {
+      const msg = (e as Error)?.message ?? ''
+      if (msg.includes('Slot sudah terisi')) {
+        // Race: someone grabbed the slot between render and submit. Refresh the
+        // grid and make the patient re-pick — their date & cart stay intact.
+        track('slot_taken_error', { date, time })
+        setTime('')
+        qc.invalidateQueries({ queryKey: ['slot-availability', date] })
+        setErrMsg('Jam ini baru saja terisi oleh pasien lain. Pilih jam lain ya — tanggal & keranjangmu tidak berubah.')
+      } else if (msg.includes('masuk')) {
+        setErrMsg('Sesi kamu sudah berakhir. Silakan masuk lagi untuk menyelesaikan booking — keranjangmu tetap tersimpan.')
+      } else {
+        setErrMsg(msg || 'Terjadi kesalahan saat membuat booking. Coba lagi ya.')
+      }
+      return
+    }
+    track('purchase', {
+      transaction_id: res.id,
+      currency: 'IDR',
+      value: res.total,
+      payment_method: payment,
+      items: gaItems(items),
     })
     // Online → open Midtrans Snap (or the sandbox dialog). Transfer Bank shows
     // manual instructions; Offline pays at the clinic — neither hits a gateway.
@@ -275,6 +339,23 @@ function BookingPage() {
             Pilih tanggal &amp; jam, lalu metode pembayaran. Hanya butuh satu menit.
           </p>
 
+          {guest && (
+            <div className="mt-5 flex flex-col gap-3 rounded-2xl p-4 sm:flex-row sm:items-center sm:justify-between" style={{ background: 'rgba(195,154,68,0.1)', border: '1px solid var(--color-gold)' }}>
+              <div className="flex items-start gap-2.5">
+                <LogIn size={18} className="mt-0.5 shrink-0" style={{ color: 'var(--color-gold-deep)' }} />
+                <div className="text-sm">
+                  <div className="font-bold">Masuk dulu untuk menyelesaikan booking</div>
+                  <div style={{ color: 'var(--color-ink-muted)' }}>
+                    Kamu tetap bisa memilih jadwal sekarang — keranjang &amp; pilihanmu aman, dan setelah masuk kamu langsung kembali ke halaman ini.
+                  </div>
+                </div>
+              </div>
+              <Link to="/masuk" search={{ redirect: '/booking' }} className="btn btn-primary shrink-0">
+                Masuk / daftar <ArrowRight size={16} />
+              </Link>
+            </div>
+          )}
+
           <div className="mt-8 grid items-start gap-6 lg:grid-cols-[1.55fr_1fr]">
             {/* ── Form ── */}
             <div className="flex flex-col gap-6">
@@ -343,24 +424,45 @@ function BookingPage() {
                   <p className="mt-3 rounded-xl px-4 py-3 text-sm" style={{ background: 'var(--color-cream)', color: 'var(--color-ink-muted)' }}>
                     Pilih tanggal dulu untuk melihat slot yang tersedia.
                   </p>
-                ) : (
-                  <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
-                    {SLOTS.map((s, si) => {
-                      const full = slotFull(date, si)
-                      const active = time === s
-                      return (
-                        <button key={s} type="button" disabled={full} onClick={() => setTime(s)}
-                          className="rounded-xl py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-40"
-                          style={
-                            active
-                              ? { background: 'var(--grad-gold)', color: '#3a2c0f' }
-                              : { background: 'var(--color-shell)', border: '1px solid var(--color-line)', color: 'var(--color-ink)' }
-                          }>
-                          {full ? '—' : s}
-                        </button>
-                      )
-                    })}
+                ) : slotsQ.isPending ? (
+                  <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4" aria-busy>
+                    {SLOTS.map((s) => (
+                      <div key={s} className="animate-pulse rounded-xl py-2.5 text-sm" style={{ background: 'var(--color-muted)' }}>
+                        &nbsp;
+                      </div>
+                    ))}
                   </div>
+                ) : slotsQ.isError ? (
+                  <p className="mt-3 rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(179,73,47,0.1)', color: 'var(--color-destructive)' }}>
+                    Gagal memuat ketersediaan slot.{' '}
+                    <button type="button" className="font-bold underline" onClick={() => slotsQ.refetch()}>Coba lagi</button>
+                  </p>
+                ) : (
+                  <>
+                    <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                      {SLOTS.map((s) => {
+                        const full = takenSet.has(s)
+                        const active = time === s
+                        return (
+                          <button key={s} type="button" disabled={full} onClick={() => setTime(s)}
+                            aria-label={full ? `${s} sudah penuh` : `Pilih jam ${s}`}
+                            className="rounded-xl py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-40"
+                            style={
+                              active
+                                ? { background: 'var(--grad-gold)', color: '#3a2c0f' }
+                                : { background: 'var(--color-shell)', border: '1px solid var(--color-line)', color: 'var(--color-ink)' }
+                            }>
+                            <span className={full ? 'line-through' : ''}>{s}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {allFull && (
+                      <p className="mt-3 rounded-xl px-4 py-3 text-sm" style={{ background: 'var(--color-cream)', color: 'var(--color-ink-muted)' }}>
+                        Semua slot di tanggal ini sudah penuh — coba pilih tanggal lain ya.
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -505,9 +607,20 @@ function BookingPage() {
                 <span className="mono font-semibold">{payNow === 0 ? 'di klinik' : formatRp(payNow)}</span>
               </div>
 
-              <button type="button" className="btn btn-gold mt-5 hidden w-full lg:inline-flex disabled:cursor-not-allowed disabled:opacity-50" disabled={!ready || submitting} onClick={confirm}>
-                {submitting ? 'Memproses…' : 'Konfirmasi booking'} {!submitting && <ArrowRight size={18} />}
-              </button>
+              {errMsg && (
+                <p className="mt-4 hidden items-start gap-2 rounded-xl px-4 py-3 text-sm font-medium lg:flex" style={{ background: 'rgba(179,73,47,0.1)', color: 'var(--color-destructive)' }}>
+                  <AlertTriangle size={16} className="mt-0.5 shrink-0" /> <span>{errMsg}</span>
+                </p>
+              )}
+              {guest ? (
+                <Link to="/masuk" search={{ redirect: '/booking' }} className="btn btn-gold mt-5 hidden w-full lg:inline-flex">
+                  <LogIn size={17} /> Masuk untuk konfirmasi
+                </Link>
+              ) : (
+                <button type="button" className="btn btn-gold mt-5 hidden w-full lg:inline-flex disabled:cursor-not-allowed disabled:opacity-50" disabled={!ready || submitting} onClick={confirm}>
+                  {submitting ? 'Memproses…' : 'Konfirmasi booking'} {!submitting && <ArrowRight size={18} />}
+                </button>
+              )}
               <div className="mt-3 hidden items-center justify-center gap-1.5 text-[0.76rem] lg:flex" style={{ color: 'var(--color-ink-muted)' }}>
                 <ShieldCheck size={13} /> Pembayaran aman · bisa dijadwalkan ulang
               </div>
@@ -518,15 +631,28 @@ function BookingPage() {
 
       {/* Sticky confirm bar (narrow screens) */}
       <div className="fixed inset-x-0 bottom-0 z-40 lg:hidden" style={{ background: 'rgba(253,250,244,0.95)', borderTop: '1px solid var(--color-line)', backdropFilter: 'blur(10px)' }}>
+        {errMsg && (
+          <div className="shell-x pt-2.5">
+            <p className="flex items-start gap-2 rounded-xl px-3 py-2 text-[0.8rem] font-medium" style={{ background: 'rgba(179,73,47,0.1)', color: 'var(--color-destructive)' }}>
+              <AlertTriangle size={14} className="mt-0.5 shrink-0" /> <span>{errMsg}</span>
+            </p>
+          </div>
+        )}
         <div className="shell-x flex items-center justify-between gap-3 py-3">
           <div>
             <div className="text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>Total</div>
             <div className="mono text-lg font-extrabold gold-text">{formatRp(discountedTotal)}</div>
             {discount > 0 && <div className="text-[0.66rem]" style={{ color: 'var(--color-gold-deep)' }}>Voucher −{formatRp(discount)}</div>}
           </div>
-          <button type="button" className="btn btn-gold flex-1 disabled:cursor-not-allowed disabled:opacity-50" disabled={!ready || submitting} onClick={confirm}>
-            {submitting ? 'Memproses…' : ready ? 'Konfirmasi' : 'Pilih tanggal & jam'} {ready && !submitting && <ArrowRight size={18} />}
-          </button>
+          {guest ? (
+            <Link to="/masuk" search={{ redirect: '/booking' }} className="btn btn-gold flex-1">
+              <LogIn size={16} /> Masuk untuk konfirmasi
+            </Link>
+          ) : (
+            <button type="button" className="btn btn-gold flex-1 disabled:cursor-not-allowed disabled:opacity-50" disabled={!ready || submitting} onClick={confirm}>
+              {submitting ? 'Memproses…' : ready ? 'Konfirmasi' : 'Pilih tanggal & jam'} {ready && !submitting && <ArrowRight size={18} />}
+            </button>
+          )}
         </div>
       </div>
     </PageShell>

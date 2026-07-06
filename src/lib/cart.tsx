@@ -6,6 +6,7 @@ import {
   useState,
 } from 'react'
 import { effectivePrice, type Treatment } from '../data/clinic'
+import { gaItems, track } from './analytics'
 
 export type CartItem = {
   id: string
@@ -59,17 +60,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [items, hydrated])
 
-  const add = (t: Treatment, qty?: number) =>
+  const add = (t: Treatment, qty?: number) => {
+    const min = minQtyFor(t)
+    // Per-unit: default to the minimum (or the explicit qty, floored at min).
+    // Normal treatments: default to one session.
+    const addQty = Math.max(qty ?? min, t.pricePerUnit ? min : 1)
+    const price = effectivePrice(t)
+    track('add_to_cart', { currency: 'IDR', value: price * addQty, items: gaItems([{ id: t.id, name: t.name, price, qty: addQty }]) })
     setItems((cur) => {
-      const min = minQtyFor(t)
-      // Per-unit: default to the minimum (or the explicit qty, floored at min).
-      // Normal treatments: default to one session.
-      const addQty = Math.max(qty ?? min, t.pricePerUnit ? min : 1)
       const ex = cur.find((i) => i.id === t.id)
       if (ex) return cur.map((i) => (i.id === t.id ? { ...i, qty: i.qty + addQty } : i))
       // Store the effective (promo-aware) price so the cart subtotal reflects the discount.
-      return [...cur, { id: t.id, name: t.name, price: effectivePrice(t), qty: addQty, pricePerUnit: t.pricePerUnit, minUnits: min }]
+      return [...cur, { id: t.id, name: t.name, price, qty: addQty, pricePerUnit: t.pricePerUnit, minUnits: min }]
     })
+  }
 
   const remove = (id: string) => setItems((cur) => cur.filter((i) => i.id !== id))
 

@@ -4,13 +4,23 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Check, Phone, Calendar, User } from 'lucide-react'
 import { authClient } from '../lib/auth-client'
 import { profileNeedsCompletion } from '../lib/profile'
+import { safeInternalPath } from '../lib/redirect'
 import { updateProfile } from '../server/account'
 import { Brand } from '../components/landing/Brand'
 
-export const Route = createFileRoute('/lengkapi-profil')({ component: CompleteProfilePage })
+// ?redirect= keeps the booking-gate round-trip intact: sign-up → onboarding →
+// straight back to /booking instead of stranding the patient on /akun.
+export const Route = createFileRoute('/lengkapi-profil')({
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
+    redirect: typeof search.redirect === 'string' ? search.redirect : undefined,
+  }),
+  component: CompleteProfilePage,
+})
 
 function CompleteProfilePage() {
   const navigate = useNavigate()
+  const { redirect } = Route.useSearch()
+  const backTo = safeInternalPath(redirect)
   const qc = useQueryClient()
   const { data: session, isPending } = authClient.useSession()
   const userExt = session?.user as { phone?: string | null; birthDate?: string | null; role?: string } | undefined
@@ -35,7 +45,7 @@ function CompleteProfilePage() {
   useEffect(() => {
     if (isPending) return
     if (!session) {
-      navigate({ to: '/masuk' })
+      navigate({ to: '/masuk', search: { redirect: backTo } })
       return
     }
     // Staff go to their own console
@@ -44,9 +54,9 @@ function CompleteProfilePage() {
     if (role === 'dokter') { navigate({ to: '/dokter' }); return }
     // Already complete → no need to onboard.
     if (!profileNeedsCompletion(session.user)) {
-      navigate({ to: '/akun' })
+      navigate({ to: (backTo ?? '/akun') as '/' })
     }
-  }, [isPending, session, userExt, navigate])
+  }, [isPending, session, userExt, navigate, backTo])
 
   const save = useMutation({
     mutationFn: (v: { name: string; phone: string; birthDate: string }) =>
@@ -54,7 +64,7 @@ function CompleteProfilePage() {
     onSuccess: () => {
       // Drop the cached profile so akun.tsx re-reads fresh data from DB.
       qc.removeQueries({ queryKey: ['my-profile'] })
-      navigate({ to: '/akun' })
+      navigate({ to: (backTo ?? '/akun') as '/' })
     },
     onError: () => setError('Terjadi kesalahan. Coba lagi ya.'),
   })

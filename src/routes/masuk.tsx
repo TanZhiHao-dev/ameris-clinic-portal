@@ -5,15 +5,25 @@ import { ArrowLeft, ArrowRight, Eye, EyeOff, Lock, Mail, MailCheck, User } from 
 import { Brand } from '../components/landing/Brand'
 import { clinic } from '../data/clinic'
 import { authClient } from '../lib/auth-client'
+import { safeInternalPath } from '../lib/redirect'
 import { authConfig } from '../server/auth-meta'
 import { useI18n } from '../lib/i18n'
 
-export const Route = createFileRoute('/masuk')({ component: AuthPage })
+// ?redirect=/booking → after login/signup the patient is sent back to where
+// they came from (the booking gate) instead of the default /akun.
+export const Route = createFileRoute('/masuk')({
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
+    redirect: typeof search.redirect === 'string' ? search.redirect : undefined,
+  }),
+  component: AuthPage,
+})
 
 type Mode = 'masuk' | 'daftar' | 'lupa'
 
 function AuthPage() {
   const navigate = useNavigate()
+  const { redirect } = Route.useSearch()
+  const backTo = safeInternalPath(redirect)
   const { t } = useI18n()
   const [mode, setMode] = useState<Mode>('masuk')
   const [name, setName] = useState('')
@@ -34,6 +44,12 @@ function AuthPage() {
   async function routeByRole() {
     const { data } = await authClient.getSession()
     const role = (data?.user as { role?: string } | undefined)?.role
+    // Patients who arrived via a gate (e.g. /booking) go straight back there.
+    // Staff always land on their console — a redirect param never overrides it.
+    if (backTo && role !== 'owner' && role !== 'dokter') {
+      navigate({ to: backTo as '/' })
+      return
+    }
     navigate({ to: role === 'owner' ? '/owner' : role === 'dokter' ? '/dokter' : '/akun' })
   }
 
@@ -85,9 +101,10 @@ function AuthPage() {
     setError('')
     try {
       // Redirects the browser to Google; on success it returns to callbackURL.
+      // The redirect param rides along so /lanjut can finish the round-trip.
       const res = await authClient.signIn.social({
         provider: 'google',
-        callbackURL: '/lanjut',
+        callbackURL: backTo ? `/lanjut?redirect=${encodeURIComponent(backTo)}` : '/lanjut',
         errorCallbackURL: '/masuk',
       })
       if (res.error) throw new Error(res.error.message)

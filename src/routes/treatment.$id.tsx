@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, CalendarCheck, Clock, Minus, Plus, Star } from 'lucide-react'
@@ -7,6 +7,7 @@ import { TreatmentThumb } from '../components/landing/TreatmentThumb'
 import { AddToCartButton } from '../components/app/AddToCartButton'
 import { PriceTag } from '../components/app/PriceTag'
 import { useCart, minQtyFor } from '../lib/cart'
+import { gaItems, track } from '../lib/analytics'
 import { effectivePrice, formatRp } from '../data/clinic'
 import { treatmentQuery } from '../server/queries'
 import { pickLang, useI18n } from '../lib/i18n'
@@ -28,6 +29,11 @@ function DetailPage() {
   // Per-unit unit selection. `units` is the raw value the stepper/input shows
   // (null = untouched → default below); `qty` is the clamped value actually used.
   const [units, setUnits] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!t) return
+    track('view_item', { currency: 'IDR', value: effectivePrice(t), items: gaItems([{ id: t.id, name: t.name, price: effectivePrice(t) }]) })
+  }, [t?.id]) // eslint-disable-line react-hooks/exhaustive-deps -- one hit per treatment viewed
 
   if (isPending) {
     return <PageShell><div className="shell-x py-24" /></PageShell>
