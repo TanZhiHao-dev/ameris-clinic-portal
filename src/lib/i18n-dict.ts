@@ -553,6 +553,15 @@ const dict = {
   'mb.payClinic': { id: 'Bayar di klinik', en: 'Pay at the clinic' },
   'mb.reschedule': { id: 'Ubah jadwal', en: 'Reschedule' },
   'mb.cancel': { id: 'Batalkan', en: 'Cancel' },
+  'mb.cancelConfirm': { id: 'Yakin ingin membatalkan booking ini?', en: 'Cancel this booking?' },
+  'mb.cancelYes': { id: 'Ya, batalkan', en: 'Yes, cancel' },
+  'mb.cancelNo': { id: 'Kembali', en: 'Keep it' },
+  'mb.cancelling': { id: 'Membatalkan…', en: 'Cancelling…' },
+  'mb.cancelError': { id: 'Gagal membatalkan. Coba lagi ya.', en: 'Couldn’t cancel. Please try again.' },
+  'mb.rescheduleWa': {
+    id: 'Halo Ameris, saya ingin mengubah jadwal booking {id} ({date}, {time} WIB). Terima kasih 🌸',
+    en: 'Hi Ameris, I’d like to reschedule booking {id} ({date}, {time} WIB). Thank you 🌸',
+  },
 
   // ── Booking ticket (/akun/booking/$id) ────────────────────────────
   'tk.back': { id: 'Kembali ke booking', en: 'Back to bookings' },

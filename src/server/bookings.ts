@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { and, desc, eq, inArray, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, ne, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '#/db'
 import { bookingItems, bookings, loyaltyTransactions, transactions, treatments, voucherRedemptions } from '#/db/schema'
@@ -236,7 +236,15 @@ export const ownerBookingsByDate = createServerFn({ method: 'GET' })
   .validator(z.object({ date: z.string().optional() }).optional())
   .handler(async ({ data }) => {
     await requireStaff()
-    const all = await db.select().from(bookings).orderBy(desc(bookings.bookingDate))
+    // Cancelled bookings drop off the schedule entirely (both the day list and
+    // the date navigation) — a slot freed by a patient/owner cancellation should
+    // not linger as a ghost appointment. Batal is still visible on the patient's
+    // own booking list and in patient history, just not on the active schedule.
+    const all = await db
+      .select()
+      .from(bookings)
+      .where(ne(bookings.status, 'Batal'))
+      .orderBy(desc(bookings.bookingDate))
     const dates = Array.from(new Set(all.map((b) => b.bookingDate))).sort()
     const targetDate = data?.date ?? dates[dates.length - 1] ?? ''
     const dayRows = all.filter((b) => b.bookingDate === targetDate)
