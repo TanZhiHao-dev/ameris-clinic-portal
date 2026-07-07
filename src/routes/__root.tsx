@@ -7,6 +7,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import { CartProvider } from '../lib/cart'
 import { I18nProvider } from '../lib/i18n'
 import { initAnalytics, trackPageView } from '../lib/analytics'
+import { InstallApp } from '../components/app/InstallApp'
 import appCss from '../styles.css?url'
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -85,6 +86,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           <CartProvider>{children}</CartProvider>
         </I18nProvider>
         <Analytics />
+        <InstallApp />
         <TanStackDevtools
           config={{
             position: 'bottom-right',
