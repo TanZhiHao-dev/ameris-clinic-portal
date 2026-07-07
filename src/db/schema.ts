@@ -1,7 +1,7 @@
 // Domain tables per PRD §6 (Treatments, Bookings, BookingItems, Transactions,
 // MedicalRecords) plus loyalty ledger & notifications needed by the UI.
 // Enum-like columns are text to match the exact Indonesian literals the UI keys on.
-import { boolean, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import { boolean, integer, pgTable, real, text, timestamp } from 'drizzle-orm/pg-core'
 import { user } from './auth-schema'
 
 export type TreatmentCategory =
@@ -245,5 +245,48 @@ export const voucherRedemptions = pgTable('voucher_redemptions', {
     .references(() => user.id, { onDelete: 'cascade' }),
   bookingId: text('booking_id'), // plain text — booking lifecycle is independent
   amountDiscounted: integer('amount_discounted').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// ── Inventory ──
+// Clinic supplies across 4 categories (matches the owner's Stock Opname sheets):
+// Alat (tools), Bahan (consumables), Obat (medicines), P3K (first-aid/emergency).
+// `stock` is the running balance; every change is also written to
+// inventory_movements so the in/out history is fully auditable.
+export type InventoryCategory = 'Alat' | 'Bahan' | 'Obat' | 'P3K'
+
+export const inventoryItems = pgTable('inventory_items', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  category: text('category').notNull(),
+  // Optional spesifikasi/ukuran (e.g. Spuit "5 cc", Needle "30 × 13 mm").
+  spec: text('spec'),
+  unit: text('unit').notNull().default('pcs'), // satuan: pcs/unit/botol/pack/set/box…
+  // Running balance. real (not integer) because the source data has fractions
+  // like "5 ½" (cotton bud pack).
+  stock: real('stock').notNull().default(0),
+  // Low-stock alert threshold; 0 = no alert.
+  minStock: real('min_stock').notNull().default(0),
+  // Expiry as 'YYYY-MM-DD' (or 'YYYY-MM'); null = not tracked / non-perishable.
+  // Mostly for Obat & P3K. Near-expiry / expired status is computed from this.
+  expiry: text('expiry'),
+  notes: text('notes'),
+  archived: boolean('archived').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+// Full in/out audit trail. delta > 0 = masuk (pembelian/koreksi naik),
+// delta < 0 = keluar (pemakaian/koreksi turun). balanceAfter snapshots the
+// item's stock right after this movement.
+export const inventoryMovements = pgTable('inventory_movements', {
+  id: text('id').primaryKey(),
+  itemId: text('item_id')
+    .notNull()
+    .references(() => inventoryItems.id, { onDelete: 'cascade' }),
+  delta: real('delta').notNull(),
+  reason: text('reason').notNull(), // pembelian | pemakaian | penyesuaian | opname | import
+  note: text('note'),
+  balanceAfter: real('balance_after').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })

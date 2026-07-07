@@ -33,6 +33,7 @@ import { Route as OwnerPrivilegeRouteImport } from './routes/owner.privilege'
 import { Route as OwnerPosRouteImport } from './routes/owner.pos'
 import { Route as OwnerLaporanRouteImport } from './routes/owner.laporan'
 import { Route as OwnerJadwalRouteImport } from './routes/owner.jadwal'
+import { Route as OwnerInventoryRouteImport } from './routes/owner.inventory'
 import { Route as OwnerBeauticianRouteImport } from './routes/owner.beautician'
 import { Route as OwnerAkunRouteImport } from './routes/owner.akun'
 import { Route as KwitansiIdRouteImport } from './routes/kwitansi.$id'
@@ -175,6 +176,11 @@ const OwnerJadwalRoute = OwnerJadwalRouteImport.update({
   path: '/jadwal',
   getParentRoute: () => OwnerRoute,
 } as any)
+const OwnerInventoryRoute = OwnerInventoryRouteImport.update({
+  id: '/inventory',
+  path: '/inventory',
+  getParentRoute: () => OwnerRoute,
+} as any)
 const OwnerBeauticianRoute = OwnerBeauticianRouteImport.update({
   id: '/beautician',
   path: '/beautician',
@@ -304,6 +310,7 @@ export interface FileRoutesByFullPath {
   '/kwitansi/$id': typeof KwitansiIdRoute
   '/owner/akun': typeof OwnerAkunRoute
   '/owner/beautician': typeof OwnerBeauticianRoute
+  '/owner/inventory': typeof OwnerInventoryRoute
   '/owner/jadwal': typeof OwnerJadwalRoute
   '/owner/laporan': typeof OwnerLaporanRoute
   '/owner/pos': typeof OwnerPosRoute
@@ -348,6 +355,7 @@ export interface FileRoutesByTo {
   '/kwitansi/$id': typeof KwitansiIdRoute
   '/owner/akun': typeof OwnerAkunRoute
   '/owner/beautician': typeof OwnerBeauticianRoute
+  '/owner/inventory': typeof OwnerInventoryRoute
   '/owner/jadwal': typeof OwnerJadwalRoute
   '/owner/laporan': typeof OwnerLaporanRoute
   '/owner/pos': typeof OwnerPosRoute
@@ -396,6 +404,7 @@ export interface FileRoutesById {
   '/kwitansi/$id': typeof KwitansiIdRoute
   '/owner/akun': typeof OwnerAkunRoute
   '/owner/beautician': typeof OwnerBeauticianRoute
+  '/owner/inventory': typeof OwnerInventoryRoute
   '/owner/jadwal': typeof OwnerJadwalRoute
   '/owner/laporan': typeof OwnerLaporanRoute
   '/owner/pos': typeof OwnerPosRoute
@@ -445,6 +454,7 @@ export interface FileRouteTypes {
     | '/kwitansi/$id'
     | '/owner/akun'
     | '/owner/beautician'
+    | '/owner/inventory'
     | '/owner/jadwal'
     | '/owner/laporan'
     | '/owner/pos'
@@ -489,6 +499,7 @@ export interface FileRouteTypes {
     | '/kwitansi/$id'
     | '/owner/akun'
     | '/owner/beautician'
+    | '/owner/inventory'
     | '/owner/jadwal'
     | '/owner/laporan'
     | '/owner/pos'
@@ -536,6 +547,7 @@ export interface FileRouteTypes {
     | '/kwitansi/$id'
     | '/owner/akun'
     | '/owner/beautician'
+    | '/owner/inventory'
     | '/owner/jadwal'
     | '/owner/laporan'
     | '/owner/pos'
@@ -754,6 +766,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OwnerJadwalRouteImport
       parentRoute: typeof OwnerRoute
     }
+    '/owner/inventory': {
+      id: '/owner/inventory'
+      path: '/inventory'
+      fullPath: '/owner/inventory'
+      preLoaderRoute: typeof OwnerInventoryRouteImport
+      parentRoute: typeof OwnerRoute
+    }
     '/owner/beautician': {
       id: '/owner/beautician'
       path: '/beautician'
@@ -944,6 +963,7 @@ const DokterRouteWithChildren =
 interface OwnerRouteChildren {
   OwnerAkunRoute: typeof OwnerAkunRoute
   OwnerBeauticianRoute: typeof OwnerBeauticianRoute
+  OwnerInventoryRoute: typeof OwnerInventoryRoute
   OwnerJadwalRoute: typeof OwnerJadwalRoute
   OwnerLaporanRoute: typeof OwnerLaporanRoute
   OwnerPosRoute: typeof OwnerPosRoute
@@ -962,6 +982,7 @@ interface OwnerRouteChildren {
 const OwnerRouteChildren: OwnerRouteChildren = {
   OwnerAkunRoute: OwnerAkunRoute,
   OwnerBeauticianRoute: OwnerBeauticianRoute,
+  OwnerInventoryRoute: OwnerInventoryRoute,
   OwnerJadwalRoute: OwnerJadwalRoute,
   OwnerLaporanRoute: OwnerLaporanRoute,
   OwnerPosRoute: OwnerPosRoute,

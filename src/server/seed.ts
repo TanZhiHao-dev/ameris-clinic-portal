@@ -5,6 +5,8 @@ import {
   bookingItems,
   bookings,
   doctorTreatments,
+  inventoryItems,
+  inventoryMovements,
   loyaltyTransactions,
   medicalRecords,
   notifications,
@@ -37,6 +39,8 @@ const beauticianSeed = [
 
 export async function seedDatabase() {
   // FK-safe wipe
+  await db.delete(inventoryMovements)
+  await db.delete(inventoryItems)
   await db.delete(notifications)
   await db.delete(doctorTreatments)
   await db.delete(loyaltyTransactions)
@@ -269,6 +273,22 @@ export async function seedDatabase() {
       createdAt: new Date(m.date + 'T00:00:00'),
     })),
   )
+
+  // ── Inventory (sample across the 4 categories; owner imports the real Stock
+  // Opname from Excel). Includes an expired + a near-expiry obat and a
+  // low-stock item so the alert strip is exercised. Each gets an opening move. ──
+  const invSeed: { id: string; name: string; category: string; spec?: string; unit: string; stock: number; minStock?: number; expiry?: string; notes?: string }[] = [
+    { id: 'inv-showercap', name: 'Shower cap', category: 'Alat', unit: 'pcs', stock: 32 },
+    { id: 'inv-spuit5', name: 'Spuit', category: 'Alat', spec: '5 cc', unit: 'pcs', stock: 2, minStock: 5 },
+    { id: 'inv-aloe', name: 'Masker aloe vera', category: 'Bahan', unit: 'pcs', stock: 6 },
+    { id: 'inv-serumbright', name: 'Serum brightening', category: 'Bahan', unit: 'botol', stock: 2, minStock: 3 },
+    { id: 'inv-lido', name: 'Lidocaine', category: 'Obat', unit: 'pcs', stock: 2, expiry: '2026-08', notes: 'kemungkinan Lidocaine' },
+    { id: 'inv-dextripa', name: 'Dextripa', category: 'Obat', unit: 'pcs', stock: 1, expiry: '2026-04', notes: 'SUDAH EXPIRED — segera diganti' },
+    { id: 'inv-vistat', name: 'Vistat', category: 'Obat', unit: 'pcs', stock: 20 },
+    { id: 'inv-hansaplast', name: 'Hansaplast', category: 'P3K', unit: 'pcs', stock: 6 },
+  ]
+  await db.insert(inventoryItems).values(invSeed.map((i) => ({ ...i, spec: i.spec ?? null, minStock: i.minStock ?? 0, expiry: i.expiry ?? null, notes: i.notes ?? null })))
+  await db.insert(inventoryMovements).values(invSeed.map((i) => ({ id: randomUUID(), itemId: i.id, delta: i.stock, reason: 'opname', note: 'Stok awal (seed)', balanceAfter: i.stock })))
 
   // ── Loyalty ledger (Sarah / p1) ──
   await db.insert(loyaltyTransactions).values(
