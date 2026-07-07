@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, HandHeart, Pencil, Plus, X } from 'lucide-react'
+import { AlertTriangle, Check, HandHeart, Pencil, Plus, X } from 'lucide-react'
 import { ownerBeauticians, ownerSaveBeautician } from '#/server/beauticians'
 
 export const Route = createFileRoute('/owner/beautician')({ component: BeauticianAdmin })
@@ -10,21 +10,30 @@ type Row = Awaited<ReturnType<typeof ownerBeauticians>>[number]
 
 function BeauticianAdmin() {
   const qc = useQueryClient()
-  const { data: list = [] } = useQuery({ queryKey: ['owner-beauticians'], queryFn: () => ownerBeauticians() })
+  const { data: list = [], isError: listError, error: listErr, refetch } = useQuery({
+    queryKey: ['owner-beauticians'],
+    queryFn: () => ownerBeauticians(),
+    retry: false,
+  })
 
   const [name, setName] = useState('')
   const [editId, setEditId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+  const [errMsg, setErrMsg] = useState<string | null>(null)
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['owner-beauticians'] })
   const save = useMutation({
     mutationFn: (v: { id?: string; name: string; isActive?: boolean }) => ownerSaveBeautician({ data: v }),
-    onSuccess: refresh,
+    onSuccess: () => { setErrMsg(null); refresh() },
+    // Never fail silently — a swallowed error here is exactly why "klik tombol
+    // tidak terjadi apapun" happened. Surface the server message.
+    onError: (e) => setErrMsg((e as Error)?.message || 'Gagal menyimpan beautician. Coba lagi.'),
   })
 
   const add = () => {
     const n = name.trim()
     if (!n) return
+    setErrMsg(null)
     save.mutate({ name: n })
     setName('')
   }
@@ -45,6 +54,18 @@ function BeauticianAdmin() {
       <p className="mt-1 max-w-2xl text-sm" style={{ color: 'var(--color-ink-muted)' }}>
         Daftar beautician yang menangani treatment. Saat menyelesaikan kunjungan di <b>Jadwal</b>, pilih siapa yang mengerjakan — bonus &amp; laporan otomatis mengikuti. Bonus per treatment diatur di menu <b>Treatment</b> (kolom “Bonus BT”).
       </p>
+
+      {(errMsg || listError) && (
+        <div className="mt-5 flex items-start gap-2 rounded-xl px-4 py-3 text-sm font-medium" style={{ background: 'rgba(179,73,47,0.1)', color: 'var(--color-destructive)' }}>
+          <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+          <span>
+            {errMsg ?? `Gagal memuat daftar beautician: ${(listErr as Error)?.message ?? 'kesalahan tidak diketahui'}.`}
+            {listError && (
+              <button type="button" className="ml-1 font-bold underline" onClick={() => refetch()}>Coba lagi</button>
+            )}
+          </span>
+        </div>
+      )}
 
       {/* Add */}
       <div className="card-soft mt-6 flex flex-wrap items-center gap-3 p-4">
