@@ -30,6 +30,7 @@ import { Route as OwnerTreatmentRouteImport } from './routes/owner.treatment'
 import { Route as OwnerTransaksiRouteImport } from './routes/owner.transaksi'
 import { Route as OwnerProfilRouteImport } from './routes/owner.profil'
 import { Route as OwnerPrivilegeRouteImport } from './routes/owner.privilege'
+import { Route as OwnerPosRouteImport } from './routes/owner.pos'
 import { Route as OwnerLaporanRouteImport } from './routes/owner.laporan'
 import { Route as OwnerJadwalRouteImport } from './routes/owner.jadwal'
 import { Route as OwnerBeauticianRouteImport } from './routes/owner.beautician'
@@ -157,6 +158,11 @@ const OwnerProfilRoute = OwnerProfilRouteImport.update({
 const OwnerPrivilegeRoute = OwnerPrivilegeRouteImport.update({
   id: '/privilege',
   path: '/privilege',
+  getParentRoute: () => OwnerRoute,
+} as any)
+const OwnerPosRoute = OwnerPosRouteImport.update({
+  id: '/pos',
+  path: '/pos',
   getParentRoute: () => OwnerRoute,
 } as any)
 const OwnerLaporanRoute = OwnerLaporanRouteImport.update({
@@ -300,6 +306,7 @@ export interface FileRoutesByFullPath {
   '/owner/beautician': typeof OwnerBeauticianRoute
   '/owner/jadwal': typeof OwnerJadwalRoute
   '/owner/laporan': typeof OwnerLaporanRoute
+  '/owner/pos': typeof OwnerPosRoute
   '/owner/privilege': typeof OwnerPrivilegeRoute
   '/owner/profil': typeof OwnerProfilRoute
   '/owner/transaksi': typeof OwnerTransaksiRoute
@@ -343,6 +350,7 @@ export interface FileRoutesByTo {
   '/owner/beautician': typeof OwnerBeauticianRoute
   '/owner/jadwal': typeof OwnerJadwalRoute
   '/owner/laporan': typeof OwnerLaporanRoute
+  '/owner/pos': typeof OwnerPosRoute
   '/owner/privilege': typeof OwnerPrivilegeRoute
   '/owner/profil': typeof OwnerProfilRoute
   '/owner/transaksi': typeof OwnerTransaksiRoute
@@ -390,6 +398,7 @@ export interface FileRoutesById {
   '/owner/beautician': typeof OwnerBeauticianRoute
   '/owner/jadwal': typeof OwnerJadwalRoute
   '/owner/laporan': typeof OwnerLaporanRoute
+  '/owner/pos': typeof OwnerPosRoute
   '/owner/privilege': typeof OwnerPrivilegeRoute
   '/owner/profil': typeof OwnerProfilRoute
   '/owner/transaksi': typeof OwnerTransaksiRoute
@@ -438,6 +447,7 @@ export interface FileRouteTypes {
     | '/owner/beautician'
     | '/owner/jadwal'
     | '/owner/laporan'
+    | '/owner/pos'
     | '/owner/privilege'
     | '/owner/profil'
     | '/owner/transaksi'
@@ -481,6 +491,7 @@ export interface FileRouteTypes {
     | '/owner/beautician'
     | '/owner/jadwal'
     | '/owner/laporan'
+    | '/owner/pos'
     | '/owner/privilege'
     | '/owner/profil'
     | '/owner/transaksi'
@@ -527,6 +538,7 @@ export interface FileRouteTypes {
     | '/owner/beautician'
     | '/owner/jadwal'
     | '/owner/laporan'
+    | '/owner/pos'
     | '/owner/privilege'
     | '/owner/profil'
     | '/owner/transaksi'
@@ -719,6 +731,13 @@ declare module '@tanstack/react-router' {
       path: '/privilege'
       fullPath: '/owner/privilege'
       preLoaderRoute: typeof OwnerPrivilegeRouteImport
+      parentRoute: typeof OwnerRoute
+    }
+    '/owner/pos': {
+      id: '/owner/pos'
+      path: '/pos'
+      fullPath: '/owner/pos'
+      preLoaderRoute: typeof OwnerPosRouteImport
       parentRoute: typeof OwnerRoute
     }
     '/owner/laporan': {
@@ -927,6 +946,7 @@ interface OwnerRouteChildren {
   OwnerBeauticianRoute: typeof OwnerBeauticianRoute
   OwnerJadwalRoute: typeof OwnerJadwalRoute
   OwnerLaporanRoute: typeof OwnerLaporanRoute
+  OwnerPosRoute: typeof OwnerPosRoute
   OwnerPrivilegeRoute: typeof OwnerPrivilegeRoute
   OwnerProfilRoute: typeof OwnerProfilRoute
   OwnerTransaksiRoute: typeof OwnerTransaksiRoute
@@ -944,6 +964,7 @@ const OwnerRouteChildren: OwnerRouteChildren = {
   OwnerBeauticianRoute: OwnerBeauticianRoute,
   OwnerJadwalRoute: OwnerJadwalRoute,
   OwnerLaporanRoute: OwnerLaporanRoute,
+  OwnerPosRoute: OwnerPosRoute,
   OwnerPrivilegeRoute: OwnerPrivilegeRoute,
   OwnerProfilRoute: OwnerProfilRoute,
   OwnerTransaksiRoute: OwnerTransaksiRoute,

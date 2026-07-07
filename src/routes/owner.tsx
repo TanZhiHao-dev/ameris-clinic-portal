@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  ShoppingBag,
   Sparkles,
   Stethoscope,
   Ticket,
@@ -23,6 +24,7 @@ export const Route = createFileRoute('/owner')({ component: OwnerLayout })
 
 const NAV = [
   { to: '/owner', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { to: '/owner/pos', label: 'POS / Kasir', icon: ShoppingBag, exact: false },
   { to: '/owner/jadwal', label: 'Jadwal', icon: CalendarDays, exact: false },
   { to: '/owner/treatment', label: 'Treatment', icon: Sparkles, exact: false },
   { to: '/owner/privilege', label: 'Privilege', icon: Crown, exact: false },

@@ -84,6 +84,9 @@ export const bookings = pgTable('bookings', {
   // reports intact if a beautician is later removed). Owner sets it on the
   // schedule board; null = not yet attributed.
   beauticianId: text('beautician_id'),
+  // How the booking was created: 'online' = patient self-booked via the portal,
+  // 'walkin' = staff created it at the clinic (POS / doctor consultation).
+  source: text('source').notNull().default('online'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
