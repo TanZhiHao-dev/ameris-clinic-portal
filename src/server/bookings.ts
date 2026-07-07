@@ -208,6 +208,9 @@ export const cancelMyBooking = createServerFn({ method: 'POST' })
     const [b] = await db.select().from(bookings).where(and(eq(bookings.id, data.id), eq(bookings.userId, u.id)))
     if (!b) throw new Error('Booking tidak ditemukan.')
     if (b.status === 'Selesai' || b.status === 'Batal') throw new Error('Booking tidak bisa dibatalkan.')
+    // Already checked in at the clinic — self-cancel would orphan an in-progress
+    // visit; the UI hides the button here, this guards direct calls.
+    if (b.status === 'Hadir') throw new Error('Kamu sudah ditandai hadir di klinik — hubungi klinik untuk pembatalan.')
     await db.update(bookings).set({ status: 'Batal' }).where(eq(bookings.id, data.id))
     // Free the voucher so a cancelled booking doesn't permanently consume a
     // one-time voucher (re-use is still gated by its window / audience / cap).
@@ -236,25 +239,26 @@ export const ownerBookingsByDate = createServerFn({ method: 'GET' })
   .validator(z.object({ date: z.string().optional() }).optional())
   .handler(async ({ data }) => {
     await requireStaff()
-    // Cancelled bookings drop off the schedule entirely (both the day list and
-    // the date navigation) — a slot freed by a patient/owner cancellation should
-    // not linger as a ghost appointment. Batal is still visible on the patient's
-    // own booking list and in patient history, just not on the active schedule.
-    const all = await db
-      .select()
-      .from(bookings)
-      .where(ne(bookings.status, 'Batal'))
-      .orderBy(desc(bookings.bookingDate))
-    const dates = Array.from(new Set(all.map((b) => b.bookingDate))).sort()
+    // The active schedule and its date navigation exclude Batal — a freed slot
+    // must not linger as a ghost appointment. Cancelled rows for the selected
+    // date still ride along separately so the board can offer "Pulihkan"
+    // (recovery from an accidental cancellation).
+    const allRows = await db.select().from(bookings).orderBy(desc(bookings.bookingDate))
+    const active = allRows.filter((b) => b.status !== 'Batal')
+    const dates = Array.from(new Set(active.map((b) => b.bookingDate))).sort()
     const targetDate = data?.date ?? dates[dates.length - 1] ?? ''
-    const dayRows = all.filter((b) => b.bookingDate === targetDate)
-    const assembled = await assemble(dayRows)
     const names = await db.select({ id: user.id, name: user.name }).from(user)
     const nameById = new Map(names.map((n) => [n.id, n.name]))
-    const list = assembled
-      .map((b) => ({ ...b, patientId: b.userId, patientName: nameById.get(b.userId) ?? 'Pasien' }))
-      .sort((a, b) => a.time.localeCompare(b.time))
-    return { date: targetDate, dates, bookings: list }
+    const decorate = async (rows: typeof allRows) =>
+      (await assemble(rows))
+        .map((b) => ({ ...b, patientId: b.userId, patientName: nameById.get(b.userId) ?? 'Pasien' }))
+        .sort((a, b) => a.time.localeCompare(b.time))
+    return {
+      date: targetDate,
+      dates,
+      bookings: await decorate(active.filter((b) => b.bookingDate === targetDate)),
+      cancelled: await decorate(allRows.filter((b) => b.bookingDate === targetDate && b.status === 'Batal')),
+    }
   })
 
 const ALLOWED: Record<string, string[]> = {
@@ -273,7 +277,40 @@ export const ownerSetBookingStatus = createServerFn({ method: 'POST' })
       throw new Error(`Transisi ${b.status} → ${data.status} tidak diizinkan.`)
     }
     await db.update(bookings).set({ status: data.status }).where(eq(bookings.id, data.id))
+    // Cancelling frees a consumed one-time voucher — parity with cancelMyBooking
+    // and ownerMarkUnpaid, which already did this.
+    if (data.status === 'Batal' && b.voucherId) {
+      await db
+        .delete(voucherRedemptions)
+        .where(and(eq(voucherRedemptions.bookingId, data.id), eq(voucherRedemptions.userId, b.userId)))
+    }
     return { id: data.id, status: data.status }
+  })
+
+// Batal → Menunggu: recover a booking that was cancelled by mistake (e.g. a
+// stray tap on Batalkan). The paid transaction row is untouched, so an approved
+// payment stays Lunas. Blocked when another active booking has taken the slot.
+export const ownerRestoreBooking = createServerFn({ method: 'POST' })
+  .validator(z.object({ id: z.string() }))
+  .handler(async ({ data }) => {
+    await requireStaff()
+    const [b] = await db.select().from(bookings).where(eq(bookings.id, data.id))
+    if (!b) throw new Error('Booking tidak ditemukan.')
+    if (b.status !== 'Batal') throw new Error('Hanya booking berstatus Batal yang bisa dipulihkan.')
+    const clash = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.bookingDate, b.bookingDate),
+          eq(bookings.bookingTime, b.bookingTime),
+          ne(bookings.status, 'Batal'),
+        ),
+      )
+      .limit(1)
+    if (clash.length) throw new Error('Slot ini sudah terisi booking lain — tidak bisa dipulihkan.')
+    await db.update(bookings).set({ status: 'Menunggu' }).where(eq(bookings.id, data.id))
+    return { id: data.id, status: 'Menunggu' as const }
   })
 
 // Owner: mark an unpaid order as "tidak bayar" — cancels the booking so it
