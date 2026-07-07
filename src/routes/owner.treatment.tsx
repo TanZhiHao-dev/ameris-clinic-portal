@@ -37,6 +37,7 @@ type Row = {
 type AdminRow = Awaited<ReturnType<typeof listTreatmentsAdmin>>[number]
 type UpdateVars = {
   id: string
+  name?: string
   price?: number
   blurb?: string
   blurbEn?: string | null
@@ -120,6 +121,7 @@ function CatalogAdmin() {
   const [cat, setCat] = useState<'Semua' | Category>('Semua')
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState({ name: '', category: 'Facial' as Category, duration: '60 min', price: '', blurb: '', blurbEn: '' })
+  const [nameEdits, setNameEdits] = useState<Record<string, string>>({})
   const [priceEdits, setPriceEdits] = useState<Record<string, string>>({})
   const [promoEdits, setPromoEdits] = useState<Record<string, string>>({})
   const [minUnitEdits, setMinUnitEdits] = useState<Record<string, string>>({})
@@ -145,6 +147,7 @@ function CatalogAdmin() {
   // Mirror an edit onto a cached owner row so the toggle/price flips instantly.
   const applyPatch = (t: AdminRow, v: UpdateVars): AdminRow => ({
     ...t,
+    ...(v.name !== undefined && { name: v.name }),
     ...(v.price !== undefined && { price: v.price }),
     ...(v.blurb !== undefined && { blurb: v.blurb }),
     ...(v.blurbEn !== undefined && { blurbEn: v.blurbEn }),
@@ -217,6 +220,19 @@ function CatalogAdmin() {
     if ('pricePerUnit' in p && p.pricePerUnit !== undefined) updateMut.mutate({ id, pricePerUnit: p.pricePerUnit })
     if ('bestSeller' in p && p.bestSeller !== undefined) updateMut.mutate({ id, isBestSeller: p.bestSeller })
     if ('heroFeatured' in p && p.heroFeatured !== undefined) updateMut.mutate({ id, isHeroFeatured: p.heroFeatured })
+  }
+  const commitName = (id: string, original: string) => {
+    const raw = nameEdits[id]
+    setNameEdits((cur) => {
+      const next = { ...cur }
+      delete next[id]
+      return next
+    })
+    if (raw === undefined) return
+    const name = raw.trim()
+    // Ignore an empty name or a no-op edit (keeps the original).
+    if (!name || name === original) return
+    updateMut.mutate({ id, name })
   }
   const commitPrice = (id: string) => {
     const raw = priceEdits[id]
@@ -365,7 +381,15 @@ function CatalogAdmin() {
             {list.map((r) => (
               <tr key={r.id} className="border-t" style={{ borderColor: 'var(--color-line)' }}>
                 <td className="px-5 py-4">
-                  <div className="font-bold">{r.name}</div>
+                  <input
+                    className="w-full max-w-[15rem] rounded-md border border-transparent bg-transparent px-1.5 py-0.5 -ml-1.5 font-bold outline-none transition hover:border-[var(--color-line)] focus:border-[var(--color-gold)] focus:bg-[var(--color-cream)]"
+                    value={nameEdits[r.id] ?? r.name}
+                    onChange={(e) => setNameEdits((cur) => ({ ...cur, [r.id]: e.target.value }))}
+                    onBlur={() => commitName(r.id, r.name)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { setNameEdits((cur) => { const n = { ...cur }; delete n[r.id]; return n }); e.currentTarget.blur() } }}
+                    aria-label={`Nama treatment ${r.name}`}
+                    title="Klik untuk mengubah nama treatment"
+                  />
                   <div className="text-[0.76rem]" style={{ color: 'var(--color-ink-muted)' }}>{r.category} · {r.duration}</div>
                   <button
                     type="button"
