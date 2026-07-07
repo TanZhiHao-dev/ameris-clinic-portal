@@ -58,12 +58,58 @@ export const treatments = pgTable('treatments', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
-// Clinic staff who physically perform treatments. Not login users — the owner
-// manages this list from the dashboard and attributes each visit to one of them.
+// Clinic staff roster (not login users — owner-managed). Originally just
+// beauticians; now the general staff list, so the table keeps its name but the
+// UI calls it "Staf". `role` distinguishes beautician / perawat (nurse) /
+// frontoffice / terapis. Doctors stay separate (they are login users).
+export type StaffRole = 'beautician' | 'perawat' | 'frontoffice' | 'terapis'
+
 export const beauticians = pgTable('beauticians', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
+  role: text('role').notNull().default('beautician'),
   isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// Skincare / retail products the clinic sells (separate from treatments).
+// Used for the closing/upselling bonus (5% of price) and future retail sales.
+export const products = pgTable('products', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  price: integer('price').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// Closing / upselling: a deal made AFTER the patient left the doctor's room —
+// any staff (front office, doctor, therapist, beautician) can close, and one
+// booking can have several. Owner records them on the schedule. Bonus is a
+// snapshot: treatment → 1% of price, skincare → 5% of price.
+export const closings = pgTable('closings', {
+  id: text('id').primaryKey(),
+  bookingId: text('booking_id')
+    .notNull()
+    .references(() => bookings.id, { onDelete: 'cascade' }),
+  staffId: text('staff_id').notNull(), // beauticians.id or a doctor user id (plain text)
+  kind: text('kind').notNull(), // 'treatment' | 'skincare'
+  itemId: text('item_id'), // treatments.id or products.id (plain text, snapshot below)
+  itemName: text('item_name').notNull(),
+  price: integer('price').notNull(),
+  bonus: integer('bonus').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// Doctor-assistance bonus (for non-facial procedures the staff assisted on).
+// Owner marks who assisted a booking; bonus is a snapshot of the flat rate at
+// record time: Rp10.000 when the booking total > Rp1jt, else Rp5.000.
+export const assists = pgTable('assists', {
+  id: text('id').primaryKey(),
+  bookingId: text('booking_id')
+    .notNull()
+    .references(() => bookings.id, { onDelete: 'cascade' }),
+  staffId: text('staff_id').notNull(),
+  bonus: integer('bonus').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 

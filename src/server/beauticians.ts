@@ -15,22 +15,24 @@ export const ownerBeauticians = createServerFn({ method: 'GET' }).handler(async 
 // ── Create / rename / activate-deactivate (owner only) ──
 // No hard delete: a removed beautician would orphan the attribution on historical
 // bookings, so "menonaktifkan" (isActive=false) is the way to retire someone.
+const ROLES = ['beautician', 'perawat', 'frontoffice', 'terapis'] as const
+
 export const ownerSaveBeautician = createServerFn({ method: 'POST' })
-  .validator(z.object({ id: z.string().optional(), name: z.string().min(1), isActive: z.boolean().optional() }))
+  .validator(z.object({ id: z.string().optional(), name: z.string().min(1), role: z.enum(ROLES).optional(), isActive: z.boolean().optional() }))
   .handler(async ({ data }) => {
     await requireOwner()
     const name = data.name.trim()
     if (data.id) {
       const [row] = await db
         .update(beauticians)
-        .set({ name, ...(data.isActive !== undefined ? { isActive: data.isActive } : {}) })
+        .set({ name, ...(data.role !== undefined ? { role: data.role } : {}), ...(data.isActive !== undefined ? { isActive: data.isActive } : {}) })
         .where(eq(beauticians.id, data.id))
         .returning()
       return row ?? null
     }
     const id =
       'bt-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Math.floor(Math.random() * 9999)
-    const [row] = await db.insert(beauticians).values({ id, name, isActive: data.isActive ?? true }).returning()
+    const [row] = await db.insert(beauticians).values({ id, name, role: data.role ?? 'beautician', isActive: data.isActive ?? true }).returning()
     return row
   })
 

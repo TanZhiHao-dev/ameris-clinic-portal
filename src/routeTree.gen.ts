@@ -28,12 +28,14 @@ import { Route as TreatmentIdRouteImport } from './routes/treatment.$id'
 import { Route as OwnerVoucherRouteImport } from './routes/owner.voucher'
 import { Route as OwnerTreatmentRouteImport } from './routes/owner.treatment'
 import { Route as OwnerTransaksiRouteImport } from './routes/owner.transaksi'
+import { Route as OwnerSkincareRouteImport } from './routes/owner.skincare'
 import { Route as OwnerProfilRouteImport } from './routes/owner.profil'
 import { Route as OwnerPrivilegeRouteImport } from './routes/owner.privilege'
 import { Route as OwnerPosRouteImport } from './routes/owner.pos'
 import { Route as OwnerLaporanRouteImport } from './routes/owner.laporan'
 import { Route as OwnerJadwalRouteImport } from './routes/owner.jadwal'
 import { Route as OwnerInventoryRouteImport } from './routes/owner.inventory'
+import { Route as OwnerBonusRouteImport } from './routes/owner.bonus'
 import { Route as OwnerBeauticianRouteImport } from './routes/owner.beautician'
 import { Route as OwnerAkunRouteImport } from './routes/owner.akun'
 import { Route as KwitansiIdRouteImport } from './routes/kwitansi.$id'
@@ -151,6 +153,11 @@ const OwnerTransaksiRoute = OwnerTransaksiRouteImport.update({
   path: '/transaksi',
   getParentRoute: () => OwnerRoute,
 } as any)
+const OwnerSkincareRoute = OwnerSkincareRouteImport.update({
+  id: '/skincare',
+  path: '/skincare',
+  getParentRoute: () => OwnerRoute,
+} as any)
 const OwnerProfilRoute = OwnerProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
@@ -179,6 +186,11 @@ const OwnerJadwalRoute = OwnerJadwalRouteImport.update({
 const OwnerInventoryRoute = OwnerInventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
+  getParentRoute: () => OwnerRoute,
+} as any)
+const OwnerBonusRoute = OwnerBonusRouteImport.update({
+  id: '/bonus',
+  path: '/bonus',
   getParentRoute: () => OwnerRoute,
 } as any)
 const OwnerBeauticianRoute = OwnerBeauticianRouteImport.update({
@@ -310,12 +322,14 @@ export interface FileRoutesByFullPath {
   '/kwitansi/$id': typeof KwitansiIdRoute
   '/owner/akun': typeof OwnerAkunRoute
   '/owner/beautician': typeof OwnerBeauticianRoute
+  '/owner/bonus': typeof OwnerBonusRoute
   '/owner/inventory': typeof OwnerInventoryRoute
   '/owner/jadwal': typeof OwnerJadwalRoute
   '/owner/laporan': typeof OwnerLaporanRoute
   '/owner/pos': typeof OwnerPosRoute
   '/owner/privilege': typeof OwnerPrivilegeRoute
   '/owner/profil': typeof OwnerProfilRoute
+  '/owner/skincare': typeof OwnerSkincareRoute
   '/owner/transaksi': typeof OwnerTransaksiRoute
   '/owner/treatment': typeof OwnerTreatmentRoute
   '/owner/voucher': typeof OwnerVoucherRoute
@@ -355,12 +369,14 @@ export interface FileRoutesByTo {
   '/kwitansi/$id': typeof KwitansiIdRoute
   '/owner/akun': typeof OwnerAkunRoute
   '/owner/beautician': typeof OwnerBeauticianRoute
+  '/owner/bonus': typeof OwnerBonusRoute
   '/owner/inventory': typeof OwnerInventoryRoute
   '/owner/jadwal': typeof OwnerJadwalRoute
   '/owner/laporan': typeof OwnerLaporanRoute
   '/owner/pos': typeof OwnerPosRoute
   '/owner/privilege': typeof OwnerPrivilegeRoute
   '/owner/profil': typeof OwnerProfilRoute
+  '/owner/skincare': typeof OwnerSkincareRoute
   '/owner/transaksi': typeof OwnerTransaksiRoute
   '/owner/treatment': typeof OwnerTreatmentRoute
   '/owner/voucher': typeof OwnerVoucherRoute
@@ -404,12 +420,14 @@ export interface FileRoutesById {
   '/kwitansi/$id': typeof KwitansiIdRoute
   '/owner/akun': typeof OwnerAkunRoute
   '/owner/beautician': typeof OwnerBeauticianRoute
+  '/owner/bonus': typeof OwnerBonusRoute
   '/owner/inventory': typeof OwnerInventoryRoute
   '/owner/jadwal': typeof OwnerJadwalRoute
   '/owner/laporan': typeof OwnerLaporanRoute
   '/owner/pos': typeof OwnerPosRoute
   '/owner/privilege': typeof OwnerPrivilegeRoute
   '/owner/profil': typeof OwnerProfilRoute
+  '/owner/skincare': typeof OwnerSkincareRoute
   '/owner/transaksi': typeof OwnerTransaksiRoute
   '/owner/treatment': typeof OwnerTreatmentRoute
   '/owner/voucher': typeof OwnerVoucherRoute
@@ -454,12 +472,14 @@ export interface FileRouteTypes {
     | '/kwitansi/$id'
     | '/owner/akun'
     | '/owner/beautician'
+    | '/owner/bonus'
     | '/owner/inventory'
     | '/owner/jadwal'
     | '/owner/laporan'
     | '/owner/pos'
     | '/owner/privilege'
     | '/owner/profil'
+    | '/owner/skincare'
     | '/owner/transaksi'
     | '/owner/treatment'
     | '/owner/voucher'
@@ -499,12 +519,14 @@ export interface FileRouteTypes {
     | '/kwitansi/$id'
     | '/owner/akun'
     | '/owner/beautician'
+    | '/owner/bonus'
     | '/owner/inventory'
     | '/owner/jadwal'
     | '/owner/laporan'
     | '/owner/pos'
     | '/owner/privilege'
     | '/owner/profil'
+    | '/owner/skincare'
     | '/owner/transaksi'
     | '/owner/treatment'
     | '/owner/voucher'
@@ -547,12 +569,14 @@ export interface FileRouteTypes {
     | '/kwitansi/$id'
     | '/owner/akun'
     | '/owner/beautician'
+    | '/owner/bonus'
     | '/owner/inventory'
     | '/owner/jadwal'
     | '/owner/laporan'
     | '/owner/pos'
     | '/owner/privilege'
     | '/owner/profil'
+    | '/owner/skincare'
     | '/owner/transaksi'
     | '/owner/treatment'
     | '/owner/voucher'
@@ -731,6 +755,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OwnerTransaksiRouteImport
       parentRoute: typeof OwnerRoute
     }
+    '/owner/skincare': {
+      id: '/owner/skincare'
+      path: '/skincare'
+      fullPath: '/owner/skincare'
+      preLoaderRoute: typeof OwnerSkincareRouteImport
+      parentRoute: typeof OwnerRoute
+    }
     '/owner/profil': {
       id: '/owner/profil'
       path: '/profil'
@@ -771,6 +802,13 @@ declare module '@tanstack/react-router' {
       path: '/inventory'
       fullPath: '/owner/inventory'
       preLoaderRoute: typeof OwnerInventoryRouteImport
+      parentRoute: typeof OwnerRoute
+    }
+    '/owner/bonus': {
+      id: '/owner/bonus'
+      path: '/bonus'
+      fullPath: '/owner/bonus'
+      preLoaderRoute: typeof OwnerBonusRouteImport
       parentRoute: typeof OwnerRoute
     }
     '/owner/beautician': {
@@ -963,12 +1001,14 @@ const DokterRouteWithChildren =
 interface OwnerRouteChildren {
   OwnerAkunRoute: typeof OwnerAkunRoute
   OwnerBeauticianRoute: typeof OwnerBeauticianRoute
+  OwnerBonusRoute: typeof OwnerBonusRoute
   OwnerInventoryRoute: typeof OwnerInventoryRoute
   OwnerJadwalRoute: typeof OwnerJadwalRoute
   OwnerLaporanRoute: typeof OwnerLaporanRoute
   OwnerPosRoute: typeof OwnerPosRoute
   OwnerPrivilegeRoute: typeof OwnerPrivilegeRoute
   OwnerProfilRoute: typeof OwnerProfilRoute
+  OwnerSkincareRoute: typeof OwnerSkincareRoute
   OwnerTransaksiRoute: typeof OwnerTransaksiRoute
   OwnerTreatmentRoute: typeof OwnerTreatmentRoute
   OwnerVoucherRoute: typeof OwnerVoucherRoute
@@ -982,12 +1022,14 @@ interface OwnerRouteChildren {
 const OwnerRouteChildren: OwnerRouteChildren = {
   OwnerAkunRoute: OwnerAkunRoute,
   OwnerBeauticianRoute: OwnerBeauticianRoute,
+  OwnerBonusRoute: OwnerBonusRoute,
   OwnerInventoryRoute: OwnerInventoryRoute,
   OwnerJadwalRoute: OwnerJadwalRoute,
   OwnerLaporanRoute: OwnerLaporanRoute,
   OwnerPosRoute: OwnerPosRoute,
   OwnerPrivilegeRoute: OwnerPrivilegeRoute,
   OwnerProfilRoute: OwnerProfilRoute,
+  OwnerSkincareRoute: OwnerSkincareRoute,
   OwnerTransaksiRoute: OwnerTransaksiRoute,
   OwnerTreatmentRoute: OwnerTreatmentRoute,
   OwnerVoucherRoute: OwnerVoucherRoute,

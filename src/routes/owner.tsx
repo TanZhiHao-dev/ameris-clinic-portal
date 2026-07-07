@@ -11,12 +11,14 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Package,
   ShoppingBag,
   Sparkles,
   Stethoscope,
   Ticket,
   UserCog,
   Users,
+  Wallet,
   X,
 } from 'lucide-react'
 import { authClient } from '#/lib/auth-client'
@@ -32,10 +34,12 @@ const NAV = [
   { to: '/owner/voucher', label: 'Voucher', icon: Ticket, exact: false },
   { to: '/owner/transaksi', label: 'Transaksi', icon: CreditCard, exact: false },
   { to: '/owner/laporan', label: 'Laporan', icon: FileBarChart, exact: false },
+  { to: '/owner/bonus', label: 'Bonus Staf', icon: Wallet, exact: false },
   { to: '/owner/inventory', label: 'Inventory', icon: Boxes, exact: false },
   { to: '/owner/pasien', label: 'Pasien & ERM', icon: Users, exact: false },
   { to: '/owner/dokter', label: 'Dokter', icon: Stethoscope, exact: false },
-  { to: '/owner/beautician', label: 'Beautician', icon: HandHeart, exact: false },
+  { to: '/owner/beautician', label: 'Staf', icon: HandHeart, exact: false },
+  { to: '/owner/skincare', label: 'Skincare', icon: Package, exact: false },
   { to: '/owner/akun', label: 'Akun', icon: UserCog, exact: false },
   { to: '/owner/profil', label: 'Profil', icon: CircleUser, exact: false },
 ]

@@ -1,15 +1,18 @@
 import { randomUUID } from 'node:crypto'
 import { db } from '#/db'
 import {
+  assists,
   beauticians as beauticiansTbl,
   bookingItems,
   bookings,
+  closings,
   doctorTreatments,
   inventoryItems,
   inventoryMovements,
   loyaltyTransactions,
   medicalRecords,
   notifications,
+  products,
   transactions,
   treatments as treatmentsTbl,
 } from '#/db/schema'
@@ -29,16 +32,30 @@ const emailFor = (id: string, name: string) =>
 
 const staggered = (i: number) => new Date(Date.now() - i * 3 * 86_400_000)
 
-// Demo beauticians (the staff who perform treatments). Owner manages the real
-// list from the dashboard; these just make the report + bonus testable locally.
+// Demo staff (perform treatments + eligible for bonuses). Owner manages the
+// real list; these make the report + bonus testable locally. `role` = the staff
+// type used across the bonus rules.
 const beauticianSeed = [
-  { id: 'bt-sinta', name: 'Sinta Wijaya' },
-  { id: 'bt-dewi', name: 'Dewi Anggraini' },
-  { id: 'bt-rani', name: 'Rani Kusuma' },
+  { id: 'bt-sinta', name: 'Sinta Wijaya', role: 'beautician' },
+  { id: 'bt-dewi', name: 'Dewi Anggraini', role: 'beautician' },
+  { id: 'bt-rani', name: 'Rani Kusuma', role: 'perawat' },
+  { id: 'bt-maya', name: 'Maya Lestari', role: 'frontoffice' },
+  { id: 'bt-tari', name: 'Tari Puspita', role: 'terapis' },
+]
+
+// Skincare / retail products (for the closing-upsell 5% bonus).
+const productSeed = [
+  { id: 'prd-sunscreen', name: 'Sunscreen SPF50', price: 185_000 },
+  { id: 'prd-serum-vitc', name: 'Serum Vitamin C', price: 320_000 },
+  { id: 'prd-moisturizer', name: 'Barrier Moisturizer', price: 245_000 },
+  { id: 'prd-cleanser', name: 'Gentle Cleanser', price: 165_000 },
 ]
 
 export async function seedDatabase() {
   // FK-safe wipe
+  await db.delete(closings)
+  await db.delete(assists)
+  await db.delete(products)
   await db.delete(inventoryMovements)
   await db.delete(inventoryItems)
   await db.delete(notifications)
@@ -56,6 +73,7 @@ export async function seedDatabase() {
   await db.delete(user)
 
   await db.insert(beauticiansTbl).values(beauticianSeed.map((b) => ({ ...b, isActive: true })))
+  await db.insert(products).values(productSeed.map((p) => ({ ...p, isActive: true })))
 
   // ── Users (owner + patients) ──
   await db.insert(user).values({
