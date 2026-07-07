@@ -29,6 +29,7 @@ type Row = {
   heroFeatured: boolean
   promo: boolean
   promoPrice: number | null
+  beauticianBonus: number
   image?: string
 }
 
@@ -47,6 +48,7 @@ type UpdateVars = {
   isHeroFeatured?: boolean
   isPromo?: boolean
   promoNow?: number | null
+  beauticianBonus?: number
   image?: string | null
 }
 
@@ -110,6 +112,7 @@ function CatalogAdmin() {
     heroFeatured: t.heroFeatured,
     promo: t.promo,
     promoPrice: t.promoPrice,
+    beauticianBonus: t.beauticianBonus,
     image: t.image,
   }))
 
@@ -121,6 +124,7 @@ function CatalogAdmin() {
   const [promoEdits, setPromoEdits] = useState<Record<string, string>>({})
   const [minUnitEdits, setMinUnitEdits] = useState<Record<string, string>>({})
   const [presetEdits, setPresetEdits] = useState<Record<string, string>>({})
+  const [bonusEdits, setBonusEdits] = useState<Record<string, string>>({})
   const [imgEdit, setImgEdit] = useState<Row | null>(null)
   const [subEdit, setSubEdit] = useState<Row | null>(null)
 
@@ -153,6 +157,7 @@ function CatalogAdmin() {
     ...(v.isHeroFeatured !== undefined && { heroFeatured: v.isHeroFeatured }),
     ...(v.isPromo !== undefined && { isPromo: v.isPromo, promo: v.isPromo }),
     ...(v.promoNow !== undefined && { promoPrice: v.promoNow }),
+    ...(v.beauticianBonus !== undefined && { beauticianBonus: v.beauticianBonus }),
     ...(v.image !== undefined && { image: v.image ?? undefined }),
   })
 
@@ -257,6 +262,17 @@ function CatalogAdmin() {
     })
     updateMut.mutate({ id, unitPresets: raw.trim() ? raw : null })
   }
+  const commitBonus = (id: string) => {
+    const raw = bonusEdits[id]
+    if (raw === undefined) return
+    const beauticianBonus = Math.max(0, parseInt(raw.replace(/\D/g, ''), 10) || 0)
+    setBonusEdits((cur) => {
+      const next = { ...cur }
+      delete next[id]
+      return next
+    })
+    updateMut.mutate({ id, beauticianBonus })
+  }
   const remove = (id: string) => deleteMut.mutate(id)
   const add = () => {
     const price = parseInt(draft.price.replace(/\D/g, ''), 10)
@@ -338,6 +354,7 @@ function CatalogAdmin() {
               <th className="px-5 py-4 font-semibold">Treatment</th>
               <th className="px-3 py-4 font-semibold">Gambar</th>
               <th className="px-3 py-4 font-semibold">Harga</th>
+              <th className="px-3 py-4 font-semibold">Bonus BT</th>
               <th className="px-3 py-4 font-semibold">Tersedia</th>
               <th className="px-3 py-4 font-semibold">Best Seller</th>
               <th className="px-3 py-4 font-semibold">Promo</th>
@@ -436,6 +453,20 @@ function CatalogAdmin() {
                         </label>
                       </div>
                     )}
+                  </div>
+                </td>
+                <td data-label="Bonus BT" className="px-3 py-4">
+                  <div className="flex w-fit items-center gap-1 rounded-lg px-2 py-1.5" style={{ border: '1px solid var(--color-line)', background: 'var(--color-cream)' }}>
+                    <span className="text-[0.8rem]" style={{ color: 'var(--color-ink-muted)' }}>Rp</span>
+                    <input
+                      className="mono w-20 bg-transparent text-sm font-bold outline-none"
+                      value={bonusEdits[r.id] ?? (r.beauticianBonus ? r.beauticianBonus.toLocaleString('id-ID') : '0')}
+                      onChange={(e) => setBonusEdits((cur) => ({ ...cur, [r.id]: e.target.value }))}
+                      onBlur={() => commitBonus(r.id)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                      inputMode="numeric"
+                      aria-label={`Bonus beautician ${r.name}`}
+                    />
                   </div>
                 </td>
                 <td data-label="Tersedia" className="px-3 py-4"><Switch on={r.available} onChange={() => patch(r.id, { available: !r.available })} label={`Tersedia ${r.name}`} /></td>

@@ -49,9 +49,21 @@ export const treatments = pgTable('treatments', {
   // single-select (turning one on clears the others).
   isHeroFeatured: boolean('is_hero_featured').notNull().default(false),
   pointCost: integer('point_cost'),
+  // Fixed rupiah bonus paid to the beautician who performs this treatment.
+  // Same for every beautician (owner sets it per treatment); 0 = no bonus.
+  beauticianBonus: integer('beautician_bonus').notNull().default(0),
   image: text('image'),
   promoWas: integer('promo_was'),
   promoNow: integer('promo_now'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// Clinic staff who physically perform treatments. Not login users — the owner
+// manages this list from the dashboard and attributes each visit to one of them.
+export const beauticians = pgTable('beauticians', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
@@ -68,6 +80,10 @@ export const bookings = pgTable('bookings', {
   // touches historical bookings). discountAmount = rupiah taken off the subtotal.
   voucherId: text('voucher_id'),
   discountAmount: integer('discount_amount').notNull().default(0),
+  // Which beautician performed this visit (plain text, no FK — keeps historical
+  // reports intact if a beautician is later removed). Owner sets it on the
+  // schedule board; null = not yet attributed.
+  beauticianId: text('beautician_id'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 

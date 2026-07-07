@@ -1,9 +1,10 @@
 // Shared "Jadwal kedatangan" board — used by both the owner and doctor consoles.
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Check, CheckCheck, ChevronDown, Clock, RotateCcw, UserCheck, X } from 'lucide-react'
+import { AlertTriangle, Check, CheckCheck, ChevronDown, Clock, HandHeart, RotateCcw, UserCheck, X } from 'lucide-react'
 import { fmtDate, formatRp, type OwnerStatus, type PayStatus, payTone, statusTone } from '../../data/owner'
 import { ownerBookingsByDate, ownerCompleteBooking, ownerRestoreBooking, ownerSetBookingStatus } from '#/server/bookings'
+import { ownerBeauticians, ownerSetBookingBeautician } from '#/server/beauticians'
 
 // Real "today" in clinic time (WIB) — the old static TODAY constant was a seed
 // reference date, which made the board open on the wrong day in production.
@@ -23,6 +24,23 @@ export function ScheduleBoard() {
   const { data } = useQuery({
     queryKey: ['owner-jadwal', date],
     queryFn: () => ownerBookingsByDate({ data: { date } }),
+  })
+  const { data: beauticians = [] } = useQuery({ queryKey: ['owner-beauticians'], queryFn: () => ownerBeauticians() })
+  const activeBeauticians = beauticians.filter((b) => b.isActive)
+  // Keep an already-attributed (but since-deactivated) beautician selectable so
+  // the dropdown can still show who did a past visit.
+  const beauticianOptions = (currentId: string | null) => {
+    const extra = currentId && !activeBeauticians.some((b) => b.id === currentId) ? beauticians.filter((b) => b.id === currentId) : []
+    return [...activeBeauticians, ...extra]
+  }
+
+  const setBeauticianMut = useMutation({
+    mutationFn: (v: { bookingId: string; beauticianId: string | null }) => ownerSetBookingBeautician({ data: v }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['owner-jadwal'] })
+      qc.invalidateQueries({ queryKey: ['owner-visit-report'] })
+    },
+    onError: (e) => showError(e),
   })
 
   const dates = data?.dates ?? []
@@ -157,6 +175,32 @@ export function ScheduleBoard() {
                   </div>
                 </div>
                 <span className="badge shrink-0" style={{ background: statusTone[b.status as OwnerStatus].bg, color: statusTone[b.status as OwnerStatus].color }}>{b.status}</span>
+              </div>
+
+              {/* Who performed this visit — drives the beautician's bonus + the
+                  management report. Assignable any time before/after Selesai. */}
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3">
+                <HandHeart size={15} style={{ color: 'var(--color-gold-deep)' }} />
+                <span className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>Dikerjakan:</span>
+                {activeBeauticians.length === 0 && !b.beauticianId ? (
+                  <span className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>
+                    belum ada beautician — tambah di menu Beautician
+                  </span>
+                ) : (
+                  <select
+                    value={b.beauticianId ?? ''}
+                    disabled={setBeauticianMut.isPending}
+                    onChange={(e) => setBeauticianMut.mutate({ bookingId: b.id, beauticianId: e.target.value || null })}
+                    className="rounded-lg border bg-white px-2.5 py-1.5 text-sm font-semibold outline-none disabled:opacity-60"
+                    style={{ borderColor: b.beauticianId ? 'var(--color-line)' : 'var(--color-gold)', color: 'var(--color-ink)' }}
+                    aria-label={`Beautician untuk ${b.patientName}`}
+                  >
+                    <option value="">— pilih beautician —</option>
+                    {beauticianOptions(b.beauticianId).map((bt) => (
+                      <option key={bt.id} value={bt.id}>{bt.name}{bt.isActive ? '' : ' (nonaktif)'}</option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               {b.status !== 'Selesai' && b.status !== 'Batal' && (

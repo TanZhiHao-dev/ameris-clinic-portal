@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { db } from '#/db'
 import {
+  beauticians as beauticiansTbl,
   bookingItems,
   bookings,
   doctorTreatments,
@@ -26,6 +27,14 @@ const emailFor = (id: string, name: string) =>
 
 const staggered = (i: number) => new Date(Date.now() - i * 3 * 86_400_000)
 
+// Demo beauticians (the staff who perform treatments). Owner manages the real
+// list from the dashboard; these just make the report + bonus testable locally.
+const beauticianSeed = [
+  { id: 'bt-sinta', name: 'Sinta Wijaya' },
+  { id: 'bt-dewi', name: 'Dewi Anggraini' },
+  { id: 'bt-rani', name: 'Rani Kusuma' },
+]
+
 export async function seedDatabase() {
   // FK-safe wipe
   await db.delete(notifications)
@@ -35,11 +44,14 @@ export async function seedDatabase() {
   await db.delete(transactions)
   await db.delete(bookingItems)
   await db.delete(bookings)
+  await db.delete(beauticiansTbl)
   await db.delete(treatmentsTbl)
   await db.delete(session)
   await db.delete(account)
   await db.delete(verification)
   await db.delete(user)
+
+  await db.insert(beauticiansTbl).values(beauticianSeed.map((b) => ({ ...b, isActive: true })))
 
   // ── Users (owner + patients) ──
   await db.insert(user).values({
@@ -149,6 +161,9 @@ export async function seedDatabase() {
         isBestSeller: !!t.bestSeller,
         isHeroFeatured: !!t.heroFeatured,
         pointCost: redeemableIds.has(t.id) ? pointOf(price) : null,
+        // Seed a plausible flat bonus (~5% of price, rounded to Rp1.000, capped
+        // Rp50.000). Owner overrides per treatment in the catalog editor.
+        beauticianBonus: Math.min(50_000, Math.round((price * 0.05) / 1000) * 1000),
         promoWas: promo?.was ?? null,
         promoNow: promo?.now ?? null,
       }
@@ -170,6 +185,12 @@ export async function seedDatabase() {
   if (dtRows.length) await db.insert(doctorTreatments).values(dtRows)
 
   // ── Bookings + items + transactions ──
+  // Round-robin a beautician onto every already-completed booking so the report
+  // and bonus totals have data. In-flight bookings stay unattributed until the
+  // owner picks a beautician on the schedule board.
+  const btIds = beauticianSeed.map((b) => b.id)
+  let btN = 0
+  const nextBt = () => btIds[btN++ % btIds.length]
   for (const b of ownerBookings) {
     await db.insert(bookings).values({
       id: b.id,
@@ -178,6 +199,7 @@ export async function seedDatabase() {
       bookingTime: b.time,
       status: b.status,
       total: b.total,
+      beauticianId: b.status === 'Selesai' ? nextBt() : null,
       createdAt: new Date(b.date + 'T00:00:00'),
     })
     await db.insert(bookingItems).values(
@@ -222,7 +244,7 @@ export async function seedDatabase() {
       for (const date of earnDates) {
         const id = 'AMR-D' + (101 + earnN)
         const at = new Date(date + 'T00:00:00')
-        earnBookings.push({ id, userId: earnPatients[earnN % earnPatients.length], bookingDate: date, bookingTime: '11:00', status: 'Selesai', total: t.price, createdAt: at })
+        earnBookings.push({ id, userId: earnPatients[earnN % earnPatients.length], bookingDate: date, bookingTime: '11:00', status: 'Selesai', total: t.price, beauticianId: nextBt(), createdAt: at })
         earnItems.push({ id: randomUUID(), bookingId: id, treatmentId: t.id, nameAtBooking: t.name, priceAtBooking: t.price, qty: 1 })
         earnTxns.push({ id: randomUUID(), bookingId: id, amount: t.price, paymentMethod: 'Online', paymentStatus: 'Lunas', paymentPlan: 'full', midtransOrderId: `${id}-seed`, midtransStatus: 'settlement', paidAt: at, createdAt: at })
         earnN++

@@ -22,6 +22,7 @@ export type ClientTreatment = {
   heroFeatured: boolean // the single treatment shown in the landing hero card
   isPromo: boolean
   pointCost: number | null
+  beauticianBonus: number // fixed Rp bonus for the beautician who performs it
   promoPrice: number | null // owner-set promo price; discount derived vs `price`
   image?: string
 }
@@ -76,6 +77,7 @@ const toClient = (t: Row): ClientTreatment => ({
   heroFeatured: t.isHeroFeatured,
   isPromo: t.isPromo,
   pointCost: t.pointCost,
+  beauticianBonus: t.beauticianBonus,
   promoPrice: t.promoNow ?? null,
   image: t.image ?? undefined,
 })
@@ -173,6 +175,8 @@ export const updateTreatment = createServerFn({ method: 'POST' })
       isPromo: z.boolean().optional(),
       promoNow: z.number().int().nonnegative().nullable().optional(), // owner-set promo price (null clears)
       pointCost: z.number().int().nullable().optional(),
+      beauticianBonus: z.number().int().nonnegative().optional(), // fixed Rp bonus per treatment
+
       image: z.string().max(3_000_000).nullable().optional(), // URL or data URL; null clears it
     }),
   )
