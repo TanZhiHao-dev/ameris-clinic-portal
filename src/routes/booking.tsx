@@ -167,6 +167,10 @@ function BookingPage() {
 
   const payNow =
     payment === 'klinik' ? 0 : payment === 'transfer' ? discountedTotal : plan === 'dp' ? Math.round(discountedTotal / 2) : discountedTotal
+  // A fully free cart (e.g. the Konsultasi Dokter slot) skips the payment step —
+  // there's nothing to charge; it's just confirmed and handled at the clinic.
+  const isFree = !skincareOnly && items.length > 0 && discountedTotal === 0
+  useEffect(() => { if (isFree && payment !== 'klinik') setPayment('klinik') }, [isFree, payment])
 
   const createMut = useMutation({
     mutationFn: (v: Parameters<typeof createBooking>[0]['data']) =>
@@ -520,7 +524,8 @@ function BookingPage() {
                 </div>
               )}
 
-              {/* Step 2 — Payment */}
+              {/* Step 2 — Payment (hidden when the booking is fully free) */}
+              {!isFree ? (
               <div className="card-soft p-6 sm:p-7">
                 <StepHead n="2" title="Metode pembayaran" icon={<CreditCard size={17} />} />
                 <div className={`mt-5 grid gap-3 ${skincareOnly ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
@@ -540,6 +545,14 @@ function BookingPage() {
                   </div>
                 )}
               </div>
+              ) : (
+                <div className="card-soft p-6 sm:p-7">
+                  <StepHead n="2" title="Konsultasi gratis" icon={<CheckCircle2 size={17} />} />
+                  <p className="mt-4 rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(44,88,72,0.1)', color: '#2c5848' }}>
+                    ✓ Tidak ada biaya — cukup konfirmasi jadwal. Konsultasi &amp; rekomendasi treatment dilakukan langsung oleh dokter saat kamu datang.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* ── Summary ── */}

@@ -51,6 +51,7 @@ export const clinic = {
 }
 
 export type Category =
+  | 'Konsultasi'
   | 'Facial'
   | 'Peeling'
   | 'Laser'
@@ -99,6 +100,7 @@ export const promoOffPct = (price: number, promoPrice: number) =>
 
 export const categories = [
   'Best Seller',
+  'Konsultasi',
   'Facial',
   'Peeling',
   'Laser',
@@ -108,6 +110,8 @@ export const categories = [
 ] as const
 
 export const treatments: Treatment[] = [
+  // ── Konsultasi (free — book a slot to talk to the doctor first) ──
+  { id: 'konsultasi', name: 'Konsultasi Dokter', blurb: 'Konsultasi kondisi kulit langsung dengan dokter sebelum menentukan treatment. Gratis untuk semua pasien.', category: 'Konsultasi', duration: '30 min', price: 0, available: true },
   // ── Ameris Signature Facial ──
   { id: 'facial-basic', name: 'Ameris Basic Facial', blurb: 'Membersihkan kotoran, minyak & sel kulit mati — wajah lebih segar dan sehat.', category: 'Facial', duration: '90 min', price: 170_000, available: true, bestSeller: true, heroFeatured: true },
   { id: 'facial-acne', name: 'Acne Recovery Facial', blurb: 'Untuk kulit berjerawat — bersihkan pori mendalam dan redakan peradangan.', category: 'Facial', duration: '90 min', price: 370_000, available: true },

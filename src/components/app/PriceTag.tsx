@@ -14,6 +14,11 @@ export function PriceTag({ t, numClass = 'text-lg' }: { t: PriceLike; numClass?:
     <span className="text-[0.7em] font-semibold" style={{ color: 'var(--color-ink-muted)' }}>/unit</span>
   ) : null
 
+  // Free items (e.g. Konsultasi Dokter) read "Gratis", never "Rp0".
+  if (!t.pricePerUnit && t.price === 0 && !onPromo) {
+    return <span className={`font-extrabold gold-text ${numClass}`}>Gratis</span>
+  }
+
   if (!onPromo) {
     return (
       <span className="inline-flex items-baseline gap-0.5">

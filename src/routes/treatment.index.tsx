@@ -18,6 +18,7 @@ export const Route = createFileRoute('/treatment/')({
 const FILTERS = [
   'Semua',
   'Best Seller',
+  'Konsultasi',
   'Facial',
   'Peeling',
   'Laser',
