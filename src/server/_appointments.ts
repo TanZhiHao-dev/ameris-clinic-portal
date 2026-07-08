@@ -37,6 +37,7 @@ export async function assemble(bks: (typeof bookings.$inferSelect)[]) {
       paidAt: txn?.paidAt ? txn.paidAt.toISOString() : null,
       total: b.total, // already net of any voucher discount
       discount: b.discountAmount ?? 0,
+      hasVoucher: !!b.voucherId, // voucher bookings are excluded from inline editing
       beauticianId: b.beauticianId ?? null, // who performed the visit (owner-set on the schedule)
     }
   })

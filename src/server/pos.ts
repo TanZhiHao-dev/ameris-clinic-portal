@@ -50,14 +50,15 @@ export const posCreateSale = createServerFn({ method: 'POST' })
     const catalog = await db.select().from(treatments).where(inArray(treatments.id, ids))
     const byId = new Map(catalog.map((t) => [t.id, t]))
     let total = 0
-    let discountTotal = 0
     const rows = data.items.map((i) => {
       const t = byId.get(i.treatmentId)
       if (!t) throw new Error('Treatment tidak ditemukan.')
       const promo = t.isPromo && t.promoNow != null && t.promoNow < t.price
       const catalogUnit = promo ? t.promoNow! : t.price
       // Manual discount is authoritative-clamped from the catalog price, so it
-      // can only ever lower the price (a discount) — never mark it up.
+      // can only ever lower the price (a discount) — never mark it up. The net
+      // price is what we persist as the line's priceAtBooking (the amount the
+      // patient actually pays), so receipts stay consistent (subtotal = total).
       const dv = i.discountValue ?? 0
       const discPerUnit =
         i.discountMode === 'pct'
@@ -65,7 +66,6 @@ export const posCreateSale = createServerFn({ method: 'POST' })
           : Math.min(Math.max(dv, 0), catalogUnit)
       const unit = Math.max(0, catalogUnit - discPerUnit)
       total += unit * i.qty
-      discountTotal += (catalogUnit - unit) * i.qty
       return { treatmentId: t.id, name: t.name, price: unit, qty: i.qty }
     })
 
@@ -80,7 +80,6 @@ export const posCreateSale = createServerFn({ method: 'POST' })
       bookingTime: wibTime.format(now),
       status: settled ? 'Selesai' : 'Hadir',
       total,
-      discountAmount: discountTotal,
       beauticianId: data.beauticianId ?? null,
       doctorId: data.doctorId ?? null,
       source: 'walkin',
