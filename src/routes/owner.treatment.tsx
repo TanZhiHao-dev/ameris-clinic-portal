@@ -50,6 +50,8 @@ type UpdateVars = {
   isPromo?: boolean
   promoNow?: number | null
   beauticianBonus?: number
+  category?: string
+  duration?: string
   image?: string | null
 }
 
@@ -122,6 +124,7 @@ function CatalogAdmin() {
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState({ name: '', category: 'Facial' as Category, duration: '60 min', price: '', blurb: '', blurbEn: '' })
   const [nameEdits, setNameEdits] = useState<Record<string, string>>({})
+  const [durationEdits, setDurationEdits] = useState<Record<string, string>>({})
   const [priceEdits, setPriceEdits] = useState<Record<string, string>>({})
   const [promoEdits, setPromoEdits] = useState<Record<string, string>>({})
   const [minUnitEdits, setMinUnitEdits] = useState<Record<string, string>>({})
@@ -161,6 +164,8 @@ function CatalogAdmin() {
     ...(v.isPromo !== undefined && { isPromo: v.isPromo, promo: v.isPromo }),
     ...(v.promoNow !== undefined && { promoPrice: v.promoNow }),
     ...(v.beauticianBonus !== undefined && { beauticianBonus: v.beauticianBonus }),
+    ...(v.category !== undefined && { category: v.category as Category }),
+    ...(v.duration !== undefined && { duration: v.duration }),
     ...(v.image !== undefined && { image: v.image ?? undefined }),
   })
 
@@ -233,6 +238,18 @@ function CatalogAdmin() {
     // Ignore an empty name or a no-op edit (keeps the original).
     if (!name || name === original) return
     updateMut.mutate({ id, name })
+  }
+  const commitDuration = (id: string, original: string) => {
+    const raw = durationEdits[id]
+    setDurationEdits((cur) => {
+      const next = { ...cur }
+      delete next[id]
+      return next
+    })
+    if (raw === undefined) return
+    const duration = raw.trim()
+    if (duration === original) return
+    updateMut.mutate({ id, duration })
   }
   const commitPrice = (id: string) => {
     const raw = priceEdits[id]
@@ -390,7 +407,28 @@ function CatalogAdmin() {
                     aria-label={`Nama treatment ${r.name}`}
                     title="Klik untuk mengubah nama treatment"
                   />
-                  <div className="text-[0.76rem]" style={{ color: 'var(--color-ink-muted)' }}>{r.category} · {r.duration}</div>
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <select
+                      value={r.category}
+                      onChange={(e) => updateMut.mutate({ id: r.id, category: e.target.value })}
+                      className="rounded-md border border-transparent bg-transparent py-0.5 pl-1 pr-0.5 -ml-1 text-[0.76rem] outline-none transition hover:border-[var(--color-line)] focus:border-[var(--color-gold)] focus:bg-[var(--color-cream)]"
+                      style={{ color: 'var(--color-ink-muted)' }}
+                      aria-label={`Kategori ${r.name}`}
+                    >
+                      {CATS.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <span className="text-[0.76rem]" style={{ color: 'var(--color-line)' }}>·</span>
+                    <input
+                      value={durationEdits[r.id] ?? r.duration}
+                      onChange={(e) => setDurationEdits((cur) => ({ ...cur, [r.id]: e.target.value }))}
+                      onBlur={() => commitDuration(r.id, r.duration)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { setDurationEdits((cur) => { const n = { ...cur }; delete n[r.id]; return n }); e.currentTarget.blur() } }}
+                      className="w-16 rounded-md border border-transparent bg-transparent px-1 py-0.5 text-[0.76rem] outline-none transition hover:border-[var(--color-line)] focus:border-[var(--color-gold)] focus:bg-[var(--color-cream)]"
+                      style={{ color: 'var(--color-ink-muted)' }}
+                      placeholder="mis. 90 min"
+                      aria-label={`Durasi ${r.name}`}
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => setSubEdit(r)}
