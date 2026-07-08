@@ -5,6 +5,7 @@ import { AlertTriangle, ArrowRight, Banknote, CheckCircle2, HandHeart, Minus, Pl
 import { effectivePrice, formatRp, loyaltyPointsFor } from '#/data/clinic'
 import { listTreatments } from '#/server/treatments'
 import { ownerBeauticians } from '#/server/beauticians'
+import { ownerDoctors } from '#/server/doctors'
 import { ownerPatients, createPatient } from '#/server/patients'
 import { posCreateSale } from '#/server/pos'
 
@@ -59,10 +60,14 @@ function PosScreen() {
     setCart((c) => (qty <= 0 ? c.filter((l) => l.id !== id) : c.map((l) => (l.id === id ? { ...l, qty } : l))))
   const total = cart.reduce((s, l) => s + l.price * l.qty, 0)
 
-  // ── Beautician + payment ──
+  // ── Performer (doctor OR beautician) + payment ──
   const { data: beauticians = [] } = useQuery({ queryKey: ['owner-beauticians'], queryFn: () => ownerBeauticians() })
+  const { data: doctors = [] } = useQuery({ queryKey: ['owner-doctors'], queryFn: () => ownerDoctors() })
   const activeBeauticians = beauticians.filter((b) => b.isActive)
-  const [beauticianId, setBeauticianId] = useState('')
+  // Encoded performer: '' = none/asistensi only, 'doc:<id>' = doctor-led,
+  // 'bt:<id>' = beautician/terapis. Kept as one value so the picker is a single
+  // dropdown but maps to the two separate booking columns on submit.
+  const [performer, setPerformer] = useState('')
   const [payMethod, setPayMethod] = useState<'Offline' | 'Transfer'>('Offline')
 
   const [err, setErr] = useState<string | null>(null)
@@ -74,7 +79,8 @@ function PosScreen() {
         data: {
           patientId: patient!.id,
           items: cart.map((l) => ({ treatmentId: l.id, qty: l.qty })),
-          beauticianId: beauticianId || null,
+          beauticianId: performer.startsWith('bt:') ? performer.slice(3) : null,
+          doctorId: performer.startsWith('doc:') ? performer.slice(4) : null,
           paymentMethod: payMethod,
           settleNow,
         },
@@ -96,7 +102,7 @@ function PosScreen() {
   }
 
   const reset = () => {
-    setPatient(null); setPq(''); setCart([]); setTq(''); setBeauticianId(''); setPayMethod('Offline'); setDone(null); setErr(null)
+    setPatient(null); setPq(''); setCart([]); setTq(''); setPerformer(''); setPayMethod('Offline'); setDone(null); setErr(null)
   }
 
   // ── Success ──
@@ -241,15 +247,27 @@ function PosScreen() {
 
           <div className="my-4 hairline-gold" />
 
-          {/* Beautician */}
+          {/* Performer — doctor OR beautician/terapis */}
           <label className="flex items-center gap-2 text-sm font-semibold">
             <HandHeart size={15} style={{ color: 'var(--color-gold-deep)' }} /> Dikerjakan
           </label>
-          <select value={beauticianId} onChange={(e) => setBeauticianId(e.target.value)}
+          <select value={performer} onChange={(e) => setPerformer(e.target.value)}
             className="mt-2 w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none" style={{ borderColor: 'var(--color-line)' }}>
-            <option value="">— pilih beautician —</option>
-            {activeBeauticians.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            <option value="">— tidak ada / hanya asistensi —</option>
+            {doctors.length > 0 && (
+              <optgroup label="Dokter">
+                {doctors.map((d) => <option key={d.id} value={`doc:${d.id}`}>{d.name ?? 'Dokter'}</option>)}
+              </optgroup>
+            )}
+            {activeBeauticians.length > 0 && (
+              <optgroup label="Beautician / Terapis">
+                {activeBeauticians.map((b) => <option key={b.id} value={`bt:${b.id}`}>{b.name}</option>)}
+              </optgroup>
+            )}
           </select>
+          <p className="mt-1.5 text-[0.72rem] leading-snug" style={{ color: 'var(--color-ink-muted)' }}>
+            Treatment tanpa facial dikerjakan dokter — pilih dokter atau kosongkan. Beautician/perawat yang membantu cukup dicatat sebagai asistensi di Jadwal.
+          </p>
 
           {/* Payment */}
           <div className="mt-4 grid grid-cols-2 gap-2">

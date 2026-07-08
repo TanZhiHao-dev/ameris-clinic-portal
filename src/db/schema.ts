@@ -130,6 +130,12 @@ export const bookings = pgTable('bookings', {
   // reports intact if a beautician is later removed). Owner sets it on the
   // schedule board; null = not yet attributed.
   beauticianId: text('beautician_id'),
+  // Which doctor performed this visit, when the treatment series is doctor-led
+  // (injeksi/laser/filler — nothing needs a facial specialist). Plain text /
+  // user.id, no FK. Mutually exclusive with beauticianId in the POS picker;
+  // null = performed by a beautician or not attributed. Kept separate so the
+  // per-treatment beautician bonus never lands on a doctor.
+  doctorId: text('doctor_id'),
   // How the booking was created: 'online' = patient self-booked via the portal,
   // 'walkin' = staff created it at the clinic (POS / doctor consultation).
   source: text('source').notNull().default('online'),

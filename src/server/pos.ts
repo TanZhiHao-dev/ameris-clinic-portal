@@ -23,6 +23,7 @@ export const posCreateSale = createServerFn({ method: 'POST' })
       patientId: z.string(),
       items: z.array(z.object({ treatmentId: z.string(), qty: z.number().int().positive() })).min(1),
       beauticianId: z.string().nullable().optional(),
+      doctorId: z.string().nullable().optional(),
       // Tunai (cash) = Offline; QRIS/transfer = Transfer.
       paymentMethod: z.enum(['Offline', 'Transfer']),
       settleNow: z.boolean(),
@@ -60,6 +61,7 @@ export const posCreateSale = createServerFn({ method: 'POST' })
       status: settled ? 'Selesai' : 'Hadir',
       total,
       beauticianId: data.beauticianId ?? null,
+      doctorId: data.doctorId ?? null,
       source: 'walkin',
     })
     await db.insert(bookingItems).values(
