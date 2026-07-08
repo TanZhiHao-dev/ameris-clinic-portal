@@ -78,6 +78,10 @@ export const products = pgTable('products', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   price: integer('price').notNull().default(0),
+  // Retail photo (URL or uploaded data-URL) + short blurb, shown to patients in
+  // the /skincare shop — same treatment as treatments.image.
+  image: text('image'),
+  description: text('description'),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })

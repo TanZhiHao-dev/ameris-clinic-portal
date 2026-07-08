@@ -243,7 +243,9 @@ export const ownerBookingsByDate = createServerFn({ method: 'GET' })
     // must not linger as a ghost appointment. Cancelled rows for the selected
     // date still ride along separately so the board can offer "Pulihkan"
     // (recovery from an accidental cancellation).
-    const allRows = await db.select().from(bookings).orderBy(desc(bookings.bookingDate))
+    // Skincare pickup orders (source 'skincare') are retail sales, not
+    // appointments — they live in Transaksi only, never on the schedule board.
+    const allRows = (await db.select().from(bookings).orderBy(desc(bookings.bookingDate))).filter((b) => b.source !== 'skincare')
     const active = allRows.filter((b) => b.status !== 'Batal')
     const dates = Array.from(new Set(active.map((b) => b.bookingDate))).sort()
     const targetDate = data?.date ?? dates[dates.length - 1] ?? ''

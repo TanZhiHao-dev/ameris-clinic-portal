@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TentangRouteImport } from './routes/tentang'
+import { Route as SkincareRouteImport } from './routes/skincare'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as OwnerRouteImport } from './routes/owner'
 import { Route as MasukRouteImport } from './routes/masuk'
@@ -63,6 +64,11 @@ import { Route as AkunBookingIdRouteImport } from './routes/akun.booking.$id'
 const TentangRoute = TentangRouteImport.update({
   id: '/tentang',
   path: '/tentang',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SkincareRoute = SkincareRouteImport.update({
+  id: '/skincare',
+  path: '/skincare',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -323,6 +329,7 @@ export interface FileRoutesByFullPath {
   '/masuk': typeof MasukRoute
   '/owner': typeof OwnerRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
+  '/skincare': typeof SkincareRoute
   '/tentang': typeof TentangRoute
   '/akun/privilege': typeof AkunPrivilegeRoute
   '/akun/profil': typeof AkunProfilRoute
@@ -371,6 +378,7 @@ export interface FileRoutesByTo {
   '/lengkapi-profil': typeof LengkapiProfilRoute
   '/masuk': typeof MasukRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/skincare': typeof SkincareRoute
   '/tentang': typeof TentangRoute
   '/akun/privilege': typeof AkunPrivilegeRoute
   '/akun/profil': typeof AkunProfilRoute
@@ -424,6 +432,7 @@ export interface FileRoutesById {
   '/masuk': typeof MasukRoute
   '/owner': typeof OwnerRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
+  '/skincare': typeof SkincareRoute
   '/tentang': typeof TentangRoute
   '/akun/privilege': typeof AkunPrivilegeRoute
   '/akun/profil': typeof AkunProfilRoute
@@ -478,6 +487,7 @@ export interface FileRouteTypes {
     | '/masuk'
     | '/owner'
     | '/reset-password'
+    | '/skincare'
     | '/tentang'
     | '/akun/privilege'
     | '/akun/profil'
@@ -526,6 +536,7 @@ export interface FileRouteTypes {
     | '/lengkapi-profil'
     | '/masuk'
     | '/reset-password'
+    | '/skincare'
     | '/tentang'
     | '/akun/privilege'
     | '/akun/profil'
@@ -578,6 +589,7 @@ export interface FileRouteTypes {
     | '/masuk'
     | '/owner'
     | '/reset-password'
+    | '/skincare'
     | '/tentang'
     | '/akun/privilege'
     | '/akun/profil'
@@ -631,6 +643,7 @@ export interface RootRouteChildren {
   MasukRoute: typeof MasukRoute
   OwnerRoute: typeof OwnerRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
+  SkincareRoute: typeof SkincareRoute
   TentangRoute: typeof TentangRoute
   ApiBootstrapOwnerRoute: typeof ApiBootstrapOwnerRoute
   ApiHealthRoute: typeof ApiHealthRoute
@@ -650,6 +663,13 @@ declare module '@tanstack/react-router' {
       path: '/tentang'
       fullPath: '/tentang'
       preLoaderRoute: typeof TentangRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/skincare': {
+      id: '/skincare'
+      path: '/skincare'
+      fullPath: '/skincare'
+      preLoaderRoute: typeof SkincareRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -1101,6 +1121,7 @@ const rootRouteChildren: RootRouteChildren = {
   MasukRoute: MasukRoute,
   OwnerRoute: OwnerRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
+  SkincareRoute: SkincareRoute,
   TentangRoute: TentangRoute,
   ApiBootstrapOwnerRoute: ApiBootstrapOwnerRoute,
   ApiHealthRoute: ApiHealthRoute,

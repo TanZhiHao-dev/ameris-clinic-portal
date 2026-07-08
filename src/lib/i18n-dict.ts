@@ -23,6 +23,7 @@ const dict = {
   // ── Nav / header ──────────────────────────────────────────────────
   'nav.home': { id: 'Beranda', en: 'Home' },
   'nav.treatment': { id: 'Treatment', en: 'Treatments' },
+  'nav.skincare': { id: 'Skincare', en: 'Skincare' },
   'nav.promo': { id: 'Promo', en: 'Promos' },
   'nav.howItWorks': { id: 'Cara Kerja', en: 'How It Works' },
   'nav.privilege': { id: 'Privilege Club', en: 'Privilege Club' },

@@ -45,10 +45,10 @@ const beauticianSeed = [
 
 // Skincare / retail products (for the closing-upsell 5% bonus).
 const productSeed = [
-  { id: 'prd-sunscreen', name: 'Sunscreen SPF50', price: 185_000 },
-  { id: 'prd-serum-vitc', name: 'Serum Vitamin C', price: 320_000 },
-  { id: 'prd-moisturizer', name: 'Barrier Moisturizer', price: 245_000 },
-  { id: 'prd-cleanser', name: 'Gentle Cleanser', price: 165_000 },
+  { id: 'prd-sunscreen', name: 'Sunscreen SPF50', price: 185_000, description: 'Perlindungan UVA/UVB harian, ringan & tidak lengket. 30 ml.' },
+  { id: 'prd-serum-vitc', name: 'Serum Vitamin C', price: 320_000, description: 'Mencerahkan & meratakan warna kulit. Antioksidan tinggi. 20 ml.' },
+  { id: 'prd-moisturizer', name: 'Barrier Moisturizer', price: 245_000, description: 'Menguatkan skin barrier, melembapkan tanpa berminyak. 50 ml.' },
+  { id: 'prd-cleanser', name: 'Gentle Cleanser', price: 165_000, description: 'Pembersih lembut pH seimbang untuk semua jenis kulit. 100 ml.' },
 ]
 
 export async function seedDatabase() {

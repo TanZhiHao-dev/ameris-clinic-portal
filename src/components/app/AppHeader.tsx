@@ -11,6 +11,7 @@ import { LanguageToggle } from './LanguageToggle'
 const NAV: { key: DictKey; to: string }[] = [
   { key: 'nav.home', to: '/' },
   { key: 'nav.treatment', to: '/treatment' },
+  { key: 'nav.skincare', to: '/skincare' },
   { key: 'nav.privilege', to: '/akun/privilege' },
 ]
 
