@@ -4,6 +4,7 @@ import { SiteHeader } from '../components/landing/SiteHeader'
 import { Hero } from '../components/landing/Hero'
 import { BrandStrip } from '../components/landing/BrandStrip'
 import { Catalog } from '../components/landing/Catalog'
+import { SkincareShowcase } from '../components/landing/SkincareShowcase'
 import { Promo } from '../components/landing/Promo'
 import { AboutMe } from '../components/landing/AboutMe'
 import { Loyalty } from '../components/landing/Loyalty'
@@ -34,6 +35,7 @@ function Home() {
         <Hero />
         <BrandStrip />
         <Catalog />
+        <SkincareShowcase />
         <Promo />
         <AboutMe />
         <Loyalty />

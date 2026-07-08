@@ -11,6 +11,7 @@ import { LanguageToggle } from '../app/LanguageToggle'
 // the browser navigates home first, then scrolls to the section.
 const NAV: { key: DictKey; href: string }[] = [
   { key: 'nav.treatment', href: '/#treatment' },
+  { key: 'nav.skincare', href: '/#skincare' },
   { key: 'nav.promo', href: '/#promo' },
   { key: 'nav.privilege', href: '/#privilege' },
   { key: 'nav.contact', href: '/#contact' },
