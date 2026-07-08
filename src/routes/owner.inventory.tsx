@@ -6,7 +6,7 @@ import { ownerArchiveItem, ownerImportInventory, ownerInventory, ownerItemMoveme
 
 export const Route = createFileRoute('/owner/inventory')({ component: InventoryAdmin })
 
-const CATS = ['Alat', 'Bahan', 'Obat', 'P3K'] as const
+const CATS = ['Alat', 'Bahan', 'Bahan - Treatment Baru', 'Skincare Retail', 'Obat', 'P3K & Emergency'] as const
 type Cat = (typeof CATS)[number]
 type Item = Awaited<ReturnType<typeof ownerInventory>>['items'][number]
 
@@ -39,7 +39,7 @@ function InventoryAdmin() {
         <div>
           <span className="eyebrow">Stok Klinik</span>
           <h1 className="mt-2 text-[2rem]">Inventory</h1>
-          <p className="mt-1 text-sm" style={{ color: 'var(--color-ink-muted)' }}>Alat, bahan, obat &amp; P3K — dengan riwayat keluar-masuk penuh.</p>
+          <p className="mt-1 text-sm" style={{ color: 'var(--color-ink-muted)' }}>Alat · bahan · treatment baru · skincare retail · obat · P3K — dengan riwayat keluar-masuk penuh.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" className="btn btn-ghost" onClick={() => setImporting(true)}><FileSpreadsheet size={18} /> Import Excel</button>
@@ -99,6 +99,7 @@ function InventoryAdmin() {
                   <td data-label="Stok" className="px-3 py-4">
                     <span className="mono text-base font-bold">{fmtStock(it.stock)}</span> <span style={{ color: 'var(--color-ink-muted)' }}>{it.unit}</span>
                     {it.low && <span className="ml-2 rounded-full px-2 py-0.5 text-[0.66rem] font-bold" style={{ background: 'var(--color-muted)', color: 'var(--color-rose)' }}>menipis</span>}
+                    {it.rawCount && <div className="mono text-[0.7rem]" style={{ color: 'var(--color-ink-muted)' }}>asli: {it.rawCount}</div>}
                   </td>
                   <td data-label="Kadaluarsa" className="px-3 py-4">
                     {it.expiry ? (
@@ -161,13 +162,13 @@ function Modal({ title, icon, onClose, children }: { title: string; icon: React.
 function ItemDialog({ item, onClose, onSaved }: { item: Item | null; onClose: () => void; onSaved: () => void }) {
   const [f, setF] = useState({
     name: item?.name ?? '', category: (item?.category as Cat) ?? 'Alat', spec: item?.spec ?? '', unit: item?.unit ?? 'pcs',
-    minStock: item ? String(item.minStock) : '0', expiry: item?.expiry ?? '', notes: item?.notes ?? '', initialStock: '0',
+    minStock: item ? String(item.minStock) : '0', rawCount: item?.rawCount ?? '', expiry: item?.expiry ?? '', notes: item?.notes ?? '', initialStock: '0',
   })
   const [err, setErr] = useState('')
   const save = useMutation({
     mutationFn: () => ownerSaveItem({ data: {
       id: item?.id, name: f.name.trim(), category: f.category, spec: f.spec.trim() || undefined, unit: f.unit.trim(),
-      minStock: parseFloat(f.minStock) || 0, expiry: f.expiry.trim(), notes: f.notes.trim() || undefined,
+      minStock: parseFloat(f.minStock) || 0, rawCount: f.rawCount.trim(), expiry: f.expiry.trim(), notes: f.notes.trim() || undefined,
       initialStock: item ? undefined : parseFloat(f.initialStock) || 0,
     } }),
     onSuccess: onSaved,
@@ -186,9 +187,10 @@ function ItemDialog({ item, onClose, onSaved }: { item: Item | null; onClose: ()
           <select className={inp} value={f.category} onChange={(e) => setF({ ...f, category: e.target.value as Cat })}>{CATS.map((c) => <option key={c} value={c}>{c}</option>)}</select>
           <input className={inp} placeholder="Satuan (pcs/botol/…)" value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} />
         </div>
-        <input className={inp} placeholder="Spesifikasi / ukuran (opsional)" value={f.spec} onChange={(e) => setF({ ...f, spec: e.target.value })} />
+        <input className={inp} placeholder="Spesifikasi / lini produk / kelompok (opsional)" value={f.spec} onChange={(e) => setF({ ...f, spec: e.target.value })} />
         <div className="grid grid-cols-2 gap-3">
-          {!item && <input className={inp} inputMode="decimal" placeholder="Stok awal" value={f.initialStock} onChange={(e) => setF({ ...f, initialStock: e.target.value })} />}
+          {!item && <input className={inp} inputMode="decimal" placeholder="Stok awal (angka)" value={f.initialStock} onChange={(e) => setF({ ...f, initialStock: e.target.value })} />}
+          <input className={inp} placeholder="Stok tulisan asli (mis. 2 + 1 + 4)" value={f.rawCount} onChange={(e) => setF({ ...f, rawCount: e.target.value })} />
           <input className={inp} inputMode="decimal" placeholder="Batas stok menipis" value={f.minStock} onChange={(e) => setF({ ...f, minStock: e.target.value })} />
           <input className={inp} placeholder="Kadaluarsa (YYYY-MM)" value={f.expiry} onChange={(e) => setF({ ...f, expiry: e.target.value })} />
         </div>
@@ -279,7 +281,17 @@ function HistoryDialog({ item, onClose }: { item: Item; onClose: () => void }) {
 }
 
 // ── Excel import ──
-const SHEET_CATEGORY: Record<string, Cat> = { alat: 'Alat', bahan: 'Bahan', obat: 'Obat', 'p3k & emergency': 'P3K', p3k: 'P3K' }
+const SHEET_CATEGORY: Record<string, Cat> = {
+  alat: 'Alat',
+  bahan: 'Bahan',
+  'bahan - treatment baru': 'Bahan - Treatment Baru',
+  'bahan treatment baru': 'Bahan - Treatment Baru',
+  'skincare retail': 'Skincare Retail',
+  skincare: 'Skincare Retail',
+  obat: 'Obat',
+  'p3k & emergency': 'P3K & Emergency',
+  p3k: 'P3K & Emergency',
+}
 const MONTHS: Record<string, number> = { jan: 1, feb: 2, mar: 3, apr: 4, mei: 5, may: 5, jun: 6, jul: 7, agu: 8, aug: 8, agt: 8, sep: 9, okt: 10, oct: 10, nov: 11, des: 12, dec: 12 }
 function normalizeExpiry(raw: string): string | undefined {
   const s = raw.trim().toLowerCase()
@@ -293,7 +305,7 @@ function normalizeExpiry(raw: string): string | undefined {
   }
   return raw.trim()
 }
-type ParsedRow = { category: Cat; name: string; spec?: string; unit?: string; stock?: number; expiry?: string; notes?: string }
+type ParsedRow = { category: Cat; name: string; spec?: string; unit?: string; stock?: number; rawCount?: string; expiry?: string; notes?: string }
 
 function ImportDialog({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const [rows, setRows] = useState<ParsedRow[] | null>(null)
@@ -312,35 +324,53 @@ function ImportDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
         const cat = SHEET_CATEGORY[sheetName.trim().toLowerCase()]
         if (!cat) continue
         const aoa = XLSX.utils.sheet_to_json<(string | number | null)[]>(wb.Sheets[sheetName], { header: 1, blankrows: false })
-        const hIdx = aoa.findIndex((r) => r.some((c) => typeof c === 'string' && /nama/i.test(c)))
+        // The real header row carries a name/produk column AND a satuan/stok/total
+        // column — this skips the title & subtitle rows (which also say "produk").
+        const hIdx = aoa.findIndex((r) => {
+          const cells = r.map((c) => (c == null ? '' : String(c)).trim().toLowerCase())
+          const hasName = cells.some((c) => /^nama\b/.test(c) || c === 'produk')
+          const hasQty = cells.some((c) => c === 'satuan' || c === 'total' || /^stok/.test(c))
+          return hasName && hasQty
+        })
         if (hIdx < 0) continue
         const header = aoa[hIdx].map((c) => (c == null ? '' : String(c)).trim().toLowerCase())
         const find = (pred: (h: string) => boolean) => header.findIndex(pred)
-        const iName = find((h) => h.includes('nama'))
+        // name = "Nama Item/Bahan/Obat" or (Skincare) "Produk"
+        const iName = find((h) => /^nama\b/.test(h) || h === 'produk')
+        // spec absorbs whichever grouping the sheet uses: Spesifikasi/Ukuran (Alat),
+        // Lini Produk (Skincare), or Kelompok (P3K).
         const iSpec = find((h) => h.includes('spesifikasi') || h.includes('ukuran'))
+        const iLini = find((h) => h.includes('lini'))
+        const iKelompok = find((h) => h.includes('kelompok'))
         const iTotal = find((h) => h === 'total')
-        const iStok = find((h) => h.startsWith('stok'))
+        const iStok = find((h) => /^stok/.test(h))
         const iUnit = find((h) => h.includes('satuan'))
         const iExp = find((h) => h.startsWith('exp'))
         const iNote = find((h) => h.includes('catatan'))
         const num = (v: unknown): number | undefined =>
           typeof v === 'number' && isFinite(v) ? v : typeof v === 'string' && /^\d+([.,]\d+)?$/.test(v.trim()) ? parseFloat(v.replace(',', '.')) : undefined
+        const cell = (i: number, row: (string | number | null)[]) => (i >= 0 && row[i] != null ? String(row[i]).trim() : '')
         for (let r = hIdx + 1; r < aoa.length; r++) {
           const row = aoa[r]
-          const nameCell = iName >= 0 ? row[iName] : null
-          if (typeof nameCell !== 'string' || !nameCell.trim()) continue
+          const name = cell(iName, row)
+          if (!name) continue
+          const spec = cell(iSpec, row) || cell(iLini, row) || cell(iKelompok, row)
+          // Keep the handwritten tally only when it isn't already a plain number.
+          const stokStr = cell(iStok, row)
+          const rawCount = stokStr && !/^\d+([.,]\d+)?$/.test(stokStr) ? stokStr : ''
           out.push({
             category: cat,
-            name: nameCell.trim(),
-            spec: iSpec >= 0 && typeof row[iSpec] === 'string' ? (row[iSpec] as string).trim() : undefined,
-            unit: iUnit >= 0 && row[iUnit] != null ? String(row[iUnit]).trim() : undefined,
+            name,
+            spec: spec || undefined,
+            unit: cell(iUnit, row) || undefined,
             stock: num(iTotal >= 0 ? row[iTotal] : undefined) ?? num(iStok >= 0 ? row[iStok] : undefined),
+            rawCount: rawCount || undefined,
             expiry: iExp >= 0 && row[iExp] != null ? normalizeExpiry(String(row[iExp])) : undefined,
-            notes: iNote >= 0 && row[iNote] != null ? String(row[iNote]).trim() || undefined : undefined,
+            notes: cell(iNote, row) || undefined,
           })
         }
       }
-      if (out.length === 0) throw new Error('Tidak menemukan data. Pastikan sheet bernama Alat / Bahan / Obat / P3K & Emergency dengan kolom "Nama…".')
+      if (out.length === 0) throw new Error('Tidak menemukan data. Pastikan tiap sheet bernama sesuai kategori (Alat, Bahan, Skincare Retail, Obat, P3K & Emergency, …) dengan kolom "Nama…"/"Produk".')
       setRows(out)
     } catch (e) {
       setErr((e as Error)?.message || 'Gagal membaca file Excel.')
@@ -376,7 +406,7 @@ function ImportDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
           <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed py-8 text-sm transition hover:bg-[var(--color-cream)]" style={{ borderColor: 'var(--color-line)', color: 'var(--color-ink-muted)' }}>
             <FileSpreadsheet size={26} style={{ color: 'var(--color-gold-deep)' }} />
             {fileName ? <span className="font-semibold" style={{ color: 'var(--color-ink)' }}>{fileName}</span> : <span>Pilih file .xlsx (Stock Opname)</span>}
-            <span className="text-[0.72rem]">Sheet: Alat · Bahan · Obat · P3K &amp; Emergency</span>
+            <span className="text-[0.72rem]">Sheet: Alat · Bahan · Bahan - Treatment Baru · Skincare Retail · Obat · P3K &amp; Emergency</span>
             <input type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) parse(f) }} />
           </label>
 

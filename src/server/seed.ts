@@ -295,17 +295,23 @@ export async function seedDatabase() {
   // ── Inventory (sample across the 4 categories; owner imports the real Stock
   // Opname from Excel). Includes an expired + a near-expiry obat and a
   // low-stock item so the alert strip is exercised. Each gets an opening move. ──
-  const invSeed: { id: string; name: string; category: string; spec?: string; unit: string; stock: number; minStock?: number; expiry?: string; notes?: string }[] = [
+  const invSeed: { id: string; name: string; category: string; spec?: string; unit: string; stock: number; rawCount?: string; minStock?: number; expiry?: string; notes?: string }[] = [
     { id: 'inv-showercap', name: 'Shower cap', category: 'Alat', unit: 'pcs', stock: 32 },
     { id: 'inv-spuit5', name: 'Spuit', category: 'Alat', spec: '5 cc', unit: 'pcs', stock: 2, minStock: 5 },
+    { id: 'inv-shaver', name: 'Shaver', category: 'Alat', unit: 'pcs', stock: 7, rawCount: '2 + 1 + 4', notes: 'dibuka 2' },
     { id: 'inv-aloe', name: 'Masker aloe vera', category: 'Bahan', unit: 'pcs', stock: 6 },
     { id: 'inv-serumbright', name: 'Serum brightening', category: 'Bahan', unit: 'botol', stock: 2, minStock: 3 },
+    { id: 'inv-botox', name: 'Botox', category: 'Bahan - Treatment Baru', unit: 'IU', stock: 60 },
+    { id: 'inv-remedium', name: 'Re Medium Filler', category: 'Bahan - Treatment Baru', unit: 'box', stock: 0, minStock: 1 },
+    { id: 'inv-fyp-serum', name: 'Serum', category: 'Skincare Retail', spec: 'FYP', unit: 'pcs', stock: 38 },
+    { id: 'inv-txera-cleanser', name: 'Cleanser', category: 'Skincare Retail', spec: 'Txera', unit: 'pcs', stock: 29 },
     { id: 'inv-lido', name: 'Lidocaine', category: 'Obat', unit: 'pcs', stock: 2, expiry: '2026-08', notes: 'kemungkinan Lidocaine' },
-    { id: 'inv-dextripa', name: 'Dextripa', category: 'Obat', unit: 'pcs', stock: 1, expiry: '2026-04', notes: 'SUDAH EXPIRED — segera diganti' },
+    { id: 'inv-biogastron', name: 'Bio gastron', category: 'Obat', unit: 'tablet', stock: 90, rawCount: '9 × 10', expiry: '2026-09', notes: 'exp 2 bulan lagi' },
     { id: 'inv-vistat', name: 'Vistat', category: 'Obat', unit: 'pcs', stock: 20 },
-    { id: 'inv-hansaplast', name: 'Hansaplast', category: 'P3K', unit: 'pcs', stock: 6 },
+    { id: 'inv-diphen', name: 'Diphenhydramine inj', category: 'P3K & Emergency', spec: 'Set P3K (1 set)', unit: 'pcs', stock: 2, expiry: '2026-02', notes: 'SUDAH EXPIRED — segera diganti' },
+    { id: 'inv-hansaplast', name: 'Hansaplast', category: 'P3K & Emergency', spec: 'P3K kecil', unit: 'pcs', stock: 6 },
   ]
-  await db.insert(inventoryItems).values(invSeed.map((i) => ({ ...i, spec: i.spec ?? null, minStock: i.minStock ?? 0, expiry: i.expiry ?? null, notes: i.notes ?? null })))
+  await db.insert(inventoryItems).values(invSeed.map((i) => ({ ...i, spec: i.spec ?? null, rawCount: i.rawCount ?? null, minStock: i.minStock ?? 0, expiry: i.expiry ?? null, notes: i.notes ?? null })))
   await db.insert(inventoryMovements).values(invSeed.map((i) => ({ id: randomUUID(), itemId: i.id, delta: i.stock, reason: 'opname', note: 'Stok awal (seed)', balanceAfter: i.stock })))
 
   // ── Loyalty ledger (Sarah / p1) ──

@@ -5,7 +5,7 @@ import { db } from '#/db'
 import { inventoryItems, inventoryMovements } from '#/db/schema'
 import { requireOwner, requireStaff } from './_session'
 
-const CATEGORIES = ['Alat', 'Bahan', 'Obat', 'P3K'] as const
+const CATEGORIES = ['Alat', 'Bahan', 'Bahan - Treatment Baru', 'Skincare Retail', 'Obat', 'P3K & Emergency'] as const
 const REASONS = ['pembelian', 'pemakaian', 'penyesuaian', 'opname', 'import'] as const
 
 const wibToday = () =>
@@ -34,6 +34,7 @@ const decorate = (r: typeof inventoryItems.$inferSelect) => ({
   spec: r.spec ?? '',
   unit: r.unit,
   stock: r.stock,
+  rawCount: r.rawCount ?? '',
   minStock: r.minStock,
   expiry: r.expiry ?? '',
   notes: r.notes ?? '',
@@ -75,6 +76,7 @@ export const ownerSaveItem = createServerFn({ method: 'POST' })
       category: z.enum(CATEGORIES),
       spec: z.string().optional(),
       unit: z.string().min(1),
+      rawCount: z.string().optional(), // '' clears
       minStock: z.number().nonnegative().optional(),
       expiry: z.string().optional(), // '' clears
       notes: z.string().optional(),
@@ -88,6 +90,7 @@ export const ownerSaveItem = createServerFn({ method: 'POST' })
       category: data.category,
       spec: data.spec?.trim() || null,
       unit: data.unit.trim(),
+      rawCount: data.rawCount?.trim() || null,
       minStock: data.minStock ?? 0,
       expiry: data.expiry?.trim() || null,
       notes: data.notes?.trim() || null,
@@ -181,6 +184,7 @@ export const ownerImportInventory = createServerFn({ method: 'POST' })
             spec: z.string().optional(),
             unit: z.string().optional(),
             stock: z.number().nonnegative().optional(),
+            rawCount: z.string().optional(),
             expiry: z.string().optional(),
             notes: z.string().optional(),
           }),
@@ -205,6 +209,8 @@ export const ownerImportInventory = createServerFn({ method: 'POST' })
         // Refresh metadata when the sheet provides it.
         const meta: Partial<typeof inventoryItems.$inferInsert> = { updatedAt: new Date() }
         if (row.unit) meta.unit = row.unit.trim()
+        if (row.rawCount !== undefined) meta.rawCount = row.rawCount.trim() || null
+        if (row.spec !== undefined && row.spec.trim()) meta.spec = row.spec.trim()
         if (row.expiry !== undefined) meta.expiry = row.expiry.trim() || null
         if (row.notes !== undefined) meta.notes = row.notes.trim() || null
         const stockChanged = row.stock !== undefined && Math.abs(newStock - found.stock) > 1e-9
@@ -223,7 +229,8 @@ export const ownerImportInventory = createServerFn({ method: 'POST' })
         const id = 'inv-' + crypto.randomUUID().slice(0, 8)
         await db.insert(inventoryItems).values({
           id, name: row.name.trim(), category: row.category, spec: row.spec?.trim() || null,
-          unit: row.unit?.trim() || 'pcs', stock: newStock, expiry: row.expiry?.trim() || null, notes: row.notes?.trim() || null,
+          unit: row.unit?.trim() || 'pcs', stock: newStock, rawCount: row.rawCount?.trim() || null,
+          expiry: row.expiry?.trim() || null, notes: row.notes?.trim() || null,
         })
         if (newStock > 0) {
           await db.insert(inventoryMovements).values({

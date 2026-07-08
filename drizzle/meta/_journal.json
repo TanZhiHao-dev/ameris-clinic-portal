@@ -127,6 +127,13 @@
       "when": 1783491553343,
       "tag": "0017_past_purifiers",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1783505930403,
+      "tag": "0018_short_doctor_spectrum",
+      "breakpoints": true
     }
   ]
 }

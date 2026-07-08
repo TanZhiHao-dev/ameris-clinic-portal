@@ -301,22 +301,33 @@ export const voucherRedemptions = pgTable('voucher_redemptions', {
 })
 
 // ── Inventory ──
-// Clinic supplies across 4 categories (matches the owner's Stock Opname sheets):
-// Alat (tools), Bahan (consumables), Obat (medicines), P3K (first-aid/emergency).
-// `stock` is the running balance; every change is also written to
-// inventory_movements so the in/out history is fully auditable.
-export type InventoryCategory = 'Alat' | 'Bahan' | 'Obat' | 'P3K'
+// Clinic supplies across the 6 Stock Opname categories the owner keeps:
+// Alat (tools), Bahan (consumables), Bahan - Treatment Baru (filler/threadlift
+// stock), Skincare Retail (finished retail SKUs), Obat (medicines), and
+// P3K & Emergency (first-aid). `stock` is the running balance; every change is
+// also written to inventory_movements so the in/out history is fully auditable.
+export type InventoryCategory =
+  | 'Alat'
+  | 'Bahan'
+  | 'Bahan - Treatment Baru'
+  | 'Skincare Retail'
+  | 'Obat'
+  | 'P3K & Emergency'
 
 export const inventoryItems = pgTable('inventory_items', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   category: text('category').notNull(),
-  // Optional spesifikasi/ukuran (e.g. Spuit "5 cc", Needle "30 × 13 mm").
+  // Optional spesifikasi/ukuran (Alat), lini produk (Skincare) or kelompok (P3K)
+  // — e.g. Spuit "5 cc", "FYP", "Set P3K".
   spec: text('spec'),
   unit: text('unit').notNull().default('pcs'), // satuan: pcs/unit/botol/pack/set/box…
   // Running balance. real (not integer) because the source data has fractions
   // like "5 ½" (cotton bud pack).
   stock: real('stock').notNull().default(0),
+  // The handwritten tally as re-scanned ("2 + 1 + 4", "5 × 10"), kept verbatim
+  // so a count can be reconciled against the original opname note.
+  rawCount: text('raw_count'),
   // Low-stock alert threshold; 0 = no alert.
   minStock: real('min_stock').notNull().default(0),
   // Expiry as 'YYYY-MM-DD' (or 'YYYY-MM'); null = not tracked / non-perishable.
