@@ -21,7 +21,17 @@ export const posCreateSale = createServerFn({ method: 'POST' })
   .validator(
     z.object({
       patientId: z.string(),
-      items: z.array(z.object({ treatmentId: z.string(), qty: z.number().int().positive() })).min(1),
+      items: z
+        .array(
+          z.object({
+            treatmentId: z.string(),
+            qty: z.number().int().positive(),
+            // Manual walk-in discount off the unit: 'rp' = rupiah, 'pct' = percent.
+            discountMode: z.enum(['rp', 'pct']).optional(),
+            discountValue: z.number().min(0).optional(),
+          }),
+        )
+        .min(1),
       beauticianId: z.string().nullable().optional(),
       doctorId: z.string().nullable().optional(),
       // Tunai (cash) = Offline; QRIS/transfer = Transfer.
@@ -40,12 +50,22 @@ export const posCreateSale = createServerFn({ method: 'POST' })
     const catalog = await db.select().from(treatments).where(inArray(treatments.id, ids))
     const byId = new Map(catalog.map((t) => [t.id, t]))
     let total = 0
+    let discountTotal = 0
     const rows = data.items.map((i) => {
       const t = byId.get(i.treatmentId)
       if (!t) throw new Error('Treatment tidak ditemukan.')
       const promo = t.isPromo && t.promoNow != null && t.promoNow < t.price
-      const unit = promo ? t.promoNow! : t.price
+      const catalogUnit = promo ? t.promoNow! : t.price
+      // Manual discount is authoritative-clamped from the catalog price, so it
+      // can only ever lower the price (a discount) — never mark it up.
+      const dv = i.discountValue ?? 0
+      const discPerUnit =
+        i.discountMode === 'pct'
+          ? Math.round((catalogUnit * Math.min(Math.max(dv, 0), 100)) / 100)
+          : Math.min(Math.max(dv, 0), catalogUnit)
+      const unit = Math.max(0, catalogUnit - discPerUnit)
       total += unit * i.qty
+      discountTotal += (catalogUnit - unit) * i.qty
       return { treatmentId: t.id, name: t.name, price: unit, qty: i.qty }
     })
 
@@ -60,6 +80,7 @@ export const posCreateSale = createServerFn({ method: 'POST' })
       bookingTime: wibTime.format(now),
       status: settled ? 'Selesai' : 'Hadir',
       total,
+      discountAmount: discountTotal,
       beauticianId: data.beauticianId ?? null,
       doctorId: data.doctorId ?? null,
       source: 'walkin',

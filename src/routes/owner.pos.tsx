@@ -11,7 +11,10 @@ import { posCreateSale } from '#/server/pos'
 
 export const Route = createFileRoute('/owner/pos')({ component: PosScreen })
 
-type CartLine = { id: string; name: string; price: number; qty: number }
+// price = catalog unit (promo-aware). disc = manual discount the staff grants
+// during a walk-in (doctor's special price / patient nego); discMode picks
+// whether disc is a rupiah amount or a percent off the unit.
+type CartLine = { id: string; name: string; price: number; qty: number; disc: number; discMode: 'rp' | 'pct' }
 type Done = { id: string; total: number; pointsAdded: number; settled: boolean }
 
 function PosScreen() {
@@ -53,12 +56,25 @@ function PosScreen() {
     setCart((c) => {
       const ex = c.find((l) => l.id === t.id)
       if (ex) return c.map((l) => (l.id === t.id ? { ...l, qty: l.qty + 1 } : l))
-      return [...c, { id: t.id, name: t.name, price, qty: 1 }]
+      return [...c, { id: t.id, name: t.name, price, qty: 1, disc: 0, discMode: 'rp' }]
     })
   }
   const setQty = (id: string, qty: number) =>
     setCart((c) => (qty <= 0 ? c.filter((l) => l.id !== id) : c.map((l) => (l.id === id ? { ...l, qty } : l))))
-  const total = cart.reduce((s, l) => s + l.price * l.qty, 0)
+  // Clamp the discount to its mode (0..100 for %, 0..unit price for Rp) so a
+  // line can never go negative or above 100%.
+  const setDisc = (id: string, raw: number) =>
+    setCart((c) => c.map((l) => (l.id === id ? { ...l, disc: Math.min(Math.max(0, Math.round(raw) || 0), l.discMode === 'pct' ? 100 : l.price) } : l)))
+  const setDiscMode = (id: string, mode: 'rp' | 'pct') =>
+    setCart((c) => c.map((l) => (l.id === id ? { ...l, discMode: mode, disc: 0 } : l)))
+  // Effective unit price after the manual discount.
+  const effUnit = (l: CartLine) => {
+    const d = l.discMode === 'pct' ? Math.round((l.price * l.disc) / 100) : l.disc
+    return Math.max(0, l.price - Math.max(0, d))
+  }
+  const subtotal = cart.reduce((s, l) => s + l.price * l.qty, 0)
+  const total = cart.reduce((s, l) => s + effUnit(l) * l.qty, 0)
+  const totalDiscount = subtotal - total
 
   // ── Performer (doctor OR beautician) + payment ──
   const { data: beauticians = [] } = useQuery({ queryKey: ['owner-beauticians'], queryFn: () => ownerBeauticians() })
@@ -78,7 +94,7 @@ function PosScreen() {
       posCreateSale({
         data: {
           patientId: patient!.id,
-          items: cart.map((l) => ({ treatmentId: l.id, qty: l.qty })),
+          items: cart.map((l) => ({ treatmentId: l.id, qty: l.qty, discountMode: l.discMode, discountValue: l.disc })),
           beauticianId: performer.startsWith('bt:') ? performer.slice(3) : null,
           doctorId: performer.startsWith('doc:') ? performer.slice(4) : null,
           paymentMethod: payMethod,
@@ -227,21 +243,54 @@ function PosScreen() {
               Belum ada treatment dipilih.
             </p>
           ) : (
-            <div className="mt-4 flex flex-col gap-3">
-              {cart.map((l) => (
-                <div key={l.id} className="flex items-center gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-semibold">{l.name}</div>
-                    <div className="mono text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>{formatRp(l.price)}</div>
+            <div className="mt-4 flex flex-col gap-3.5">
+              {cart.map((l) => {
+                const eff = effUnit(l)
+                const discounted = eff < l.price
+                return (
+                  <div key={l.id} className="flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-semibold">{l.name}</div>
+                        <div className="mono text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>
+                          {discounted ? (
+                            <><span className="line-through">{formatRp(l.price)}</span> <span className="font-semibold" style={{ color: 'var(--color-gold-deep)' }}>{formatRp(eff)}</span></>
+                          ) : (
+                            formatRp(l.price)
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button type="button" aria-label="Kurangi" onClick={() => setQty(l.id, l.qty - 1)} className="grid h-7 w-7 place-items-center rounded-full" style={{ border: '1px solid var(--color-line)' }}><Minus size={13} /></button>
+                        <span className="mono w-6 text-center text-sm font-bold">{l.qty}</span>
+                        <button type="button" aria-label="Tambah" onClick={() => setQty(l.id, l.qty + 1)} className="grid h-7 w-7 place-items-center rounded-full" style={{ border: '1px solid var(--color-line)' }}><Plus size={13} /></button>
+                      </div>
+                      <span className="mono w-20 shrink-0 text-right text-sm font-semibold">{formatRp(eff * l.qty)}</span>
+                    </div>
+                    {/* Manual discount — nominal (Rp) or percent (%) off the unit */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[0.7rem]" style={{ color: 'var(--color-ink-muted)' }}>Diskon</span>
+                      <input
+                        type="number" min={0} max={l.discMode === 'pct' ? 100 : l.price} inputMode="numeric"
+                        value={l.disc || ''} onChange={(e) => setDisc(l.id, Number(e.target.value))}
+                        placeholder="0" aria-label={`Diskon ${l.name}`}
+                        className="w-16 rounded-md border bg-white px-2 py-1 text-right text-[0.78rem] outline-none focus:border-[var(--color-gold)]"
+                        style={{ borderColor: 'var(--color-line)' }}
+                      />
+                      <div className="flex overflow-hidden rounded-md" style={{ border: '1px solid var(--color-line)' }}>
+                        {(['rp', 'pct'] as const).map((m) => (
+                          <button key={m} type="button" onClick={() => setDiscMode(l.id, m)} aria-pressed={l.discMode === m}
+                            className="px-2 py-1 text-[0.72rem] font-semibold transition"
+                            style={l.discMode === m ? { background: 'var(--color-gold)', color: '#3a2c0f' } : { color: 'var(--color-ink-muted)' }}>
+                            {m === 'rp' ? 'Rp' : '%'}
+                          </button>
+                        ))}
+                      </div>
+                      {discounted && <span className="mono ml-auto text-[0.7rem] font-semibold" style={{ color: 'var(--color-gold-deep)' }}>−{formatRp((l.price - eff) * l.qty)}</span>}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <button type="button" aria-label="Kurangi" onClick={() => setQty(l.id, l.qty - 1)} className="grid h-7 w-7 place-items-center rounded-full" style={{ border: '1px solid var(--color-line)' }}><Minus size={13} /></button>
-                    <span className="mono w-6 text-center text-sm font-bold">{l.qty}</span>
-                    <button type="button" aria-label="Tambah" onClick={() => setQty(l.id, l.qty + 1)} className="grid h-7 w-7 place-items-center rounded-full" style={{ border: '1px solid var(--color-line)' }}><Plus size={13} /></button>
-                  </div>
-                  <span className="mono w-20 shrink-0 text-right text-sm font-semibold">{formatRp(l.price * l.qty)}</span>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
 
@@ -281,6 +330,18 @@ function PosScreen() {
           </div>
 
           <div className="my-4 hairline-gold" />
+          {totalDiscount > 0 && (
+            <>
+              <div className="flex items-center justify-between text-sm" style={{ color: 'var(--color-ink-muted)' }}>
+                <span>Subtotal</span>
+                <span className="mono">{formatRp(subtotal)}</span>
+              </div>
+              <div className="mb-1.5 mt-1 flex items-center justify-between text-sm font-semibold" style={{ color: 'var(--color-gold-deep)' }}>
+                <span>Diskon</span>
+                <span className="mono">−{formatRp(totalDiscount)}</span>
+              </div>
+            </>
+          )}
           <div className="flex items-end justify-between">
             <span className="font-bold">Total</span>
             <span className="mono text-2xl font-extrabold gold-text">{formatRp(total)}</span>
