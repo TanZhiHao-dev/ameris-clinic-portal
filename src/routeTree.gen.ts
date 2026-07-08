@@ -19,11 +19,13 @@ import { Route as KeranjangRouteImport } from './routes/keranjang'
 import { Route as DokterRouteImport } from './routes/dokter'
 import { Route as BookingRouteImport } from './routes/booking'
 import { Route as AkunRouteImport } from './routes/akun'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TreatmentIndexRouteImport } from './routes/treatment.index'
 import { Route as OwnerIndexRouteImport } from './routes/owner.index'
 import { Route as DokterIndexRouteImport } from './routes/dokter.index'
 import { Route as AkunIndexRouteImport } from './routes/akun.index'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as TreatmentIdRouteImport } from './routes/treatment.$id'
 import { Route as OwnerVoucherRouteImport } from './routes/owner.voucher'
 import { Route as OwnerTreatmentRouteImport } from './routes/owner.treatment'
@@ -108,6 +110,11 @@ const AkunRoute = AkunRouteImport.update({
   path: '/akun',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -132,6 +139,11 @@ const AkunIndexRoute = AkunIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AkunRoute,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
 } as any)
 const TreatmentIdRoute = TreatmentIdRouteImport.update({
   id: '/treatment/$id',
@@ -301,6 +313,7 @@ const AkunBookingIdRoute = AkunBookingIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/akun': typeof AkunRouteWithChildren
   '/booking': typeof BookingRoute
   '/dokter': typeof DokterRouteWithChildren
@@ -334,6 +347,7 @@ export interface FileRoutesByFullPath {
   '/owner/treatment': typeof OwnerTreatmentRoute
   '/owner/voucher': typeof OwnerVoucherRoute
   '/treatment/$id': typeof TreatmentIdRoute
+  '/admin/': typeof AdminIndexRoute
   '/akun/': typeof AkunIndexRoute
   '/dokter/': typeof DokterIndexRoute
   '/owner/': typeof OwnerIndexRoute
@@ -381,6 +395,7 @@ export interface FileRoutesByTo {
   '/owner/treatment': typeof OwnerTreatmentRoute
   '/owner/voucher': typeof OwnerVoucherRoute
   '/treatment/$id': typeof TreatmentIdRoute
+  '/admin': typeof AdminIndexRoute
   '/akun': typeof AkunIndexRoute
   '/dokter': typeof DokterIndexRoute
   '/owner': typeof OwnerIndexRoute
@@ -399,6 +414,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/akun': typeof AkunRouteWithChildren
   '/booking': typeof BookingRoute
   '/dokter': typeof DokterRouteWithChildren
@@ -432,6 +448,7 @@ export interface FileRoutesById {
   '/owner/treatment': typeof OwnerTreatmentRoute
   '/owner/voucher': typeof OwnerVoucherRoute
   '/treatment/$id': typeof TreatmentIdRoute
+  '/admin/': typeof AdminIndexRoute
   '/akun/': typeof AkunIndexRoute
   '/dokter/': typeof DokterIndexRoute
   '/owner/': typeof OwnerIndexRoute
@@ -451,6 +468,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/akun'
     | '/booking'
     | '/dokter'
@@ -484,6 +502,7 @@ export interface FileRouteTypes {
     | '/owner/treatment'
     | '/owner/voucher'
     | '/treatment/$id'
+    | '/admin/'
     | '/akun/'
     | '/dokter/'
     | '/owner/'
@@ -531,6 +550,7 @@ export interface FileRouteTypes {
     | '/owner/treatment'
     | '/owner/voucher'
     | '/treatment/$id'
+    | '/admin'
     | '/akun'
     | '/dokter'
     | '/owner'
@@ -548,6 +568,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/akun'
     | '/booking'
     | '/dokter'
@@ -581,6 +602,7 @@ export interface FileRouteTypes {
     | '/owner/treatment'
     | '/owner/voucher'
     | '/treatment/$id'
+    | '/admin/'
     | '/akun/'
     | '/dokter/'
     | '/owner/'
@@ -599,6 +621,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
   AkunRoute: typeof AkunRouteWithChildren
   BookingRoute: typeof BookingRoute
   DokterRoute: typeof DokterRouteWithChildren
@@ -692,6 +715,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AkunRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -726,6 +756,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/akun/'
       preLoaderRoute: typeof AkunIndexRouteImport
       parentRoute: typeof AkunRoute
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/treatment/$id': {
       id: '/treatment/$id'
@@ -961,6 +998,16 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminRouteChildren {
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 interface AkunRouteChildren {
   AkunPrivilegeRoute: typeof AkunPrivilegeRoute
   AkunProfilRoute: typeof AkunProfilRoute
@@ -1044,6 +1091,7 @@ const OwnerRouteWithChildren = OwnerRoute._addFileChildren(OwnerRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
   AkunRoute: AkunRouteWithChildren,
   BookingRoute: BookingRoute,
   DokterRoute: DokterRouteWithChildren,

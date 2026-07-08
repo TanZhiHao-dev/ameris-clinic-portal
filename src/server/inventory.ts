@@ -3,7 +3,7 @@ import { asc, desc, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '#/db'
 import { inventoryItems, inventoryMovements } from '#/db/schema'
-import { requireOwner, requireStaff } from './_session'
+import { requireInventory } from './_session'
 
 const CATEGORIES = ['Alat', 'Bahan', 'Bahan - Treatment Baru', 'Skincare Retail', 'Obat', 'P3K & Emergency'] as const
 const REASONS = ['pembelian', 'pemakaian', 'penyesuaian', 'opname', 'import'] as const
@@ -45,7 +45,7 @@ const decorate = (r: typeof inventoryItems.$inferSelect) => ({
 export const ownerInventory = createServerFn({ method: 'GET' })
   .validator(z.object({ category: z.enum(CATEGORIES).optional(), q: z.string().optional() }).optional())
   .handler(async ({ data }) => {
-    await requireStaff()
+    await requireInventory()
     const rows = await db
       .select()
       .from(inventoryItems)
@@ -84,7 +84,7 @@ export const ownerSaveItem = createServerFn({ method: 'POST' })
     }),
   )
   .handler(async ({ data }) => {
-    await requireOwner()
+    await requireInventory()
     const patch = {
       name: data.name.trim(),
       category: data.category,
@@ -121,7 +121,7 @@ export const ownerStockMove = createServerFn({ method: 'POST' })
     }),
   )
   .handler(async ({ data }) => {
-    await requireStaff()
+    await requireInventory()
     const [item] = await db.select().from(inventoryItems).where(eq(inventoryItems.id, data.itemId)).limit(1)
     if (!item) throw new Error('Item tidak ditemukan.')
     const balanceAfter = Math.round((item.stock + data.delta) * 100) / 100
@@ -143,7 +143,7 @@ export const ownerStockMove = createServerFn({ method: 'POST' })
 export const ownerItemMovements = createServerFn({ method: 'GET' })
   .validator(z.object({ itemId: z.string() }))
   .handler(async ({ data }) => {
-    await requireStaff()
+    await requireInventory()
     const rows = await db
       .select()
       .from(inventoryMovements)
@@ -163,7 +163,7 @@ export const ownerItemMovements = createServerFn({ method: 'GET' })
 export const ownerArchiveItem = createServerFn({ method: 'POST' })
   .validator(z.object({ id: z.string(), archived: z.boolean() }))
   .handler(async ({ data }) => {
-    await requireOwner()
+    await requireInventory()
     await db.update(inventoryItems).set({ archived: data.archived, updatedAt: new Date() }).where(eq(inventoryItems.id, data.id))
     return { id: data.id, archived: data.archived }
   })
@@ -194,7 +194,7 @@ export const ownerImportInventory = createServerFn({ method: 'POST' })
     }),
   )
   .handler(async ({ data }) => {
-    await requireOwner()
+    await requireInventory()
     const existing = await db.select().from(inventoryItems)
     const key = (c: string, n: string, s: string | null | undefined) => `${c}||${n.trim().toLowerCase()}||${(s ?? '').trim().toLowerCase()}`
     const byKey = new Map(existing.map((r) => [key(r.category, r.name, r.spec), r]))

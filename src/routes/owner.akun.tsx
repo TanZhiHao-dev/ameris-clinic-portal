@@ -13,7 +13,7 @@ import {
 
 export const Route = createFileRoute('/owner/akun')({ component: AccountsAdmin })
 
-type Role = 'owner' | 'dokter' | 'pasien'
+type Role = 'owner' | 'admin' | 'dokter' | 'pasien'
 type Account = {
   id: string
   name: string
@@ -28,10 +28,11 @@ type Account = {
 
 const ROLE_META: Record<Role, { label: string; bg: string; color: string }> = {
   owner: { label: 'Owner', bg: 'rgba(154,115,32,0.14)', color: 'var(--color-gold-deep)' },
+  admin: { label: 'Admin', bg: 'rgba(120,90,160,0.14)', color: '#6b4e9e' },
   dokter: { label: 'Dokter', bg: 'rgba(47,111,106,0.14)', color: '#2f6f6a' },
   pasien: { label: 'Pasien', bg: 'rgba(140,124,106,0.16)', color: 'var(--color-ink-soft)' },
 }
-const ROLE_FILTERS = ['Semua', 'owner', 'dokter', 'pasien'] as const
+const ROLE_FILTERS = ['Semua', 'owner', 'admin', 'dokter', 'pasien'] as const
 
 const inp = 'w-full rounded-xl border bg-[var(--color-cream)] border-[var(--color-line)] px-4 py-2.5 text-sm outline-none focus:border-[var(--color-gold)]'
 
@@ -68,6 +69,7 @@ function AccountsAdmin() {
 
   const counts = {
     owner: accounts.filter((a) => a.role === 'owner').length,
+    admin: accounts.filter((a) => a.role === 'admin').length,
     dokter: accounts.filter((a) => a.role === 'dokter').length,
     pasien: accounts.filter((a) => a.role === 'pasien').length,
   }
@@ -86,7 +88,7 @@ function AccountsAdmin() {
           <span className="eyebrow">Kelola Akun</span>
           <h1 className="mt-2 text-[2rem]">Akun &amp; akses</h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-            {accounts.length} akun — {counts.owner} owner · {counts.dokter} dokter · {counts.pasien} pasien.
+            {accounts.length} akun — {counts.owner} owner · {counts.admin} admin · {counts.dokter} dokter · {counts.pasien} pasien.
           </p>
         </div>
         <button type="button" className="btn btn-gold" onClick={() => setCreating(true)}>
@@ -303,6 +305,7 @@ function AccountDialog({
                 onChange={(e) => set({ role: e.target.value as Role })}
               >
                 <option value="owner">Owner</option>
+                <option value="admin">Admin (inventory saja)</option>
                 <option value="dokter">Dokter</option>
                 <option value="pasien">Pasien</option>
               </select>
@@ -322,6 +325,12 @@ function AccountDialog({
               </label>
             )}
           </div>
+
+          {form.role === 'admin' && (
+            <p className="mt-4 rounded-xl px-4 py-3 text-[0.78rem]" style={{ background: 'rgba(120,90,160,0.1)', color: '#6b4e9e' }}>
+              Akun <b>Admin</b> hanya bisa mengelola <b>Inventory</b> (stok, opname, import) di halaman <span className="mono">/admin</span>. Tidak bisa melihat omzet, transaksi, pasien, atau bonus.
+            </p>
+          )}
 
           {isSelf && (
             <p className="mt-4 text-[0.78rem]" style={{ color: 'var(--color-ink-muted)' }}>

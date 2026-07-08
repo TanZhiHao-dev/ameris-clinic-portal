@@ -52,3 +52,14 @@ export async function requireStaff(): Promise<SessionUser> {
   }
   return u
 }
+
+// Inventory managers: the owner OR a dedicated inventory admin. Kept separate
+// from requireStaff so an inventory admin never gains patient/EMR/finance access.
+export async function requireInventory(): Promise<SessionUser> {
+  const u = await requireUser()
+  if (u.role !== 'owner' && u.role !== 'admin') {
+    setResponseStatus(403)
+    throw new Error('Akses khusus owner / admin.')
+  }
+  return u
+}

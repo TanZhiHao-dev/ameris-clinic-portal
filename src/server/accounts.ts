@@ -8,12 +8,14 @@ import { account, user } from '#/db/auth-schema'
 import { auth } from '#/lib/auth'
 import { requireOwner } from './_session'
 
-// The three account roles the clinic portal recognises.
-const ROLES = ['owner', 'dokter', 'pasien'] as const
+// The account roles the clinic portal recognises. 'admin' is an inventory-only
+// operator (see requireInventory) — no finance/patient access.
+const ROLES = ['owner', 'admin', 'dokter', 'pasien'] as const
 type Role = (typeof ROLES)[number]
-const roleOrder: Record<string, number> = { owner: 0, dokter: 1, pasien: 2 }
+const roleOrder: Record<string, number> = { owner: 0, admin: 1, dokter: 2, pasien: 3 }
 
-const normalizeRole = (r: string | null): Role => (r === 'owner' || r === 'dokter' ? r : 'pasien')
+const normalizeRole = (r: string | null): Role =>
+  r === 'owner' || r === 'admin' || r === 'dokter' ? r : 'pasien'
 const normalizeEmail = (e: string) => e.trim().toLowerCase()
 
 function accountShape(u: typeof user.$inferSelect, bookingCount: number) {

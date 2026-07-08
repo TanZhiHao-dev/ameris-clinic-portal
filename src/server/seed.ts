@@ -121,11 +121,24 @@ export async function seedDatabase() {
     })),
   )
 
+  // ── Inventory admin (role 'admin') — inventory-only console at /admin ──
+  await db.insert(user).values({
+    id: 'admin-ameris',
+    name: 'Admin Inventory',
+    email: 'admin@ameris.local',
+    emailVerified: true,
+    role: 'admin',
+    phone: '0811-0000-0009',
+    birthDate: '1995-05-05',
+    loyaltyPoints: 0,
+    createdAt: new Date('2026-02-01'),
+  })
+
   // ── Credential passwords (email + password auth) ──
   // One Better-Auth-hashed password row per user; everyone shares DEMO_PASSWORD.
   const ctx = await auth.$context
   const passwordHash = await ctx.password.hash(DEMO_PASSWORD)
-  const allUserIds = ['owner-meriana', ...patients.map((p) => p.id), ...doctors.map((d) => d.id)]
+  const allUserIds = ['owner-meriana', 'admin-ameris', ...patients.map((p) => p.id), ...doctors.map((d) => d.id)]
   await db.insert(account).values(
     allUserIds.map((uid) => ({
       id: randomUUID(),

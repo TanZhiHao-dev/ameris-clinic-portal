@@ -46,11 +46,11 @@ function AuthPage() {
     const role = (data?.user as { role?: string } | undefined)?.role
     // Patients who arrived via a gate (e.g. /booking) go straight back there.
     // Staff always land on their console — a redirect param never overrides it.
-    if (backTo && role !== 'owner' && role !== 'dokter') {
+    if (backTo && role !== 'owner' && role !== 'admin' && role !== 'dokter') {
       navigate({ to: backTo as '/' })
       return
     }
-    navigate({ to: role === 'owner' ? '/owner' : role === 'dokter' ? '/dokter' : '/akun' })
+    navigate({ to: role === 'owner' ? '/owner' : role === 'admin' ? '/admin' : role === 'dokter' ? '/dokter' : '/akun' })
   }
 
   async function submit() {
