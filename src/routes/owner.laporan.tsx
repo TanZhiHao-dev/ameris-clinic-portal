@@ -29,9 +29,14 @@ function OwnerReport() {
   const rows = data?.rows ?? []
   const summary = data?.summary ?? []
 
+  // Who performed the visit: the beautician, else the doctor (doctor-led), else
+  // an explicit "no facial" mark, else still unassigned.
+  const performerLabel = (r: (typeof rows)[number]) =>
+    r.beauticianName ?? (r.doctorName ? `${r.doctorName} (dokter)` : r.noFacial ? 'Tanpa facial (dokter)' : '')
+
   const exportCsv = () => {
-    const header = ['Tanggal', 'Waktu', 'Nama Pasien', 'Treatment', 'Harga Treatment', 'Beautician', 'Bonus']
-    const body = rows.map((r) => [r.date, r.time, r.patientName, r.treatments.join('; '), r.total, r.beauticianName ?? '', r.bonus])
+    const header = ['Tanggal', 'Waktu', 'Nama Pasien', 'Treatment', 'Harga Treatment', 'Dikerjakan', 'Bonus']
+    const body = rows.map((r) => [r.date, r.time, r.patientName, r.treatments.join('; '), r.total, performerLabel(r) || 'belum diisi', r.beauticianName ? r.bonus : 0])
     const csv = [header, ...body].map((row) => row.map(csvCell).join(',')).join('\n')
     // Prepend a UTF-8 BOM so Excel opens Indonesian names in the right encoding.
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
@@ -91,7 +96,8 @@ function OwnerReport() {
       {/* Per-beautician bonus summary */}
       {summary.length > 0 && (
         <div className="mt-6">
-          <h2 className="flex items-center gap-2 text-sm font-bold"><HandHeart size={16} style={{ color: 'var(--color-gold-deep)' }} /> Bonus per beautician</h2>
+          <h2 className="flex items-center gap-2 text-sm font-bold"><HandHeart size={16} style={{ color: 'var(--color-gold-deep)' }} /> Bonus per beautician <span className="text-[0.72rem] font-normal" style={{ color: 'var(--color-ink-muted)' }}>· bonus per-tindakan saja</span></h2>
+          <p className="mt-1 text-[0.76rem]" style={{ color: 'var(--color-ink-muted)' }}>Bonus lengkap (closing/upselling, asistensi, target omzet Rp100jt) ada di menu <b>Bonus Staf</b>.</p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {summary.map((s) => (
               <div key={s.id} className="card-soft flex items-center justify-between gap-3 p-4">
@@ -125,7 +131,7 @@ function OwnerReport() {
               <th className="px-3 py-4 font-semibold">Nama Pasien</th>
               <th className="px-3 py-4 font-semibold">Treatment</th>
               <th className="px-3 py-4 font-semibold">Harga</th>
-              <th className="px-3 py-4 font-semibold">Beautician</th>
+              <th className="px-3 py-4 font-semibold">Dikerjakan</th>
               <th className="px-3 py-4 font-semibold">Bonus</th>
             </tr>
           </thead>
@@ -141,14 +147,18 @@ function OwnerReport() {
                   <td data-label="Pasien" className="px-3 py-4">{r.patientName}</td>
                   <td data-label="Treatment" className="px-3 py-4">{r.treatments.join(', ')}</td>
                   <td data-label="Harga" className="mono px-3 py-4">{formatRp(r.total)}</td>
-                  <td data-label="Beautician" className="px-3 py-4">
+                  <td data-label="Dikerjakan" className="px-3 py-4">
                     {r.beauticianName ? (
                       <span className="font-semibold">{r.beauticianName}</span>
+                    ) : r.doctorName ? (
+                      <span className="font-semibold">{r.doctorName} <span className="text-[0.72rem] font-normal" style={{ color: 'var(--color-ink-muted)' }}>· dokter</span></span>
+                    ) : r.noFacial ? (
+                      <span className="text-[0.8rem]" style={{ color: 'var(--color-ink-muted)' }}>Tanpa facial · dokter</span>
                     ) : (
                       <span className="text-[0.8rem] italic" style={{ color: 'var(--color-rose)' }}>belum diisi</span>
                     )}
                   </td>
-                  <td data-label="Bonus" className="mono px-3 py-4 font-semibold" style={{ color: 'var(--color-gold-deep)' }}>{r.bonus > 0 ? formatRp(r.bonus) : '—'}</td>
+                  <td data-label="Bonus" className="mono px-3 py-4 font-semibold" style={{ color: 'var(--color-gold-deep)' }}>{r.beauticianName && r.bonus > 0 ? formatRp(r.bonus) : '—'}</td>
                 </tr>
               ))
             )}

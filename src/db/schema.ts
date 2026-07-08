@@ -140,6 +140,10 @@ export const bookings = pgTable('bookings', {
   // null = performed by a beautician or not attributed. Kept separate so the
   // per-treatment beautician bonus never lands on a doctor.
   doctorId: text('doctor_id'),
+  // Owner marked this visit as doctor-led with NO facial step, so no beautician
+  // is expected to perform it (they only assist). Distinguishes an intentional
+  // "no facial" from a not-yet-attributed visit in the report.
+  noFacial: boolean('no_facial').notNull().default(false),
   // How the booking was created: 'online' = patient self-booked via the portal,
   // 'walkin' = staff created it at the clinic (POS / doctor consultation).
   source: text('source').notNull().default('online'),

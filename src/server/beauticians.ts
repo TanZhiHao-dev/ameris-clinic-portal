@@ -38,11 +38,14 @@ export const ownerSaveBeautician = createServerFn({ method: 'POST' })
 
 // ── Attribute a visit to the beautician who performed it (owner or doctor) ──
 export const ownerSetBookingBeautician = createServerFn({ method: 'POST' })
-  .validator(z.object({ bookingId: z.string(), beauticianId: z.string().nullable() }))
+  .validator(z.object({ bookingId: z.string(), beauticianId: z.string().nullable(), noFacial: z.boolean().optional() }))
   .handler(async ({ data }) => {
     await requireStaff()
-    await db.update(bookings).set({ beauticianId: data.beauticianId }).where(eq(bookings.id, data.bookingId))
-    return { bookingId: data.bookingId, beauticianId: data.beauticianId }
+    // Picking a beautician clears the "no facial" mark; marking "no facial"
+    // clears any beautician — the two are mutually exclusive.
+    const noFacial = data.noFacial ?? false
+    await db.update(bookings).set({ beauticianId: noFacial ? null : data.beauticianId, noFacial }).where(eq(bookings.id, data.bookingId))
+    return { bookingId: data.bookingId, beauticianId: noFacial ? null : data.beauticianId, noFacial }
   })
 
 // Completed visits in a date range, decorated with patient name, treatments, the
@@ -53,11 +56,14 @@ async function completedVisits(from?: string, to?: string) {
   const conds = [eq(bookings.status, 'Selesai')]
   if (from) conds.push(gte(bookings.bookingDate, from))
   if (to) conds.push(lte(bookings.bookingDate, to))
-  const bks = await db
+  // Skincare pickup orders are retail sales, not clinic visits — keep them out
+  // of the visit report (they still count in Transaksi + the bonus revenue).
+  const bks = (await db
     .select()
     .from(bookings)
     .where(and(...conds))
     .orderBy(desc(bookings.bookingDate), asc(bookings.bookingTime))
+  ).filter((b) => b.source !== 'skincare')
 
   const [bts, trs, users] = await Promise.all([
     db.select().from(beauticians),
@@ -93,6 +99,9 @@ async function completedVisits(from?: string, to?: string) {
       total: b.total,
       beauticianId: b.beauticianId ?? null,
       beauticianName: b.beauticianId ? btName.get(b.beauticianId) ?? '(dihapus)' : null,
+      doctorId: b.doctorId ?? null,
+      doctorName: b.doctorId ? patientName.get(b.doctorId) ?? '(dokter)' : null,
+      noFacial: b.noFacial ?? false,
       bonus,
     }
   })
@@ -108,7 +117,9 @@ export const ownerVisitReport = createServerFn({ method: 'GET' })
     let unattributed = 0
     for (const r of rows) {
       if (!r.beauticianId) {
-        unattributed++
+        // Doctor-led or explicitly marked "no facial" visits are intentionally
+        // beauticianless — only genuinely unresolved facial visits are flagged.
+        if (!r.doctorId && !r.noFacial) unattributed++
         continue
       }
       const cur = byBt.get(r.beauticianId) ?? { id: r.beauticianId, name: r.beauticianName ?? '—', visits: 0, revenue: 0, bonus: 0 }
@@ -122,6 +133,8 @@ export const ownerVisitReport = createServerFn({ method: 'GET' })
       summary: [...byBt.values()].sort((a, b) => b.bonus - a.bonus),
       unattributed,
       totalRevenue: rows.reduce((s, r) => s + r.total, 0),
-      totalBonus: rows.reduce((s, r) => s + r.bonus, 0),
+      // Per-treatment bonus is only earned by an actual beautician performer —
+      // doctor-led / no-facial visits earn none even if the treatment lists one.
+      totalBonus: rows.reduce((s, r) => s + (r.beauticianId ? r.bonus : 0), 0),
     }
   })

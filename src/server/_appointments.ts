@@ -39,6 +39,8 @@ export async function assemble(bks: (typeof bookings.$inferSelect)[]) {
       discount: b.discountAmount ?? 0,
       hasVoucher: !!b.voucherId, // voucher bookings are excluded from inline editing
       beauticianId: b.beauticianId ?? null, // who performed the visit (owner-set on the schedule)
+      noFacial: b.noFacial ?? false, // owner marked as doctor-led / no facial step
+      doctorId: b.doctorId ?? null, // doctor performer (POS doctor-led)
     }
   })
 }

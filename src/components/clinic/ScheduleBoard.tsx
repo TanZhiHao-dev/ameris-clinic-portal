@@ -40,7 +40,7 @@ export function ScheduleBoard() {
   }
 
   const setBeauticianMut = useMutation({
-    mutationFn: (v: { bookingId: string; beauticianId: string | null }) => ownerSetBookingBeautician({ data: v }),
+    mutationFn: (v: { bookingId: string; beauticianId: string | null; noFacial?: boolean }) => ownerSetBookingBeautician({ data: v }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['owner-jadwal'] })
       qc.invalidateQueries({ queryKey: ['owner-visit-report'] })
@@ -187,20 +187,28 @@ export function ScheduleBoard() {
               <div className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3">
                 <HandHeart size={15} style={{ color: 'var(--color-gold-deep)' }} />
                 <span className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>Dikerjakan:</span>
-                {activeBeauticians.length === 0 && !b.beauticianId ? (
+                {activeBeauticians.length === 0 && !b.beauticianId && !b.noFacial ? (
                   <span className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>
                     belum ada beautician — tambah di menu Beautician
                   </span>
                 ) : (
                   <select
-                    value={b.beauticianId ?? ''}
+                    value={b.noFacial ? '__nofacial__' : (b.beauticianId ?? '')}
                     disabled={setBeauticianMut.isPending}
-                    onChange={(e) => setBeauticianMut.mutate({ bookingId: b.id, beauticianId: e.target.value || null })}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setBeauticianMut.mutate({
+                        bookingId: b.id,
+                        beauticianId: v === '__nofacial__' || v === '' ? null : v,
+                        noFacial: v === '__nofacial__',
+                      })
+                    }}
                     className="rounded-lg border bg-white px-2.5 py-1.5 text-sm font-semibold outline-none disabled:opacity-60"
-                    style={{ borderColor: b.beauticianId ? 'var(--color-line)' : 'var(--color-gold)', color: 'var(--color-ink)' }}
+                    style={{ borderColor: b.beauticianId || b.noFacial ? 'var(--color-line)' : 'var(--color-gold)', color: 'var(--color-ink)' }}
                     aria-label={`Beautician untuk ${b.patientName}`}
                   >
                     <option value="">— pilih beautician —</option>
+                    <option value="__nofacial__">Tidak ada tindakan facial (dokter)</option>
                     {beauticianOptions(b.beauticianId).map((bt) => (
                       <option key={bt.id} value={bt.id}>{bt.name}{bt.isActive ? '' : ' (nonaktif)'}</option>
                     ))}
