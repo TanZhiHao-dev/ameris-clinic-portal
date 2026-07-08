@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { and, desc, eq, inArray, ne, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '#/db'
-import { bookingItems, bookings, loyaltyTransactions, transactions, treatments, voucherRedemptions } from '#/db/schema'
+import { bookingItems, bookings, loyaltyTransactions, products, transactions, treatments, voucherRedemptions } from '#/db/schema'
 import { user } from '#/db/auth-schema'
 import { loyaltyPointsFor } from '#/data/clinic'
 import { requireOwner, requireStaff, requireUser } from './_session'
@@ -16,6 +16,9 @@ export const createBooking = createServerFn({ method: 'POST' })
   .validator(
     z.object({
       items: z.array(z.object({ treatmentId: z.string(), qty: z.number().int().positive() })).min(1),
+      // Skincare products bought together with the treatment(s) — no voucher, no
+      // slot of their own; they ride along and are picked up at the visit.
+      productItems: z.array(z.object({ productId: z.string(), qty: z.number().int().positive() })).optional(),
       bookingDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       bookingTime: z.string(),
       paymentMethod: z.enum(['Online', 'Offline', 'Transfer']),
@@ -98,7 +101,21 @@ export const createBooking = createServerFn({ method: 'POST' })
         }
       }
     }
-    const total = Math.max(0, subtotal - discount)
+    // Skincare ride-along items — validated against the product catalog, added
+    // to the total after the (treatment-only) voucher discount.
+    const productRows: { name: string; price: number; qty: number }[] = []
+    if (data.productItems?.length) {
+      const pids = [...new Set(data.productItems.map((i) => i.productId))]
+      const prods = await db.select().from(products).where(inArray(products.id, pids))
+      const pById = new Map(prods.map((p) => [p.id, p]))
+      for (const i of data.productItems) {
+        const p = pById.get(i.productId)
+        if (!p || !p.isActive) throw new Error('Produk skincare tidak tersedia.')
+        productRows.push({ name: p.name, price: p.price, qty: i.qty })
+      }
+    }
+    const productSubtotal = productRows.reduce((s, r) => s + r.price * r.qty, 0)
+    const total = Math.max(0, subtotal - discount) + productSubtotal
 
     try {
       await db.insert(bookings).values({
@@ -111,8 +128,8 @@ export const createBooking = createServerFn({ method: 'POST' })
         voucherId: appliedVoucherId,
         discountAmount: discount,
       })
-      await db.insert(bookingItems).values(
-        rows.map((r) => ({
+      await db.insert(bookingItems).values([
+        ...rows.map((r) => ({
           id: crypto.randomUUID(),
           bookingId: id,
           treatmentId: r.treatmentId,
@@ -120,7 +137,15 @@ export const createBooking = createServerFn({ method: 'POST' })
           priceAtBooking: r.price,
           qty: r.qty,
         })),
-      )
+        ...productRows.map((r) => ({
+          id: crypto.randomUUID(),
+          bookingId: id,
+          treatmentId: null,
+          nameAtBooking: r.name,
+          priceAtBooking: r.price,
+          qty: r.qty,
+        })),
+      ])
       await db.insert(transactions).values({
         id: crypto.randomUUID(),
         bookingId: id,

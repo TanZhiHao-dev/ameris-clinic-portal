@@ -23,6 +23,7 @@ import { useSession } from '../lib/auth-client'
 import { gaItems, track } from '../lib/analytics'
 import { clinic, formatRp, loyaltyPointsFor, treatments } from '../data/clinic'
 import { createBooking, slotAvailability } from '../server/bookings'
+import { createProductOrder } from '../server/products'
 import { previewBestVoucher } from '../server/vouchers'
 import { useMidtransPay, type PayOutcome } from '../lib/useMidtransPay'
 import { getVisual } from '../components/landing/TreatmentThumb'
@@ -50,10 +51,16 @@ type Confirmation = {
   time: string
   payment: 'online' | 'klinik' | 'transfer'
   payOutcome: PayOutcome | null // null = transfer bank / bayar di klinik (tidak ada gateway)
+  pickup?: boolean // skincare-only order — no slot, picked up at the clinic
 }
 
 function BookingPage() {
   const { items, subtotal, clear, hydrated } = useCart()
+  // Split the unified cart: treatments need a slot; skincare rides along (or, on
+  // its own, becomes a pickup order with no slot at all).
+  const treatItems = useMemo(() => items.filter((i) => i.kind !== 'skincare'), [items])
+  const skinItems = useMemo(() => items.filter((i) => i.kind === 'skincare'), [items])
+  const skincareOnly = items.length > 0 && treatItems.length === 0
   const qc = useQueryClient()
   const { pay, dialog, busy } = useMidtransPay()
   // createBooking() requires a signed-in user; gate the confirm CTA client-side
@@ -113,7 +120,10 @@ function BookingPage() {
     if (time && takenSet.has(time)) setTime('')
   }, [takenSet, time])
 
-  const ready = date && time && items.length > 0
+  // Skincare-only orders are pickup — no slot needed; treatment carts still need date+time.
+  const ready = items.length > 0 && (skincareOnly || Boolean(date && time))
+  // The online gateway needs a treatment booking — skincare pickup uses transfer/klinik.
+  useEffect(() => { if (skincareOnly && payment === 'online') setPayment('transfer') }, [skincareOnly, payment])
 
   // Funnel events — one hit per visit, not per re-render.
   const trackedCheckout = useRef(false)
@@ -138,9 +148,9 @@ function BookingPage() {
     queryKey: ['best-voucher', itemsKey, voucherTarget],
     queryFn: () =>
       previewBestVoucher({
-        data: { items: items.map((i) => ({ treatmentId: i.id, qty: i.qty })), targetTreatmentId: voucherTarget ?? undefined },
+        data: { items: treatItems.map((i) => ({ treatmentId: i.id, qty: i.qty })), targetTreatmentId: voucherTarget ?? undefined },
       }),
-    enabled: hydrated && items.length > 0,
+    enabled: hydrated && treatItems.length > 0,
     retry: false,
   })
   const voucher = preview?.voucher ?? null
@@ -148,9 +158,12 @@ function BookingPage() {
   const discount = preview?.discount ?? 0
   const targets = preview?.targets ?? []
   const appliedTarget = preview?.targetTreatmentId ?? null
-  // Prefer authoritative server numbers; fall back to the cart estimate while loading.
-  const displaySubtotal = preview?.subtotal ?? subtotal
-  const discountedTotal = preview?.total ?? Math.max(0, subtotal - discount)
+  // Prefer authoritative server numbers; fall back to the cart estimate while
+  // loading. The voucher only touches treatments — skincare is added on top.
+  const skincareSubtotal = skinItems.reduce((s, i) => s + i.price * i.qty, 0)
+  const treatSubtotal = preview?.subtotal ?? treatItems.reduce((s, i) => s + i.price * i.qty, 0)
+  const displaySubtotal = treatSubtotal + skincareSubtotal
+  const discountedTotal = (preview?.total ?? Math.max(0, treatSubtotal - discount)) + skincareSubtotal
 
   const payNow =
     payment === 'klinik' ? 0 : payment === 'transfer' ? discountedTotal : plan === 'dp' ? Math.round(discountedTotal / 2) : discountedTotal
@@ -159,15 +172,41 @@ function BookingPage() {
     mutationFn: (v: Parameters<typeof createBooking>[0]['data']) =>
       createBooking({ data: v }),
   })
-  const submitting = createMut.isPending || busy
+  const productOrderMut = useMutation({
+    mutationFn: (v: Parameters<typeof createProductOrder>[0]['data']) => createProductOrder({ data: v }),
+  })
+  const submitting = createMut.isPending || productOrderMut.isPending || busy
 
   const confirm = async () => {
     if (!ready || submitting) return
     setErrMsg('')
+
+    // Skincare-only → a pickup order: no slot, no voucher, no payment gateway.
+    if (skincareOnly) {
+      let pres
+      try {
+        pres = await productOrderMut.mutateAsync({
+          items: skinItems.map((i) => ({ productId: i.id, qty: i.qty })),
+          paymentMethod: payment === 'transfer' ? 'Transfer' : 'Offline',
+        })
+      } catch (e) {
+        const msg = (e as Error)?.message ?? ''
+        setErrMsg(msg.includes('masuk') ? 'Sesi kamu sudah berakhir. Silakan masuk lagi — keranjangmu tetap tersimpan.' : msg || 'Terjadi kesalahan. Coba lagi ya.')
+        return
+      }
+      track('purchase', { transaction_id: pres.id, currency: 'IDR', value: pres.total, payment_method: payment, items: gaItems(items) })
+      setDone({ id: pres.id, items: [...items], total: pres.total, discount: 0, voucherName: null, date: '', time: '', payment: payment === 'transfer' ? 'transfer' : 'klinik', payOutcome: null, pickup: true })
+      clear()
+      qc.invalidateQueries()
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+
     let res
     try {
       res = await createMut.mutateAsync({
-        items: items.map((i) => ({ treatmentId: i.id, qty: i.qty })),
+        items: treatItems.map((i) => ({ treatmentId: i.id, qty: i.qty })),
+        productItems: skinItems.length ? skinItems.map((i) => ({ productId: i.id, qty: i.qty })) : undefined,
         bookingDate: date,
         bookingTime: time,
         paymentMethod: payment === 'online' ? 'Online' : payment === 'transfer' ? 'Transfer' : 'Offline',
@@ -262,8 +301,14 @@ function BookingPage() {
                 </div>
                 <div className="my-4 hairline-gold" />
                 <dl className="flex flex-col gap-3 text-sm">
-                  <Row label="Tanggal" value={prettyDate(done.date)} />
-                  <Row label="Jam" value={`${done.time} WIB`} />
+                  {done.pickup ? (
+                    <Row label="Pengambilan" value="Ambil di klinik" />
+                  ) : (
+                    <>
+                      <Row label="Tanggal" value={prettyDate(done.date)} />
+                      <Row label="Jam" value={`${done.time} WIB`} />
+                    </>
+                  )}
                   <Row label="Pembayaran" value={payValue} />
                 </dl>
                 <div className="my-4 hairline-gold" />
@@ -333,10 +378,10 @@ function BookingPage() {
       {dialog}
       <section className="py-10 pb-28 sm:py-14 lg:pb-14" style={{ background: 'var(--color-cream)' }}>
         <div className="shell-x">
-          <span className="eyebrow">Booking</span>
-          <h1 className="mt-2 text-[2.2rem] sm:text-[2.8rem]">Atur jadwal kunjunganmu</h1>
+          <span className="eyebrow">{skincareOnly ? 'Pesanan skincare' : 'Booking'}</span>
+          <h1 className="mt-2 text-[2.2rem] sm:text-[2.8rem]">{skincareOnly ? 'Konfirmasi pesanan' : 'Atur jadwal kunjunganmu'}</h1>
           <p className="mt-2 text-[1rem]" style={{ color: 'var(--color-ink-soft)' }}>
-            Pilih tanggal &amp; jam, lalu metode pembayaran. Hanya butuh satu menit.
+            {skincareOnly ? 'Produk skincare diambil di klinik — cukup pilih metode pembayaran.' : 'Pilih tanggal & jam, lalu metode pembayaran. Hanya butuh satu menit.'}
           </p>
 
           {guest && (
@@ -359,7 +404,8 @@ function BookingPage() {
           <div className="mt-8 grid items-start gap-6 lg:grid-cols-[1.55fr_1fr]">
             {/* ── Form ── */}
             <div className="flex flex-col gap-6">
-              {/* Step 1 — Schedule */}
+              {/* Step 1 — Schedule (treatments need a slot; skincare-only = pickup) */}
+              {!skincareOnly ? (
               <div className="card-soft p-6 sm:p-7">
                 <StepHead n="1" title="Pilih tanggal & jam" icon={<CalendarCheck size={17} />} />
 
@@ -465,14 +511,22 @@ function BookingPage() {
                   </>
                 )}
               </div>
+              ) : (
+                <div className="card-soft p-6 sm:p-7">
+                  <StepHead n="1" title="Ambil di klinik" icon={<ShoppingBag size={17} />} />
+                  <p className="mt-4 rounded-xl px-4 py-3 text-sm" style={{ background: 'var(--color-cream)', color: 'var(--color-ink-muted)' }}>
+                    🛍️ Pesanan skincare <b>tanpa perlu pilih jadwal</b> — cukup selesaikan pembayaran, lalu ambil produkmu di {clinic.location}.
+                  </p>
+                </div>
+              )}
 
               {/* Step 2 — Payment */}
               <div className="card-soft p-6 sm:p-7">
                 <StepHead n="2" title="Metode pembayaran" icon={<CreditCard size={17} />} />
-                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                <div className={`mt-5 grid gap-3 ${skincareOnly ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
                   <PayOption active={payment === 'transfer'} onClick={() => setPayment('transfer')} icon={<Landmark size={20} />} title="Transfer Bank" sub="BCA / QRIS" />
-                  <PayOption active={payment === 'online'} onClick={() => setPayment('online')} icon={<CreditCard size={20} />} title="Bayar online" sub="Kartu / e-wallet" />
-                  <PayOption active={payment === 'klinik'} onClick={() => setPayment('klinik')} icon={<MapPin size={20} />} title="Bayar di klinik" sub="Saat datang" />
+                  {!skincareOnly && <PayOption active={payment === 'online'} onClick={() => setPayment('online')} icon={<CreditCard size={20} />} title="Bayar online" sub="Kartu / e-wallet" />}
+                  <PayOption active={payment === 'klinik'} onClick={() => setPayment('klinik')} icon={<MapPin size={20} />} title="Bayar di klinik" sub={skincareOnly ? 'Saat ambil' : 'Saat datang'} />
                 </div>
                 {payment === 'online' && (
                   <div className="mt-3 flex gap-2">
@@ -517,14 +571,23 @@ function BookingPage() {
 
               <div className="my-4 hairline-gold" />
               <dl className="flex flex-col gap-2 text-sm">
-                <div className="flex justify-between">
-                  <dt style={{ color: 'var(--color-ink-muted)' }}>Tanggal</dt>
-                  <dd className="font-semibold">{date ? prettyDate(date) : '—'}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt style={{ color: 'var(--color-ink-muted)' }}>Jam</dt>
-                  <dd className="font-semibold">{time ? `${time} WIB` : '—'}</dd>
-                </div>
+                {skincareOnly ? (
+                  <div className="flex justify-between">
+                    <dt style={{ color: 'var(--color-ink-muted)' }}>Pengambilan</dt>
+                    <dd className="font-semibold">Ambil di klinik</dd>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between">
+                      <dt style={{ color: 'var(--color-ink-muted)' }}>Tanggal</dt>
+                      <dd className="font-semibold">{date ? prettyDate(date) : '—'}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt style={{ color: 'var(--color-ink-muted)' }}>Jam</dt>
+                      <dd className="font-semibold">{time ? `${time} WIB` : '—'}</dd>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between">
                   <dt style={{ color: 'var(--color-ink-muted)' }}>Estimasi poin</dt>
                   <dd className="mono font-semibold" style={{ color: 'var(--color-gold-deep)' }}>+{loyaltyPointsFor(discountedTotal)}</dd>

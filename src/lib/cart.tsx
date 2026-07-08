@@ -16,11 +16,15 @@ export type CartItem = {
   // Per-unit treatments (e.g. Botox): qty means units, with an enforced minimum.
   pricePerUnit?: boolean
   minUnits?: number
+  // 'skincare' = a retail product (pickup, no slot); undefined/'treatment' = a
+  // treatment that needs a booking slot at checkout.
+  kind?: 'treatment' | 'skincare'
 }
 
 type CartCtx = {
   items: CartItem[]
   add: (t: Treatment, qty?: number) => void
+  addProduct: (p: { id: string; name: string; price: number }, qty?: number) => void
   remove: (id: string) => void
   setQty: (id: string, qty: number) => void
   clear: () => void
@@ -75,6 +79,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  // Add a retail skincare product (no per-unit / promo logic — plain price × qty).
+  const addProduct = (p: { id: string; name: string; price: number }, qty = 1) => {
+    const addQty = Math.max(1, qty)
+    track('add_to_cart', { currency: 'IDR', value: p.price * addQty, items: gaItems([{ id: p.id, name: p.name, price: p.price, qty: addQty }]) })
+    setItems((cur) => {
+      const ex = cur.find((i) => i.id === p.id)
+      if (ex) return cur.map((i) => (i.id === p.id ? { ...i, qty: i.qty + addQty } : i))
+      return [...cur, { id: p.id, name: p.name, price: p.price, qty: addQty, kind: 'skincare' }]
+    })
+  }
+
   const remove = (id: string) => setItems((cur) => cur.filter((i) => i.id !== id))
 
   const setQty = (id: string, qty: number) =>
@@ -94,7 +109,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0)
 
   return (
-    <Ctx.Provider value={{ items, add, remove, setQty, clear, count, subtotal, hydrated }}>
+    <Ctx.Provider value={{ items, add, addProduct, remove, setQty, clear, count, subtotal, hydrated }}>
       {children}
     </Ctx.Provider>
   )
