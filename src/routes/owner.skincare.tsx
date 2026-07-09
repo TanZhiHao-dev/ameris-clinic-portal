@@ -1,8 +1,9 @@
 import { type ChangeEvent, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, ImagePlus, Package, Pencil, Plus, X } from 'lucide-react'
+import { AlertTriangle, ImagePlus, Link2, Package, Pencil, Plus, X } from 'lucide-react'
 import { ownerProducts, ownerSaveProduct } from '#/server/products'
+import { ownerInventory } from '#/server/inventory'
 import { formatRp } from '#/data/clinic'
 
 export const Route = createFileRoute('/owner/skincare')({ component: SkincareAdmin })
@@ -44,6 +45,7 @@ function SkincareAdmin() {
             ) : (
               <span className="rounded-full px-2 py-0.5 text-[0.66rem] font-semibold" style={{ background: 'var(--color-muted)', color: p.stock <= 5 ? 'var(--color-rose)' : 'var(--color-ink-muted)' }}>Stok: {p.stock}{p.stock <= 5 ? ' · menipis' : ''}</span>
             )}
+            {p.inventoryName && <span className="inline-flex items-center gap-1 text-[0.7rem]" style={{ color: 'var(--color-gold-deep)' }}><Link2 size={11} /> {p.inventoryName}</span>}
           </div>
           {p.description && <div className="mt-0.5 line-clamp-1 text-[0.76rem]" style={{ color: 'var(--color-ink-muted)' }}>{p.description}</div>}
         </div>
@@ -99,10 +101,29 @@ function ProductDialog({ product, onClose, onSaved }: { product: Row | null; onC
   const [image, setImage] = useState<string>(product?.image ?? '')
   const [description, setDescription] = useState(product?.description ?? '')
   const [stock, setStock] = useState(product?.stock != null ? String(product.stock) : '')
+  const [invId, setInvId] = useState<string>(product?.inventoryItemId ?? '')
   const [err, setErr] = useState('')
 
+  // Skincare Retail inventory items available to link — selling a linked product
+  // draws down THIS item's stock (single source of truth) + logs a movement.
+  const { data: inv } = useQuery({ queryKey: ['inv-skincare-retail'], queryFn: () => ownerInventory({ data: { category: 'Skincare Retail' } }) })
+  const invItems = inv?.items ?? []
+  const linked = invItems.find((it) => it.id === invId)
+
   const save = useMutation({
-    mutationFn: () => ownerSaveProduct({ data: { id: product?.id, name: name.trim(), price: digits(price), image, description, stock: stock.trim() === '' ? null : Math.max(0, digits(stock)) } }),
+    mutationFn: () =>
+      ownerSaveProduct({
+        data: {
+          id: product?.id,
+          name: name.trim(),
+          price: digits(price),
+          image,
+          description,
+          inventoryItemId: invId || null,
+          // When linked, stock lives in Inventory — don't write a standalone number.
+          stock: invId ? null : stock.trim() === '' ? null : Math.max(0, digits(stock)),
+        },
+      }),
     onSuccess: onSaved,
     onError: (e) => setErr((e as Error)?.message || 'Gagal menyimpan.'),
   })
@@ -139,14 +160,33 @@ function ProductDialog({ product, onClose, onSaved }: { product: Row | null; onC
             </div>
           </div>
           <input className={inp} placeholder="Nama produk skincare" value={name} onChange={(e) => setName(e.target.value)} />
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex items-center gap-2 rounded-xl border px-3 py-2.5" style={{ borderColor: 'var(--color-line)', background: 'var(--color-cream)' }}>
-              <span className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>Rp</span>
-              <input className="mono w-full bg-transparent text-sm font-bold outline-none" inputMode="numeric" placeholder="Harga" value={price} onChange={(e) => setPrice(e.target.value)} />
-            </label>
-            <input className={inp} inputMode="numeric" placeholder="Stok" value={stock} onChange={(e) => setStock(e.target.value)} />
+          <label className="flex items-center gap-2 rounded-xl border px-3 py-2.5" style={{ borderColor: 'var(--color-line)', background: 'var(--color-cream)' }}>
+            <span className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>Rp</span>
+            <input className="mono w-full bg-transparent text-sm font-bold outline-none" inputMode="numeric" placeholder="Harga" value={price} onChange={(e) => setPrice(e.target.value)} />
+          </label>
+
+          {/* Link to Inventory (Skincare Retail) — one source of truth for stock */}
+          <div className="flex flex-col gap-1.5">
+            <span className="flex items-center gap-1.5 text-[0.78rem] font-semibold" style={{ color: 'var(--color-espresso)' }}><Link2 size={13} style={{ color: 'var(--color-gold-deep)' }} /> Tautkan ke stok Inventory</span>
+            <select className={inp} value={invId} onChange={(e) => setInvId(e.target.value)}>
+              <option value="">— Stok berdiri sendiri (tidak ditautkan) —</option>
+              {invItems.map((it) => (
+                <option key={it.id} value={it.id}>{it.name}{it.spec ? ` · ${it.spec}` : ''} — stok {it.stock} {it.unit}</option>
+              ))}
+            </select>
           </div>
-          <p className="-mt-1 text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>Stok berkurang otomatis tiap checkout. Kosongkan kalau tidak mau dilacak.</p>
+
+          {linked ? (
+            <p className="-mt-1 flex items-start gap-1.5 rounded-xl px-3 py-2 text-[0.74rem]" style={{ background: 'rgba(195,154,68,0.1)', color: 'var(--color-gold-deep)' }}>
+              <Link2 size={13} className="mt-0.5 shrink-0" />
+              <span>Stok ikut item Inventory <b>{linked.name}</b> — tersisa <b>{linked.stock} {linked.unit}</b>. Tiap checkout mengurangi stok Inventory &amp; tercatat sebagai movement “penjualan”.</span>
+            </p>
+          ) : (
+            <>
+              <input className={inp} inputMode="numeric" placeholder="Stok" value={stock} onChange={(e) => setStock(e.target.value)} />
+              <p className="-mt-1 text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>Stok berkurang otomatis tiap checkout. Kosongkan kalau tidak mau dilacak.</p>
+            </>
+          )}
           <textarea className={`${inp} h-20 resize-none`} placeholder="Deskripsi singkat (opsional) — mis. manfaat, ukuran, cara pakai" value={description} onChange={(e) => setDescription(e.target.value)} />
           {err && <p className="text-sm font-medium" style={{ color: 'var(--color-destructive)' }}>{err}</p>}
           <div className="flex justify-end gap-3">

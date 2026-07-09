@@ -82,10 +82,15 @@ export const products = pgTable('products', {
   // the /skincare shop — same treatment as treatments.image.
   image: text('image'),
   description: text('description'),
-  // Sellable stock. null = untracked (always sellable, never decremented); a
-  // number = tracked: checkout decrements it and 0 shows as "Habis". Nullable so
-  // existing products stay untracked until the owner opts in.
+  // Standalone sellable stock, used ONLY when inventoryItemId is null. null =
+  // untracked (always sellable). When linked to an inventory item below, that
+  // item's stock is the single source of truth instead.
   stock: integer('stock'),
+  // Optional link to an inventory_items row (the "Skincare Retail" physical
+  // stock). When set, the product's stock is read from — and checkout decrements
+  // — that inventory item (with a movement logged). Plain text, no FK, so
+  // archiving the item never breaks historical products.
+  inventoryItemId: text('inventory_item_id'),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })

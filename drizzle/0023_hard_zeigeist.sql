@@ -1,0 +1,1 @@
+ALTER TABLE "products" ADD COLUMN "inventory_item_id" text;

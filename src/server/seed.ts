@@ -46,7 +46,8 @@ const beauticianSeed = [
 // Skincare / retail products (for the closing-upsell 5% bonus).
 const productSeed = [
   { id: 'prd-sunscreen', name: 'Sunscreen SPF50', price: 185_000, stock: 25, description: 'Perlindungan UVA/UVB harian, ringan & tidak lengket. 30 ml.' },
-  { id: 'prd-serum-vitc', name: 'Serum Vitamin C', price: 320_000, stock: 4, description: 'Mencerahkan & meratakan warna kulit. Antioksidan tinggi. 20 ml.' },
+  // Linked to the Inventory "Skincare Retail" item — stock is drawn from there.
+  { id: 'prd-serum-vitc', name: 'Serum Vitamin C', price: 320_000, stock: null as number | null, inventoryItemId: 'inv-fyp-serum', description: 'Mencerahkan & meratakan warna kulit. Antioksidan tinggi. 20 ml.' },
   { id: 'prd-moisturizer', name: 'Barrier Moisturizer', price: 245_000, stock: 30, description: 'Menguatkan skin barrier, melembapkan tanpa berminyak. 50 ml.' },
   { id: 'prd-cleanser', name: 'Gentle Cleanser', price: 165_000, stock: 12, description: 'Pembersih lembut pH seimbang untuk semua jenis kulit. 100 ml.' },
 ]

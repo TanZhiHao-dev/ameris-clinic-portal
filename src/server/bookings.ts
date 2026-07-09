@@ -145,7 +145,7 @@ export const createBooking = createServerFn({ method: 'POST' })
         paymentStatus: 'Pending',
         paymentPlan: data.paymentPlan ?? 'full',
       })
-      if (data.productItems?.length) await decrementProductStock(data.productItems)
+      if (productRows.length) await decrementProductStock(productRows, id)
     } catch (e) {
       // Don't leave a consumed voucher behind if booking creation failed.
       if (redemptionId) await db.delete(voucherRedemptions).where(eq(voucherRedemptions.id, redemptionId))

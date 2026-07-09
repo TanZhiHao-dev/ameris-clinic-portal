@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { db } from '#/db'
 import { bookingItems, bookings, products, transactions } from '#/db/schema'
 import { requireOwner, requireStaff, requireUser } from './_session'
-import { decrementProductStock, resolveProductItems } from './_products'
+import { decrementProductStock, effectiveStockFor, resolveProductItems } from './_products'
 
 // Clinic-local (WIB) date so an evening order lands on the right calendar day.
 const wibDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' })
@@ -16,13 +16,18 @@ export const ownerProducts = createServerFn({ method: 'GET' })
   .handler(async ({ data }) => {
     await requireStaff()
     const rows = await db.select().from(products).orderBy(asc(products.name))
-    return data?.activeOnly ? rows.filter((p) => p.isActive) : rows
+    const list = data?.activeOnly ? rows.filter((p) => p.isActive) : rows
+    const stockBy = await effectiveStockFor(list)
+    // Override `stock` with the effective (inventory-linked) value + surface the
+    // linked item's name so the editor can show where the stock comes from.
+    return list.map((p) => ({ ...p, stock: stockBy.get(p.id)?.stock ?? null, inventoryName: stockBy.get(p.id)?.invName ?? null }))
   })
 
 // Patient-facing shop list — active products only, with photo + blurb.
 export const publicProducts = createServerFn({ method: 'GET' }).handler(async () => {
   const rows = await db.select().from(products).where(eq(products.isActive, true)).orderBy(asc(products.name))
-  return rows.map((p) => ({ id: p.id, name: p.name, price: p.price, image: p.image ?? null, description: p.description ?? null, stock: p.stock ?? null }))
+  const stockBy = await effectiveStockFor(rows)
+  return rows.map((p) => ({ id: p.id, name: p.name, price: p.price, image: p.image ?? null, description: p.description ?? null, stock: stockBy.get(p.id)?.stock ?? null }))
 })
 
 export const ownerSaveProduct = createServerFn({ method: 'POST' })
@@ -34,6 +39,7 @@ export const ownerSaveProduct = createServerFn({ method: 'POST' })
       image: z.string().optional(), // '' clears
       description: z.string().optional(),
       stock: z.number().int().min(0).nullable().optional(), // null = untracked
+      inventoryItemId: z.string().nullable().optional(), // link to Skincare Retail stock
       isActive: z.boolean().optional(),
     }),
   )
@@ -46,6 +52,7 @@ export const ownerSaveProduct = createServerFn({ method: 'POST' })
       ...(data.image !== undefined ? { image: data.image.trim() || null } : {}),
       ...(data.description !== undefined ? { description: data.description.trim() || null } : {}),
       ...(data.stock !== undefined ? { stock: data.stock } : {}),
+      ...(data.inventoryItemId !== undefined ? { inventoryItemId: data.inventoryItemId || null } : {}),
       ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
     }
     if (data.id) {
@@ -98,6 +105,6 @@ export const createProductOrder = createServerFn({ method: 'POST' })
       paymentStatus: 'Pending',
       paymentPlan: 'full',
     })
-    await decrementProductStock(data.items)
+    await decrementProductStock(rows, id)
     return { id, total, paymentMethod: data.paymentMethod }
   })
