@@ -82,6 +82,10 @@ export const products = pgTable('products', {
   // the /skincare shop — same treatment as treatments.image.
   image: text('image'),
   description: text('description'),
+  // Sellable stock. null = untracked (always sellable, never decremented); a
+  // number = tracked: checkout decrements it and 0 shows as "Habis". Nullable so
+  // existing products stay untracked until the owner opts in.
+  stock: integer('stock'),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })

@@ -35,7 +35,16 @@ function SkincareAdmin() {
         </div>
         <div className="min-w-0">
           <div className="truncate font-bold">{p.name}</div>
-          <div className="mono text-sm font-bold gold-text">{formatRp(p.price)}</div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="mono text-sm font-bold gold-text">{formatRp(p.price)}</span>
+            {p.stock == null ? (
+              <span className="text-[0.72rem]" style={{ color: 'var(--color-line)' }}>· stok tidak dilacak</span>
+            ) : p.stock === 0 ? (
+              <span className="rounded-full px-2 py-0.5 text-[0.66rem] font-bold" style={{ background: 'rgba(179,73,47,0.12)', color: 'var(--color-destructive)' }}>Habis</span>
+            ) : (
+              <span className="rounded-full px-2 py-0.5 text-[0.66rem] font-semibold" style={{ background: 'var(--color-muted)', color: p.stock <= 5 ? 'var(--color-rose)' : 'var(--color-ink-muted)' }}>Stok: {p.stock}{p.stock <= 5 ? ' · menipis' : ''}</span>
+            )}
+          </div>
           {p.description && <div className="mt-0.5 line-clamp-1 text-[0.76rem]" style={{ color: 'var(--color-ink-muted)' }}>{p.description}</div>}
         </div>
       </div>
@@ -89,10 +98,11 @@ function ProductDialog({ product, onClose, onSaved }: { product: Row | null; onC
   const [price, setPrice] = useState(product ? String(product.price) : '')
   const [image, setImage] = useState<string>(product?.image ?? '')
   const [description, setDescription] = useState(product?.description ?? '')
+  const [stock, setStock] = useState(product?.stock != null ? String(product.stock) : '')
   const [err, setErr] = useState('')
 
   const save = useMutation({
-    mutationFn: () => ownerSaveProduct({ data: { id: product?.id, name: name.trim(), price: digits(price), image, description } }),
+    mutationFn: () => ownerSaveProduct({ data: { id: product?.id, name: name.trim(), price: digits(price), image, description, stock: stock.trim() === '' ? null : Math.max(0, digits(stock)) } }),
     onSuccess: onSaved,
     onError: (e) => setErr((e as Error)?.message || 'Gagal menyimpan.'),
   })
@@ -129,10 +139,14 @@ function ProductDialog({ product, onClose, onSaved }: { product: Row | null; onC
             </div>
           </div>
           <input className={inp} placeholder="Nama produk skincare" value={name} onChange={(e) => setName(e.target.value)} />
-          <label className="flex items-center gap-2 rounded-xl border px-3 py-2.5" style={{ borderColor: 'var(--color-line)', background: 'var(--color-cream)' }}>
-            <span className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>Rp</span>
-            <input className="mono flex-1 bg-transparent text-sm font-bold outline-none" inputMode="numeric" placeholder="Harga" value={price} onChange={(e) => setPrice(e.target.value)} />
-          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex items-center gap-2 rounded-xl border px-3 py-2.5" style={{ borderColor: 'var(--color-line)', background: 'var(--color-cream)' }}>
+              <span className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>Rp</span>
+              <input className="mono w-full bg-transparent text-sm font-bold outline-none" inputMode="numeric" placeholder="Harga" value={price} onChange={(e) => setPrice(e.target.value)} />
+            </label>
+            <input className={inp} inputMode="numeric" placeholder="Stok" value={stock} onChange={(e) => setStock(e.target.value)} />
+          </div>
+          <p className="-mt-1 text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>Stok berkurang otomatis tiap checkout. Kosongkan kalau tidak mau dilacak.</p>
           <textarea className={`${inp} h-20 resize-none`} placeholder="Deskripsi singkat (opsional) — mis. manfaat, ukuran, cara pakai" value={description} onChange={(e) => setDescription(e.target.value)} />
           {err && <p className="text-sm font-medium" style={{ color: 'var(--color-destructive)' }}>{err}</p>}
           <div className="flex justify-end gap-3">

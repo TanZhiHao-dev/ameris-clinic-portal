@@ -1,9 +1,10 @@
 import { createServerFn } from '@tanstack/react-start'
-import { asc, eq, inArray } from 'drizzle-orm'
+import { asc, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '#/db'
 import { bookingItems, bookings, products, transactions } from '#/db/schema'
 import { requireOwner, requireStaff, requireUser } from './_session'
+import { decrementProductStock, resolveProductItems } from './_products'
 
 // Clinic-local (WIB) date so an evening order lands on the right calendar day.
 const wibDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' })
@@ -21,7 +22,7 @@ export const ownerProducts = createServerFn({ method: 'GET' })
 // Patient-facing shop list — active products only, with photo + blurb.
 export const publicProducts = createServerFn({ method: 'GET' }).handler(async () => {
   const rows = await db.select().from(products).where(eq(products.isActive, true)).orderBy(asc(products.name))
-  return rows.map((p) => ({ id: p.id, name: p.name, price: p.price, image: p.image ?? null, description: p.description ?? null }))
+  return rows.map((p) => ({ id: p.id, name: p.name, price: p.price, image: p.image ?? null, description: p.description ?? null, stock: p.stock ?? null }))
 })
 
 export const ownerSaveProduct = createServerFn({ method: 'POST' })
@@ -32,6 +33,7 @@ export const ownerSaveProduct = createServerFn({ method: 'POST' })
       price: z.number().int().nonnegative(),
       image: z.string().optional(), // '' clears
       description: z.string().optional(),
+      stock: z.number().int().min(0).nullable().optional(), // null = untracked
       isActive: z.boolean().optional(),
     }),
   )
@@ -43,6 +45,7 @@ export const ownerSaveProduct = createServerFn({ method: 'POST' })
       price: data.price,
       ...(data.image !== undefined ? { image: data.image.trim() || null } : {}),
       ...(data.description !== undefined ? { description: data.description.trim() || null } : {}),
+      ...(data.stock !== undefined ? { stock: data.stock } : {}),
       ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
     }
     if (data.id) {
@@ -67,17 +70,9 @@ export const createProductOrder = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const u = await requireUser()
 
-    // Authoritative prices from the catalog — never trust client-sent amounts.
-    const ids = [...new Set(data.items.map((i) => i.productId))]
-    const catalog = await db.select().from(products).where(inArray(products.id, ids))
-    const byId = new Map(catalog.map((p) => [p.id, p]))
-    let total = 0
-    const rows = data.items.map((i) => {
-      const p = byId.get(i.productId)
-      if (!p || !p.isActive) throw new Error('Produk tidak tersedia.')
-      total += p.price * i.qty
-      return { name: p.name, price: p.price, qty: i.qty }
-    })
+    // Validate + price against the catalog (stock-checked) — never trust client amounts.
+    const rows = await resolveProductItems(data.items)
+    const total = rows.reduce((s, r) => s + r.price * r.qty, 0)
 
     const now = new Date()
     const id = 'AMR-' + crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()
@@ -103,5 +98,6 @@ export const createProductOrder = createServerFn({ method: 'POST' })
       paymentStatus: 'Pending',
       paymentPlan: 'full',
     })
+    await decrementProductStock(data.items)
     return { id, total, paymentMethod: data.paymentMethod }
   })

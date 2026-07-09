@@ -55,21 +55,22 @@ function SkincareShop() {
                         {p.description && <p className="mt-1 line-clamp-2 text-[0.8rem]" style={{ color: 'var(--color-ink-muted)' }}>{p.description}</p>}
                         <div className="mt-3 flex items-center justify-between gap-2">
                           <span className="mono font-extrabold gold-text">{formatRp(p.price)}</span>
-                          {n === 0 ? (
+                          {p.stock === 0 ? (
+                            <span className="rounded-full px-3 py-1.5 text-sm font-bold" style={{ background: 'var(--color-muted)', color: 'var(--color-destructive)' }}>Habis</span>
+                          ) : n === 0 ? (
                             <button type="button" className="btn btn-gold px-3 py-1.5 text-sm" onClick={() => addProduct(p)}><Plus size={15} /> Keranjang</button>
                           ) : (
                             <div className="flex items-center gap-1.5">
                               <button type="button" aria-label="Kurangi" onClick={() => setQty(p.id, n - 1)} className="grid h-8 w-8 place-items-center rounded-full" style={{ border: '1px solid var(--color-line)' }}><Minus size={14} /></button>
                               <span className="mono w-6 text-center font-bold">{n}</span>
-                              <button type="button" aria-label="Tambah" onClick={() => addProduct(p)} className="grid h-8 w-8 place-items-center rounded-full" style={{ border: '1px solid var(--color-line)' }}><Plus size={14} /></button>
+                              <button type="button" aria-label="Tambah" disabled={p.stock != null && n >= p.stock} onClick={() => addProduct(p)} className="grid h-8 w-8 place-items-center rounded-full transition disabled:opacity-30" style={{ border: '1px solid var(--color-line)' }}><Plus size={14} /></button>
                             </div>
                           )}
                         </div>
-                        {n > 0 && (
-                          <div className="mt-2 inline-flex items-center gap-1 text-[0.72rem] font-semibold" style={{ color: '#2c5848' }}>
-                            <Check size={13} /> {n} di keranjang
-                          </div>
-                        )}
+                        <div className="mt-2 flex items-center gap-2 text-[0.72rem] font-semibold">
+                          {n > 0 && <span className="inline-flex items-center gap-1" style={{ color: '#2c5848' }}><Check size={13} /> {n} di keranjang</span>}
+                          {p.stock != null && p.stock > 0 && p.stock <= 5 && <span style={{ color: 'var(--color-rose)' }}>Sisa {p.stock}</span>}
+                        </div>
                       </div>
                     </div>
                   )

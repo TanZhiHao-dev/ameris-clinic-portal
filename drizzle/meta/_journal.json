@@ -155,6 +155,13 @@
       "when": 1783528192769,
       "tag": "0021_add_konsultasi_treatment",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1783590182788,
+      "tag": "0022_zippy_malice",
+      "breakpoints": true
     }
   ]
 }

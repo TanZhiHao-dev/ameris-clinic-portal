@@ -2,11 +2,12 @@ import { createServerFn } from '@tanstack/react-start'
 import { and, desc, eq, inArray, ne, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '#/db'
-import { bookingItems, bookings, loyaltyTransactions, products, transactions, treatments, voucherRedemptions } from '#/db/schema'
+import { bookingItems, bookings, loyaltyTransactions, transactions, treatments, voucherRedemptions } from '#/db/schema'
 import { user } from '#/db/auth-schema'
 import { loyaltyPointsFor } from '#/data/clinic'
 import { requireOwner, requireStaff, requireUser } from './_session'
 import { assemble } from './_appointments'
+import { decrementProductStock, resolveProductItems } from './_products'
 import { loadUsableVoucher, voucherDiscountFor, voucherTreatmentScope } from './_vouchers'
 
 const SLOTS = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00']
@@ -101,19 +102,9 @@ export const createBooking = createServerFn({ method: 'POST' })
         }
       }
     }
-    // Skincare ride-along items — validated against the product catalog, added
-    // to the total after the (treatment-only) voucher discount.
-    const productRows: { name: string; price: number; qty: number }[] = []
-    if (data.productItems?.length) {
-      const pids = [...new Set(data.productItems.map((i) => i.productId))]
-      const prods = await db.select().from(products).where(inArray(products.id, pids))
-      const pById = new Map(prods.map((p) => [p.id, p]))
-      for (const i of data.productItems) {
-        const p = pById.get(i.productId)
-        if (!p || !p.isActive) throw new Error('Produk skincare tidak tersedia.')
-        productRows.push({ name: p.name, price: p.price, qty: i.qty })
-      }
-    }
+    // Skincare ride-along items — validated (stock-checked) against the catalog,
+    // added to the total after the (treatment-only) voucher discount.
+    const productRows = data.productItems?.length ? await resolveProductItems(data.productItems) : []
     const productSubtotal = productRows.reduce((s, r) => s + r.price * r.qty, 0)
     const total = Math.max(0, subtotal - discount) + productSubtotal
 
@@ -154,6 +145,7 @@ export const createBooking = createServerFn({ method: 'POST' })
         paymentStatus: 'Pending',
         paymentPlan: data.paymentPlan ?? 'full',
       })
+      if (data.productItems?.length) await decrementProductStock(data.productItems)
     } catch (e) {
       // Don't leave a consumed voucher behind if booking creation failed.
       if (redemptionId) await db.delete(voucherRedemptions).where(eq(voucherRedemptions.id, redemptionId))

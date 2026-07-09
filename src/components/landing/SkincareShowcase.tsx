@@ -46,7 +46,9 @@ export function SkincareShowcase() {
                     {p.description && <p className="mt-2 flex-1 text-sm leading-relaxed" style={{ color: 'var(--color-ink-muted)' }}>{p.description}</p>}
                     <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-5" style={{ borderColor: 'var(--color-line)' }}>
                       <span className="mono text-lg font-extrabold gold-text">{formatRp(p.price)}</span>
-                      {n === 0 ? (
+                      {p.stock === 0 ? (
+                        <span className="rounded-full px-3 py-2 text-sm font-bold" style={{ background: 'var(--color-muted)', color: 'var(--color-destructive)' }}>Habis</span>
+                      ) : n === 0 ? (
                         <button type="button" className="btn btn-gold px-4 py-2 text-sm" onClick={() => addProduct(p)}>
                           <Plus size={16} /> Keranjang
                         </button>
