@@ -88,6 +88,7 @@ const dict = {
   'cat.Skinbooster': { id: 'Skinbooster', en: 'Skinbooster' },
   'cat.Injeksi': { id: 'Injeksi', en: 'Injection' },
   'cat.Paket': { id: 'Paket', en: 'Package' },
+  'cat.Add on': { id: 'Add on', en: 'Add-on' },
 
   // ── Promo ─────────────────────────────────────────────────────────
   'promo.eyebrow': { id: 'Promo Paket Spesial', en: 'Special Package Promos' },

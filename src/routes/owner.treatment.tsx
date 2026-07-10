@@ -55,7 +55,7 @@ type UpdateVars = {
   image?: string | null
 }
 
-const CATS: Category[] = ['Facial', 'Peeling', 'Laser', 'Skinbooster', 'Injeksi', 'Paket']
+const CATS: Category[] = ['Facial', 'Peeling', 'Laser', 'Skinbooster', 'Injeksi', 'Paket', 'Add on']
 
 // Client-side mirror of the server's preset parser/serializer — kept local so
 // this route never imports db-backed server utilities. `parsePresets` feeds the

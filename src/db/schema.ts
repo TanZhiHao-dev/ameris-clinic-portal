@@ -11,6 +11,7 @@ export type TreatmentCategory =
   | 'Skinbooster'
   | 'Injeksi'
   | 'Paket'
+  | 'Add on'
 
 export type BookingStatus =
   | 'Menunggu'

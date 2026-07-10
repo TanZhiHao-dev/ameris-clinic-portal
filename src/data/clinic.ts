@@ -58,6 +58,7 @@ export type Category =
   | 'Skinbooster'
   | 'Injeksi'
   | 'Paket'
+  | 'Add on'
 
 export type Treatment = {
   id: string
@@ -107,6 +108,7 @@ export const categories = [
   'Skinbooster',
   'Injeksi',
   'Paket',
+  'Add on',
 ] as const
 
 export const treatments: Treatment[] = [

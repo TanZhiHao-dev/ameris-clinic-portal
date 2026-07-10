@@ -42,6 +42,7 @@ function classify(t: Treatment): { kind: Kind; from: string; to: string } {
     case 'Skinbooster': kind = 'drop'; key = 'rose'; break
     case 'Injeksi': kind = 'molecule'; key = 'goldsoft'; break
     case 'Paket': kind = 'arcs'; key = 'paket'; break
+    case 'Add on': kind = 'ripple'; key = 'champagne'; break
   }
   if (n.includes('exosome')) { kind = 'radiance'; key = 'gold' }
   else if (n.includes('dna') || n.includes('salmon') || n.includes('pdrn')) { kind = 'molecule' }
