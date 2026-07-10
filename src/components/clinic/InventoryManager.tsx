@@ -14,14 +14,18 @@ export function InventoryManager() {
   const qc = useQueryClient()
   const [cat, setCat] = useState<'Semua' | Cat>('Semua')
   const [q, setQ] = useState('')
+  const [lowOnly, setLowOnly] = useState(false) // toggled via the "segera restock" chip
   const { data } = useQuery({ queryKey: ['owner-inventory'], queryFn: () => ownerInventory() })
   const items = data?.items ?? []
   const counts = data?.counts
 
   const list = useMemo(() => {
     const qq = q.trim().toLowerCase()
-    return items.filter((i) => (cat === 'Semua' || i.category === cat) && (!qq || i.name.toLowerCase().includes(qq) || i.spec.toLowerCase().includes(qq)))
-  }, [items, cat, q])
+    // The low-only filter only bites while something is actually low — once all
+    // items are restocked the chip disappears, so the filter releases too.
+    const lowFilter = lowOnly && items.some((i) => i.low)
+    return items.filter((i) => (cat === 'Semua' || i.category === cat) && (!lowFilter || i.low) && (!qq || i.name.toLowerCase().includes(qq) || i.spec.toLowerCase().includes(qq)))
+  }, [items, cat, q, lowOnly])
 
   const [edit, setEdit] = useState<Item | 'new' | null>(null)
   const [move, setMove] = useState<{ item: Item; dir: 'in' | 'out' } | null>(null)
@@ -49,7 +53,15 @@ export function InventoryManager() {
         <div className="mt-5 flex flex-wrap gap-3">
           {counts.expired > 0 && <Alert tone="danger" icon={<TriangleAlert size={15} />} text={`${counts.expired} item kadaluarsa`} />}
           {counts.soon > 0 && <Alert tone="warn" icon={<Clock size={15} />} text={`${counts.soon} hampir kadaluarsa (≤60 hari)`} />}
-          {counts.low > 0 && <Alert tone="warn" icon={<AlertTriangle size={15} />} text={`${counts.low} stok menipis`} />}
+          {counts.low > 0 && (
+            <Alert
+              tone="warn"
+              icon={<AlertTriangle size={15} />}
+              text={`${counts.low} stok menipis — segera restock`}
+              active={lowOnly}
+              onClick={() => setLowOnly((v) => !v)}
+            />
+          )}
         </div>
       )}
 
@@ -95,7 +107,7 @@ export function InventoryManager() {
                   <td data-label="Kategori" className="px-3 py-4">{it.category}</td>
                   <td data-label="Stok" className="px-3 py-4">
                     <span className="mono text-base font-bold">{fmtStock(it.stock)}</span> <span style={{ color: 'var(--color-ink-muted)' }}>{it.unit}</span>
-                    {it.low && <span className="ml-2 rounded-full px-2 py-0.5 text-[0.66rem] font-bold" style={{ background: 'var(--color-muted)', color: 'var(--color-rose)' }}>menipis</span>}
+                    {it.low && <span className="ml-2 rounded-full px-2 py-0.5 text-[0.66rem] font-bold" title={`Sisa ${fmtStock(it.stock)} ${it.unit} (batas: ${fmtStock(it.restockAt)})`} style={{ background: 'var(--color-muted)', color: 'var(--color-rose)' }}>segera restock</span>}
                     {it.rawCount && <div className="mono text-[0.7rem]" style={{ color: 'var(--color-ink-muted)' }}>asli: {it.rawCount}</div>}
                   </td>
                   <td data-label="Kadaluarsa" className="px-3 py-4">
@@ -130,9 +142,17 @@ export function InventoryManager() {
   )
 }
 
-function Alert({ tone, icon, text }: { tone: 'danger' | 'warn'; icon: React.ReactNode; text: string }) {
+function Alert({ tone, icon, text, onClick, active }: { tone: 'danger' | 'warn'; icon: React.ReactNode; text: string; onClick?: () => void; active?: boolean }) {
   const c = tone === 'danger' ? { bg: 'rgba(179,73,47,0.1)', fg: 'var(--color-destructive)' } : { bg: 'rgba(197,135,108,0.14)', fg: 'var(--color-rose)' }
-  return <span className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: c.bg, color: c.fg }}>{icon} {text}</span>
+  const cls = 'inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold'
+  if (!onClick) return <span className={cls} style={{ background: c.bg, color: c.fg }}>{icon} {text}</span>
+  // Clickable chip toggles a list filter; the outline marks it active.
+  return (
+    <button type="button" onClick={onClick} title={active ? 'Tampilkan semua item lagi' : 'Klik untuk lihat item yang perlu restock'}
+      className={`${cls} transition`} style={{ background: c.bg, color: c.fg, outline: active ? `1.5px solid ${c.fg}` : 'none' }}>
+      {icon} {text} {active && <X size={13} />}
+    </button>
+  )
 }
 function Badge({ tone, children }: { tone: 'danger' | 'warn'; children: React.ReactNode }) {
   const c = tone === 'danger' ? { bg: 'rgba(179,73,47,0.12)', fg: 'var(--color-destructive)' } : { bg: 'rgba(197,135,108,0.16)', fg: 'var(--color-rose)' }
@@ -191,6 +211,9 @@ function ItemDialog({ item, onClose, onSaved }: { item: Item | null; onClose: ()
           <input className={inp} inputMode="decimal" placeholder="Batas stok menipis" value={f.minStock} onChange={(e) => setF({ ...f, minStock: e.target.value })} />
           <input className={inp} placeholder="Kadaluarsa (YYYY-MM)" value={f.expiry} onChange={(e) => setF({ ...f, expiry: e.target.value })} />
         </div>
+        <p className="-mt-1 text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>
+          Item dengan stok ≤ batas ditandai <b>“segera restock”</b>. Biarkan 0 untuk pakai default: ≤ 5 (kategori <b>Alat</b> tidak otomatis — isi batas kalau mau dipantau).
+        </p>
         <textarea className={`${inp} h-16 resize-none`} placeholder="Catatan (opsional)" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} />
         {err && <p className="text-sm font-medium" style={{ color: 'var(--color-destructive)' }}>{err}</p>}
         <div className="flex items-center justify-between gap-3">

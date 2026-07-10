@@ -27,6 +27,13 @@ export function expiryStatus(expiry: string | null): 'expired' | 'soon' | 'ok' |
   return iso <= soonCutoff ? 'soon' : 'ok'
 }
 
+// Restock threshold: the item's own minStock wins; otherwise consumables
+// default to 5. 'Alat' (durable tools — owning 1-2 is normal, not a shortage)
+// stays quiet unless the owner sets a minStock explicitly.
+const RESTOCK_DEFAULT = 5
+const restockAt = (r: typeof inventoryItems.$inferSelect) =>
+  r.minStock > 0 ? r.minStock : r.category === 'Alat' ? 0 : RESTOCK_DEFAULT
+
 const decorate = (r: typeof inventoryItems.$inferSelect) => ({
   id: r.id,
   name: r.name,
@@ -39,7 +46,8 @@ const decorate = (r: typeof inventoryItems.$inferSelect) => ({
   expiry: r.expiry ?? '',
   notes: r.notes ?? '',
   expStatus: expiryStatus(r.expiry),
-  low: r.minStock > 0 && r.stock <= r.minStock,
+  restockAt: restockAt(r),
+  low: restockAt(r) > 0 && r.stock <= restockAt(r),
 })
 
 export const ownerInventory = createServerFn({ method: 'GET' })
