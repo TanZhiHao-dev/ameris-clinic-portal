@@ -82,6 +82,7 @@ const dict = {
     en: '*Prices exclude promos/discounts · subject to clinic availability.',
   },
   'cat.Best Seller': { id: 'Best Seller', en: 'Best Seller' },
+  'cat.Konsultasi': { id: 'Konsultasi', en: 'Consultation' },
   'cat.Facial': { id: 'Facial', en: 'Facial' },
   'cat.Peeling': { id: 'Peeling', en: 'Peeling' },
   'cat.Laser': { id: 'Laser', en: 'Laser' },

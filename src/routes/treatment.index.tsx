@@ -25,6 +25,7 @@ const FILTERS = [
   'Skinbooster',
   'Injeksi',
   'Paket',
+  'Add on',
 ] as const
 
 function MenuPage() {
