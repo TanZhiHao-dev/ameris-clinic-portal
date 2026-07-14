@@ -2,11 +2,12 @@ import { createServerFn } from '@tanstack/react-start'
 import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '#/db'
-import { bookingItems, bookings, loyaltyTransactions, transactions, treatments } from '#/db/schema'
+import { bookingItems, bookings, loyaltyTransactions, transactions, treatments, voucherRedemptions, vouchers } from '#/db/schema'
 import { user } from '#/db/auth-schema'
 import { loyaltyPointsFor } from '#/data/clinic'
 import { requireOwner } from './_session'
 import { assemble, attachNames } from './_appointments'
+import { voucherDiscountFor, voucherTreatmentScope } from './_vouchers'
 
 export const ownerTransactions = createServerFn({ method: 'GET' })
   .validator(z.object({ tab: z.enum(['Semua', 'Pending', 'Lunas']).optional() }).optional())
@@ -35,13 +36,16 @@ export const ownerBookingDetail = createServerFn({ method: 'GET' })
     if (!b) throw new Error('Transaksi tidak ditemukan.')
     const items = await db.select().from(bookingItems).where(eq(bookingItems.bookingId, b.id))
     const [txn] = await db.select().from(transactions).where(eq(transactions.bookingId, b.id)).limit(1)
+    const [v] = b.voucherId ? await db.select({ name: vouchers.name }).from(vouchers).where(eq(vouchers.id, b.voucherId)).limit(1) : []
     return {
       id: b.id,
       status: b.status,
       payStatus: txn?.paymentStatus ?? 'Pending',
       paymentMethod: (txn?.paymentMethod ?? 'Offline') as 'Online' | 'Offline' | 'Transfer',
       hasVoucher: !!b.voucherId,
-      editable: b.status !== 'Batal' && !b.voucherId,
+      voucherName: b.voucherId ? (v?.name ?? 'Voucher') : null,
+      discountAmount: b.discountAmount,
+      editable: b.status !== 'Batal',
       items: items.map((i) => ({ treatmentId: i.treatmentId, name: i.nameAtBooking, unitPrice: i.priceAtBooking, qty: i.qty })),
     }
   })
@@ -65,28 +69,49 @@ export const ownerUpdateBooking = createServerFn({ method: 'POST' })
     const [b] = await db.select().from(bookings).where(eq(bookings.id, data.bookingId)).limit(1)
     if (!b) throw new Error('Transaksi tidak ditemukan.')
     if (b.status === 'Batal') throw new Error('Transaksi dibatalkan — tidak bisa diedit.')
-    if (b.voucherId) throw new Error('Transaksi dengan voucher tidak bisa diedit di sini.')
 
     const ids = [...new Set(data.items.map((i) => i.treatmentId))]
     const catalog = await db.select().from(treatments).where(inArray(treatments.id, ids))
     const byId = new Map(catalog.map((t) => [t.id, t]))
-    let total = 0
+    let subtotal = 0
     const rows = data.items.map((i) => {
       const t = byId.get(i.treatmentId)
       if (!t) throw new Error('Treatment tidak ditemukan.')
-      const promo = t.isPromo && t.promoNow != null && t.promoNow < t.price
+      const promo = !!(t.isPromo && t.promoNow != null && t.promoNow < t.price)
       const catalogUnit = promo ? t.promoNow! : t.price
       const unit = Math.min(Math.max(0, Math.round(i.unitPrice)), catalogUnit)
-      total += unit * i.qty
-      return { treatmentId: t.id, name: t.name, price: unit, qty: i.qty }
+      subtotal += unit * i.qty
+      return { treatmentId: t.id, name: t.name, price: unit, qty: i.qty, promoApplied: promo }
     })
+
+    // A voucher redeemed on this booking is recomputed against the NEW items
+    // under its own terms (scope, %, minimum spend) — an upsell inside a
+    // cart-wide % voucher gets the discount too, and the redemption ledger is
+    // kept in sync so the patient's account still shows the true amount. The
+    // voucher's validity window is NOT re-checked: it was valid when redeemed.
+    let discount = 0
+    if (b.voucherId) {
+      const [v] = await db.select().from(vouchers).where(eq(vouchers.id, b.voucherId)).limit(1)
+      if (v) {
+        const scope = await voucherTreatmentScope(v)
+        discount = voucherDiscountFor(v, scope, rows.map((r) => ({ treatmentId: r.treatmentId, unit: r.price, qty: r.qty, promoApplied: r.promoApplied })))
+      } else {
+        // Voucher since deleted — keep the recorded rupiah discount, clamped.
+        discount = Math.min(b.discountAmount, subtotal)
+      }
+      await db
+        .update(voucherRedemptions)
+        .set({ amountDiscounted: discount })
+        .where(and(eq(voucherRedemptions.bookingId, b.id), eq(voucherRedemptions.userId, b.userId)))
+    }
+    const total = Math.max(0, subtotal - discount)
 
     // Swap the items out wholesale, then re-point the money at the new total.
     await db.delete(bookingItems).where(eq(bookingItems.bookingId, b.id))
     await db.insert(bookingItems).values(
       rows.map((r) => ({ id: crypto.randomUUID(), bookingId: b.id, treatmentId: r.treatmentId, nameAtBooking: r.name, priceAtBooking: r.price, qty: r.qty })),
     )
-    await db.update(bookings).set({ total, discountAmount: 0 }).where(eq(bookings.id, b.id))
+    await db.update(bookings).set({ total, discountAmount: discount }).where(eq(bookings.id, b.id))
     const [txn] = await db.select().from(transactions).where(eq(transactions.bookingId, b.id)).limit(1)
     await db
       .update(transactions)
@@ -105,7 +130,7 @@ export const ownerUpdateBooking = createServerFn({ method: 'POST' })
         await db.insert(loyaltyTransactions).values({ id: crypto.randomUUID(), userId: b.userId, label: 'Penyesuaian transaksi', delta: pointsDelta, bookingId: b.id })
       }
     }
-    return { id: b.id, total, pointsDelta }
+    return { id: b.id, total, discount, pointsDelta }
   })
 
 export const ownerApprovePayment = createServerFn({ method: 'POST' })

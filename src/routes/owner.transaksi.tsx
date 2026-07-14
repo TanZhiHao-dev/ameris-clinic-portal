@@ -197,11 +197,9 @@ function TransactionsPage() {
                 </td>
                 <td className="px-3 py-4">
                   <div className="flex flex-col items-end gap-2">
-                    {!b.hasVoucher && (
-                      <button type="button" className="btn btn-ghost whitespace-nowrap px-3 py-1.5 text-xs" onClick={() => setEditId(b.id)}>
-                        <Pencil size={14} /> Edit
-                      </button>
-                    )}
+                    <button type="button" className="btn btn-ghost whitespace-nowrap px-3 py-1.5 text-xs" onClick={() => setEditId(b.id)}>
+                      <Pencil size={14} /> Edit
+                    </button>
                     {b.payStatus === 'Pending' && (
                       <button type="button" className="btn btn-primary whitespace-nowrap px-3 py-1.5 text-xs" onClick={() => approve(b.id)}>
                         <BadgeCheck size={14} /> Lunas
@@ -316,7 +314,8 @@ function EditTxnDialog({ bookingId, onClose, onSaved }: { bookingId: string; onC
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ['owner-booking-detail', bookingId] })
       const pts = r.pointsDelta ? ` · poin ${r.pointsDelta > 0 ? '+' : ''}${r.pointsDelta}` : ''
-      onSaved(`Transaksi ${r.id} diperbarui — total ${formatRp(r.total)}${pts}.`)
+      const disc = r.discount > 0 ? ` (sudah termasuk voucher −${formatRp(r.discount)})` : ''
+      onSaved(`Transaksi ${r.id} diperbarui — total ${formatRp(r.total)}${disc}${pts}.`)
     },
     onError: (e) => setErr((e as Error)?.message || 'Gagal menyimpan perubahan.'),
   })
@@ -348,6 +347,11 @@ function EditTxnDialog({ bookingId, onClose, onSaved }: { bookingId: string; onC
               {detail?.payStatus === 'Lunas' && (
                 <div className="mb-4 rounded-xl px-3 py-2 text-[0.76rem]" style={{ background: 'rgba(195,154,68,0.1)', color: 'var(--color-gold-deep)' }}>
                   Transaksi sudah <b>Lunas</b>. Menambah/mengubah item akan menyesuaikan total & poin — pastikan selisih pembayaran sudah ditagih.
+                </div>
+              )}
+              {detail?.hasVoucher && (
+                <div className="mb-4 rounded-xl px-3 py-2 text-[0.76rem]" style={{ background: 'rgba(195,154,68,0.1)', color: 'var(--color-gold-deep)' }}>
+                  Transaksi ini memakai voucher <b>{detail.voucherName}</b> (saat ini −{formatRp(detail.discountAmount)}). Diskonnya <b>dihitung ulang otomatis</b> mengikuti item baru saat disimpan.
                 </div>
               )}
 
@@ -418,7 +422,7 @@ function EditTxnDialog({ bookingId, onClose, onSaved }: { bookingId: string; onC
 
         <div className="flex items-center justify-between gap-3 px-6 py-4" style={{ borderTop: '1px solid var(--color-line)' }}>
           <div>
-            <div className="text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>Total baru</div>
+            <div className="text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>{detail?.hasVoucher ? 'Subtotal baru (sebelum voucher)' : 'Total baru'}</div>
             <div className="mono text-xl font-extrabold gold-text">{formatRp(total)}</div>
           </div>
           <div className="flex items-center gap-2">
