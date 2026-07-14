@@ -1,13 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, ArrowRight, Banknote, CheckCircle2, HandHeart, Minus, Plus, Search, ShoppingBag, Ticket, UserPlus } from 'lucide-react'
+import { AlertTriangle, ArrowRight, BadgePercent, Banknote, CheckCircle2, HandHeart, Minus, Plus, Search, ShoppingBag, Ticket, UserPlus } from 'lucide-react'
 import { effectivePrice, formatRp, loyaltyPointsFor } from '#/data/clinic'
 import { listTreatments } from '#/server/treatments'
 import { ownerBeauticians } from '#/server/beauticians'
 import { ownerDoctors } from '#/server/doctors'
 import { ownerPatients, createPatient } from '#/server/patients'
-import { posCreateSale } from '#/server/pos'
+import { posCreateSale, posPatientVouchers } from '#/server/pos'
 
 export const Route = createFileRoute('/owner/pos')({ component: PosScreen })
 
@@ -15,7 +15,7 @@ export const Route = createFileRoute('/owner/pos')({ component: PosScreen })
 // during a walk-in (doctor's special price / patient nego); discMode picks
 // whether disc is a rupiah amount or a percent off the unit.
 type CartLine = { id: string; name: string; price: number; qty: number; disc: number; discMode: 'rp' | 'pct' }
-type Done = { id: string; total: number; pointsAdded: number; settled: boolean }
+type Done = { id: string; total: number; subtotal: number; voucherDiscount: number; pointsAdded: number; settled: boolean }
 
 function PosScreen() {
   const qc = useQueryClient()
@@ -76,6 +76,29 @@ function PosScreen() {
   const total = cart.reduce((s, l) => s + effUnit(l) * l.qty, 0)
   const totalDiscount = subtotal - total
 
+  // ── Patient's vouchers (registered accounts only) ──
+  // Server prices every usable voucher against the CURRENT cart, so the kasir
+  // sees the real saving. Applying one at submit writes the redemption to the
+  // patient's account — the same ledger online checkout uses.
+  const [voucherId, setVoucherId] = useState<string | null>(null)
+  const itemsPayload = useMemo(
+    () => cart.map((l) => ({ treatmentId: l.id, qty: l.qty, discountMode: l.discMode, discountValue: l.disc })),
+    [cart],
+  )
+  const { data: vouchers = [] } = useQuery({
+    queryKey: ['pos-vouchers', patient?.id, JSON.stringify(itemsPayload)],
+    queryFn: () => posPatientVouchers({ data: { patientId: patient!.id, items: itemsPayload } }),
+    enabled: !!patient,
+  })
+  const chosenVoucher = vouchers.find((v) => v.id === voucherId) ?? null
+  const voucherDiscount = chosenVoucher?.discount ?? 0
+  // Deselect automatically when the chosen voucher stops applying (cart edited
+  // below its minimum, items changed out of scope, patient switched, …).
+  useEffect(() => {
+    if (voucherId && !vouchers.some((v) => v.id === voucherId && v.discount > 0)) setVoucherId(null)
+  }, [vouchers, voucherId])
+  const grandTotal = Math.max(0, total - voucherDiscount)
+
   // ── Performer (doctor OR beautician) + payment ──
   const { data: beauticians = [] } = useQuery({ queryKey: ['owner-beauticians'], queryFn: () => ownerBeauticians() })
   const { data: doctors = [] } = useQuery({ queryKey: ['owner-doctors'], queryFn: () => ownerDoctors() })
@@ -99,6 +122,7 @@ function PosScreen() {
           doctorId: performer.startsWith('doc:') ? performer.slice(4) : null,
           paymentMethod: payMethod,
           settleNow,
+          voucherId: voucherId ?? undefined,
         },
       }),
     onSuccess: (r) => {
@@ -108,6 +132,7 @@ function PosScreen() {
       qc.invalidateQueries({ queryKey: ['owner-jadwal'] })
       qc.invalidateQueries({ queryKey: ['owner-transaksi'] })
       qc.invalidateQueries({ queryKey: ['owner-visit-report'] })
+      qc.invalidateQueries({ queryKey: ['pos-vouchers'] })
     },
     onError: (e) => setErr((e as Error)?.message || 'Gagal membuat transaksi.'),
   })
@@ -118,7 +143,7 @@ function PosScreen() {
   }
 
   const reset = () => {
-    setPatient(null); setPq(''); setCart([]); setTq(''); setPerformer(''); setPayMethod('Offline'); setDone(null); setErr(null)
+    setPatient(null); setPq(''); setCart([]); setTq(''); setPerformer(''); setPayMethod('Offline'); setDone(null); setErr(null); setVoucherId(null)
   }
 
   // ── Success ──
@@ -135,6 +160,8 @@ function PosScreen() {
           </div>
           <div className="p-7">
             <Row label="No." value={done.id} mono />
+            {done.voucherDiscount > 0 && <Row label="Subtotal" value={formatRp(done.subtotal)} />}
+            {done.voucherDiscount > 0 && <Row label="Diskon voucher" value={`−${formatRp(done.voucherDiscount)}`} />}
             <Row label="Total" value={formatRp(done.total)} />
             <Row label="Status" value={done.settled ? 'Lunas · Selesai' : 'Pending · Hadir'} />
             {done.settled && <Row label="Poin diberikan" value={`+${done.pointsAdded}`} />}
@@ -174,7 +201,7 @@ function PosScreen() {
             {patient ? (
               <div className="mt-4 flex items-center justify-between rounded-xl px-4 py-3" style={{ background: 'rgba(195,154,68,0.1)', border: '1px solid var(--color-gold)' }}>
                 <span className="font-bold">{patient.name}</span>
-                <button type="button" className="text-sm font-semibold" style={{ color: 'var(--color-gold-deep)' }} onClick={() => setPatient(null)}>Ganti</button>
+                <button type="button" className="text-sm font-semibold" style={{ color: 'var(--color-gold-deep)' }} onClick={() => { setPatient(null); setVoucherId(null) }}>Ganti</button>
               </div>
             ) : addingPatient ? (
               <div className="mt-4 flex flex-col gap-3">
@@ -200,7 +227,7 @@ function PosScreen() {
                 {pq.trim() && (
                   <div className="mt-2 flex flex-col overflow-hidden rounded-xl" style={{ border: '1px solid var(--color-line)' }}>
                     {patients.slice(0, 6).map((p) => (
-                      <button key={p.id} type="button" onClick={() => { setPatient({ id: p.id, name: p.name }); setPq('') }}
+                      <button key={p.id} type="button" onClick={() => { setPatient({ id: p.id, name: p.name }); setPq(''); setVoucherId(null) }}
                         className="flex items-center justify-between px-4 py-2.5 text-left text-sm transition hover:bg-[var(--color-muted)]" style={{ borderBottom: '1px solid var(--color-line)' }}>
                         <span className="font-semibold">{p.name}</span>
                         <span style={{ color: 'var(--color-ink-muted)' }}>{p.phone || '—'}</span>
@@ -294,6 +321,54 @@ function PosScreen() {
             </div>
           )}
 
+          {/* Patient's vouchers — only registered accounts have these */}
+          {patient && vouchers.length > 0 && (
+            <>
+              <div className="my-4 hairline-gold" />
+              <label className="flex items-center gap-2 text-sm font-semibold">
+                <BadgePercent size={15} style={{ color: 'var(--color-gold-deep)' }} /> Voucher pasien
+              </label>
+              <div className="mt-2 flex flex-col gap-1.5">
+                {vouchers.map((v) => {
+                  const selected = v.id === voucherId
+                  const usableNow = v.discount > 0
+                  const valueLabel = v.discountType === 'pct' ? `${v.discountValue}%` : formatRp(v.discountValue)
+                  return (
+                    <button
+                      key={v.id} type="button" aria-pressed={selected} disabled={!usableNow}
+                      onClick={() => setVoucherId(selected ? null : v.id)}
+                      className="flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-sm transition disabled:cursor-not-allowed"
+                      style={selected
+                        ? { background: 'rgba(195,154,68,0.12)', border: '1.5px solid var(--color-gold)' }
+                        : { background: 'var(--color-shell)', border: '1px solid var(--color-line)', opacity: usableNow ? 1 : 0.6 }}
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate font-semibold">{v.name}</span>
+                        <span className="block text-[0.7rem]" style={{ color: 'var(--color-ink-muted)' }}>
+                          {valueLabel}
+                          {v.minSpend > 0 ? ` · min. ${formatRp(v.minSpend)}` : ''}
+                          {v.validUntil ? ` · s/d ${v.validUntil}` : ''}
+                        </span>
+                      </span>
+                      <span className="mono shrink-0 text-[0.8rem] font-bold" style={{ color: usableNow ? 'var(--color-gold-deep)' : 'var(--color-ink-muted)' }}>
+                        {usableNow
+                          ? `−${formatRp(v.discount)}`
+                          : cart.length === 0
+                            ? '—'
+                            : v.blockedByMinSpend
+                              ? `kurang ${formatRp(v.neededForMin)}`
+                              : 'tidak berlaku'}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="mt-1.5 text-[0.7rem] leading-snug" style={{ color: 'var(--color-ink-muted)' }}>
+                Voucher milik akun pasien — kalau dipakai di sini, otomatis tercatat terpakai di akunnya.
+              </p>
+            </>
+          )}
+
           <div className="my-4 hairline-gold" />
 
           {/* Performer — doctor OR beautician/terapis */}
@@ -330,25 +405,31 @@ function PosScreen() {
           </div>
 
           <div className="my-4 hairline-gold" />
-          {totalDiscount > 0 && (
-            <>
-              <div className="flex items-center justify-between text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-                <span>Subtotal</span>
-                <span className="mono">{formatRp(subtotal)}</span>
-              </div>
-              <div className="mb-1.5 mt-1 flex items-center justify-between text-sm font-semibold" style={{ color: 'var(--color-gold-deep)' }}>
-                <span>Diskon</span>
-                <span className="mono">−{formatRp(totalDiscount)}</span>
-              </div>
-            </>
+          {(totalDiscount > 0 || voucherDiscount > 0) && (
+            <div className="flex items-center justify-between text-sm" style={{ color: 'var(--color-ink-muted)' }}>
+              <span>Subtotal</span>
+              <span className="mono">{formatRp(subtotal)}</span>
+            </div>
           )}
-          <div className="flex items-end justify-between">
+          {totalDiscount > 0 && (
+            <div className="mt-1 flex items-center justify-between text-sm font-semibold" style={{ color: 'var(--color-gold-deep)' }}>
+              <span>Diskon manual</span>
+              <span className="mono">−{formatRp(totalDiscount)}</span>
+            </div>
+          )}
+          {voucherDiscount > 0 && chosenVoucher && (
+            <div className="mt-1 flex items-center justify-between gap-2 text-sm font-semibold" style={{ color: 'var(--color-gold-deep)' }}>
+              <span className="min-w-0 truncate">Voucher — {chosenVoucher.name}</span>
+              <span className="mono shrink-0">−{formatRp(voucherDiscount)}</span>
+            </div>
+          )}
+          <div className="mt-1.5 flex items-end justify-between">
             <span className="font-bold">Total</span>
-            <span className="mono text-2xl font-extrabold gold-text">{formatRp(total)}</span>
+            <span className="mono text-2xl font-extrabold gold-text">{formatRp(grandTotal)}</span>
           </div>
           <div className="mt-1 flex items-center justify-between text-[0.8rem]" style={{ color: 'var(--color-ink-muted)' }}>
             <span>Estimasi poin</span>
-            <span className="mono font-semibold" style={{ color: 'var(--color-gold-deep)' }}>+{loyaltyPointsFor(total)}</span>
+            <span className="mono font-semibold" style={{ color: 'var(--color-gold-deep)' }}>+{loyaltyPointsFor(grandTotal)}</span>
           </div>
 
           <button type="button" className="btn btn-gold mt-5 w-full disabled:cursor-not-allowed disabled:opacity-50" disabled={!ready || busy} onClick={() => submit(true)}>

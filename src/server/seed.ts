@@ -15,6 +15,7 @@ import {
   products,
   transactions,
   treatments as treatmentsTbl,
+  vouchers,
 } from '#/db/schema'
 import { account, session, user, verification } from '#/db/auth-schema'
 import { treatments as treatmentData, weeklyPromos } from '#/data/clinic'
@@ -54,6 +55,7 @@ const productSeed = [
 
 export async function seedDatabase() {
   // FK-safe wipe
+  await db.delete(vouchers) // cascades voucher_treatments/users/redemptions
   await db.delete(closings)
   await db.delete(assists)
   await db.delete(products)
@@ -205,6 +207,13 @@ export async function seedDatabase() {
       }
     }),
   )
+
+  // ── Vouchers (demo) — one always-on member discount + one with a minimum
+  // spend so the POS "kurang Rp…" nudge state is exercised. ──
+  await db.insert(vouchers).values([
+    { id: 'vch-member10', name: 'Voucher Member 10%', discountType: 'pct', discountValue: 10, audience: 'all', appliesToAllNormal: true, applyScope: 'cart', maxUsesPerUser: 1, minSpend: 0, isActive: true },
+    { id: 'vch-hemat50', name: 'Hemat Rp50.000', discountType: 'amount', discountValue: 50_000, audience: 'all', appliesToAllNormal: true, applyScope: 'cart', maxUsesPerUser: 1, minSpend: 1_000_000, isActive: true },
+  ])
 
   // ── Doctor treatment shares (which treatments each doctor does + share %) ──
   const dtRows = doctors.flatMap((d) =>
