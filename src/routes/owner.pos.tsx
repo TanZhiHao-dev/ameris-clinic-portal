@@ -85,7 +85,7 @@ function PosScreen() {
     () => cart.map((l) => ({ treatmentId: l.id, qty: l.qty, discountMode: l.discMode, discountValue: l.disc })),
     [cart],
   )
-  const { data: vouchers = [] } = useQuery({
+  const { data: vouchers = [], isPending: vouchersPending } = useQuery({
     queryKey: ['pos-vouchers', patient?.id, JSON.stringify(itemsPayload)],
     queryFn: () => posPatientVouchers({ data: { patientId: patient!.id, items: itemsPayload } }),
     enabled: !!patient,
@@ -321,13 +321,20 @@ function PosScreen() {
             </div>
           )}
 
-          {/* Patient's vouchers — only registered accounts have these */}
-          {patient && vouchers.length > 0 && (
+          {/* Patient's vouchers — only registered accounts have these. The header
+              stays visible even with zero vouchers so the kasir can tell "this
+              patient has none" apart from "the panel didn't load". */}
+          {patient && !vouchersPending && (
             <>
               <div className="my-4 hairline-gold" />
               <label className="flex items-center gap-2 text-sm font-semibold">
                 <BadgePercent size={15} style={{ color: 'var(--color-gold-deep)' }} /> Voucher pasien
               </label>
+              {vouchers.length === 0 && (
+                <p className="mt-1.5 text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}>
+                  Tidak ada voucher aktif untuk pasien ini.
+                </p>
+              )}
               <div className="mt-2 flex flex-col gap-1.5">
                 {vouchers.map((v) => {
                   const selected = v.id === voucherId
@@ -363,9 +370,11 @@ function PosScreen() {
                   )
                 })}
               </div>
-              <p className="mt-1.5 text-[0.7rem] leading-snug" style={{ color: 'var(--color-ink-muted)' }}>
-                Voucher milik akun pasien — kalau dipakai di sini, otomatis tercatat terpakai di akunnya.
-              </p>
+              {vouchers.length > 0 && (
+                <p className="mt-1.5 text-[0.7rem] leading-snug" style={{ color: 'var(--color-ink-muted)' }}>
+                  Voucher milik akun pasien — kalau dipakai di sini, otomatis tercatat terpakai di akunnya.
+                </p>
+              )}
             </>
           )}
 
