@@ -1,6 +1,6 @@
 import { type ChangeEvent, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Camera, Check, GitCompareArrows, Images, Loader2, Rows3, Search, Trash2, UserPlus, X } from 'lucide-react'
+import { AlertTriangle, Camera, Check, GitCompareArrows, ImageUp, Images, Loader2, Rows3, Search, Trash2, UserPlus, X } from 'lucide-react'
 import { createPhotoPatient, deletePhotoSet, listPatientPhotoSets, photoPatients, savePhotoSet } from '#/server/photos'
 import { fileToCompressedDataUrl } from '#/lib/image'
 
@@ -29,7 +29,7 @@ export function BeforeAfterStudio() {
           <span className="eyebrow">Dokumentasi</span>
           <h1 className="mt-2 text-[2rem]">Before / After</h1>
           <p className="mt-1 max-w-2xl text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-            Pilih pasien, ambil 3 angle (depan · serong kiri · serong kanan), tandai <b>Before</b> atau <b>After</b>. Otomatis tercatat tanggalnya.
+            Pilih pasien, ambil 3 angle (depan · serong kiri · serong kanan) — <b>kamera</b> atau <b>galeri HP</b> — tandai <b>Before</b> atau <b>After</b>. Otomatis tercatat tanggalnya.
           </p>
         </div>
       </div>
@@ -243,7 +243,12 @@ function CapturePanel({ patient, onSaved }: { patient: Patient; onSaved: () => v
 }
 
 function AngleSlot({ angle, value, busy, onPick, onClear }: { angle: { key: AngleKey; label: string; hint: string }; value: string | null; busy: boolean; onPick: (e: ChangeEvent<HTMLInputElement>) => void; onClear: () => void }) {
-  const inputRef = useRef<HTMLInputElement>(null)
+  // Two inputs so the user can either shoot fresh (capture=camera) OR pick an
+  // existing photo from the gallery — e.g. before/after shots the patient took
+  // on their phone before this system existed. capture="environment" forces the
+  // camera; omitting it opens the photo library / file picker.
+  const camRef = useRef<HTMLInputElement>(null)
+  const galRef = useRef<HTMLInputElement>(null)
   return (
     <div>
       <div className="relative aspect-[3/4] overflow-hidden rounded-xl" style={{ background: 'var(--color-cream)', border: value ? '1.5px solid var(--color-gold)' : '1.5px dashed var(--color-line)' }}>
@@ -251,20 +256,29 @@ function AngleSlot({ angle, value, busy, onPick, onClear }: { angle: { key: Angl
           <>
             <img src={value} alt={angle.label} className="h-full w-full object-cover" />
             <button type="button" aria-label={`Hapus ${angle.label}`} onClick={onClear} className="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-full" style={{ background: 'rgba(20,16,12,0.6)', color: '#fff' }}><X size={14} /></button>
-            <button type="button" onClick={() => inputRef.current?.click()} className="absolute inset-x-1.5 bottom-1.5 rounded-lg py-1 text-[0.68rem] font-semibold" style={{ background: 'rgba(20,16,12,0.55)', color: '#fff' }}>Ganti</button>
+            <div className="absolute inset-x-1.5 bottom-1.5 flex gap-1">
+              <button type="button" aria-label={`Foto ulang ${angle.label} dengan kamera`} onClick={() => camRef.current?.click()} className="flex flex-1 items-center justify-center gap-1 rounded-lg py-1 text-[0.66rem] font-semibold" style={{ background: 'rgba(20,16,12,0.6)', color: '#fff' }}><Camera size={12} /> Kamera</button>
+              <button type="button" aria-label={`Ganti ${angle.label} dari galeri`} onClick={() => galRef.current?.click()} className="flex flex-1 items-center justify-center gap-1 rounded-lg py-1 text-[0.66rem] font-semibold" style={{ background: 'rgba(20,16,12,0.6)', color: '#fff' }}><ImageUp size={12} /> Galeri</button>
+            </div>
           </>
+        ) : busy ? (
+          <div className="grid h-full w-full place-items-center gap-1">
+            <Loader2 size={22} className="animate-spin" style={{ color: 'var(--color-gold-deep)' }} />
+            <span className="text-[0.68rem]" style={{ color: 'var(--color-ink-muted)' }}>Memproses…</span>
+          </div>
         ) : (
-          <button type="button" onClick={() => inputRef.current?.click()} className="grid h-full w-full place-items-center gap-1 transition hover:bg-[var(--color-muted)]" disabled={busy}>
-            {busy ? <Loader2 size={22} className="animate-spin" style={{ color: 'var(--color-gold-deep)' }} /> : <Camera size={22} style={{ color: 'var(--color-gold-deep)' }} />}
-            <span className="text-[0.68rem]" style={{ color: 'var(--color-ink-muted)' }}>{busy ? 'Memproses…' : 'Ambil'}</span>
-          </button>
+          <div className="flex h-full w-full flex-col items-stretch justify-center gap-1.5 p-2">
+            <button type="button" onClick={() => camRef.current?.click()} className="flex items-center justify-center gap-1.5 rounded-lg py-2 text-[0.72rem] font-semibold transition" style={{ background: 'var(--grad-gold)', color: '#3a2c0f' }}><Camera size={15} /> Kamera</button>
+            <button type="button" onClick={() => galRef.current?.click()} className="flex items-center justify-center gap-1.5 rounded-lg py-2 text-[0.72rem] font-semibold transition hover:bg-[var(--color-muted)]" style={{ border: '1px solid var(--color-line)', color: 'var(--color-ink-soft)' }}><ImageUp size={15} /> Galeri</button>
+          </div>
         )}
       </div>
       <div className="mt-1 text-center">
         <div className="text-[0.76rem] font-semibold">{angle.label}</div>
         <div className="text-[0.64rem]" style={{ color: 'var(--color-ink-muted)' }}>{angle.hint}</div>
       </div>
-      <input ref={inputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onPick} />
+      <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onPick} />
+      <input ref={galRef} type="file" accept="image/*" className="hidden" onChange={onPick} />
     </div>
   )
 }
