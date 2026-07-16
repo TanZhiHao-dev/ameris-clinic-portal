@@ -148,6 +148,7 @@ function CapturePanel({ patient, onSaved }: { patient: Patient; onSaved: () => v
   const [note, setNote] = useState('')
   const [shots, setShots] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [err, setErr] = useState('')
   const [flash, setFlash] = useState('')
   // Two inputs: camera (one shot at a time) and gallery (multi-select up to the
@@ -173,19 +174,24 @@ function CapturePanel({ patient, onSaved }: { patient: Patient; onSaved: () => v
     e.target.value = ''
     if (files.length === 0) return
     setErr('')
-    if (files.length > room) setErr(`Maksimal ${MAX_PHOTOS} foto per set — ${files.length - room} foto terakhir dilewati.`)
     const take = files.slice(0, room)
+    const overCap = files.length - take.length
     if (take.length === 0) { setErr(`Sudah ${MAX_PHOTOS} foto. Hapus salah satu dulu.`); return }
-    setBusy(true)
-    try {
-      const urls: string[] = []
-      for (const f of take) {
-        try { urls.push(await fileToCompressedDataUrl(f)) } catch (ex) { setErr((ex as Error)?.message || 'Ada gambar gagal diproses.') }
-      }
-      if (urls.length) setShots((s) => [...s, ...urls].slice(0, MAX_PHOTOS))
-    } finally {
-      setBusy(false)
+    setBusy(true); setProgress({ done: 0, total: take.length })
+    const urls: string[] = []
+    let failMsg = ''
+    let failed = 0
+    for (const f of take) {
+      try { urls.push(await fileToCompressedDataUrl(f)) } catch (ex) { failed++; failMsg = (ex as Error)?.message || 'Ada gambar gagal diproses.' }
+      setProgress((p) => (p ? { ...p, done: p.done + 1 } : p))
     }
+    if (urls.length) setShots((s) => [...s, ...urls].slice(0, MAX_PHOTOS))
+    setBusy(false); setProgress(null)
+    // One combined message so a partial success is never silent ("nothing happened").
+    const parts: string[] = []
+    if (failed > 0) parts.push(`${failed} foto gagal: ${failMsg}`)
+    if (overCap > 0) parts.push(`${overCap} foto lewat batas ${MAX_PHOTOS}, dilewati.`)
+    setErr(parts.join(' '))
   }
   const removeAt = (i: number) => setShots((s) => s.filter((_, idx) => idx !== i))
 
@@ -215,7 +221,7 @@ function CapturePanel({ patient, onSaved }: { patient: Patient; onSaved: () => v
       {/* Photos (up to 5) */}
       <div className="mt-4 flex items-center justify-between">
         <span className="text-sm font-semibold">Foto <span style={{ color: 'var(--color-ink-muted)' }}>({shots.length}/{MAX_PHOTOS})</span></span>
-        {busy && <span className="flex items-center gap-1 text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}><Loader2 size={12} className="animate-spin" /> Memproses…</span>}
+        {busy && <span className="flex items-center gap-1 text-[0.72rem]" style={{ color: 'var(--color-gold-deep)' }}><Loader2 size={12} className="animate-spin" /> Memproses{progress ? ` ${progress.done}/${progress.total}` : ''}…</span>}
       </div>
       <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
         {shots.map((src, i) => (
@@ -256,7 +262,15 @@ type PhotoSet = Awaited<ReturnType<typeof listPatientPhotoSets>>[number]
 function GalleryPanel({ patient, onZoom }: { patient: Patient; onZoom: (v: { src: string; caption: string }) => void }) {
   const qc = useQueryClient()
   const [compare, setCompare] = useState(false)
-  const { data: sets = [], isPending } = useQuery({ queryKey: ['patient-photo-sets', patient.id], queryFn: () => listPatientPhotoSets({ data: { patientId: patient.id } }) })
+  // Photo payloads are heavy (base64) — don't keep other patients' sets cached
+  // in memory, and don't refetch the same big list on every window focus.
+  const { data: sets = [], isPending } = useQuery({
+    queryKey: ['patient-photo-sets', patient.id],
+    queryFn: () => listPatientPhotoSets({ data: { patientId: patient.id } }),
+    gcTime: 60_000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+  })
 
   const del = useMutation({
     mutationFn: (id: string) => deletePhotoSet({ data: { id } }),
@@ -317,7 +331,8 @@ function PhaseBadge({ phase }: { phase: 'before' | 'after' }) {
 
 function Thumb({ src, caption, onZoom }: { src: string | null; caption: string; onZoom: (v: { src: string; caption: string }) => void }) {
   if (!src) return <div className="grid aspect-[3/4] place-items-center rounded-lg text-[0.62rem]" style={{ background: 'var(--color-cream)', border: '1px dashed var(--color-line)', color: 'var(--color-line)' }}>—</div>
-  return <button type="button" onClick={() => onZoom({ src, caption })} className="aspect-[3/4] overflow-hidden rounded-lg" style={{ border: '1px solid var(--color-line)' }}><img src={src} alt={caption} className="h-full w-full object-cover transition hover:scale-105" /></button>
+  // lazy + async decode so a long history doesn't decode every photo up front.
+  return <button type="button" onClick={() => onZoom({ src, caption })} className="aspect-[3/4] overflow-hidden rounded-lg" style={{ border: '1px solid var(--color-line)' }}><img src={src} alt={caption} loading="lazy" decoding="async" className="h-full w-full object-cover transition hover:scale-105" /></button>
 }
 
 function SetCard({ set, onZoom, onDelete, deleting }: { set: PhotoSet; onZoom: (v: { src: string; caption: string }) => void; onDelete: () => void; deleting: boolean }) {

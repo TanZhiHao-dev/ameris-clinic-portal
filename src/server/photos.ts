@@ -135,11 +135,14 @@ export const listPatientPhotoSets = createServerFn({ method: 'GET' })
   .validator(z.object({ patientId: z.string() }))
   .handler(async ({ data }) => {
     await requirePhotoAccess()
+    // Cap the newest N sets — each row carries up to 5 base64 images, so an
+    // unbounded list would be a very heavy payload for a long-time patient.
     const rows = await db
       .select()
       .from(patientPhotoSets)
       .where(eq(patientPhotoSets.userId, data.patientId))
       .orderBy(desc(patientPhotoSets.createdAt))
+      .limit(40)
     return rows.map(setShape)
   })
 
