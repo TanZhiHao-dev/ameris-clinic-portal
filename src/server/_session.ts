@@ -63,3 +63,16 @@ export async function requireInventory(): Promise<SessionUser> {
   }
   return u
 }
+
+// Before/After photo studio: the owner OR the admin. This narrowly extends the
+// admin's reach to a patient-name picker + photo capture ONLY — the photo server
+// fns never return medical records, bookings, or finance, so the "no EMR/finance
+// for admin" boundary above still holds.
+export async function requirePhotoAccess(): Promise<SessionUser> {
+  const u = await requireUser()
+  if (u.role !== 'owner' && u.role !== 'admin') {
+    setResponseStatus(403)
+    throw new Error('Akses khusus owner / admin.')
+  }
+  return u
+}

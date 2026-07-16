@@ -1,9 +1,14 @@
 import { useEffect } from 'react'
 import { createFileRoute, Link, Outlet, useNavigate } from '@tanstack/react-router'
-import { LogOut } from 'lucide-react'
+import { Boxes, Camera, LogOut } from 'lucide-react'
 import { authClient } from '#/lib/auth-client'
 
 export const Route = createFileRoute('/admin')({ component: AdminLayout })
+
+const TABS = [
+  { to: '/admin', label: 'Inventory', icon: Boxes, exact: true },
+  { to: '/admin/foto', label: 'Before / After', icon: Camera, exact: false },
+] as const
 
 // Inventory-only console for the 'admin' role (owner may use it too). Everything
 // else in the app stays gated behind the owner/doctor consoles.
@@ -53,6 +58,24 @@ function AdminLayout() {
           </button>
         </div>
       </header>
+
+      <nav className="sticky top-[57px] z-20 flex gap-1 overflow-x-auto px-5 py-2 sm:px-8" style={{ background: 'rgba(247,240,230,0.85)', borderBottom: '1px solid var(--color-line)', backdropFilter: 'blur(10px)' }}>
+        {TABS.map((t) => {
+          const Icon = t.icon
+          return (
+            <Link
+              key={t.to}
+              to={t.to}
+              activeOptions={{ exact: t.exact }}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition"
+              activeProps={{ style: { background: 'var(--color-ink)', color: 'var(--color-cream)' } }}
+              inactiveProps={{ style: { color: 'var(--color-ink-muted)' } }}
+            >
+              <Icon size={15} /> {t.label}
+            </Link>
+          )
+        })}
+      </nav>
 
       <main className="p-5 sm:p-8">
         <div className="mx-auto max-w-[1200px]">

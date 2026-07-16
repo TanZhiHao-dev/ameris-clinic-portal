@@ -38,6 +38,7 @@ import { Route as OwnerPosRouteImport } from './routes/owner.pos'
 import { Route as OwnerLaporanRouteImport } from './routes/owner.laporan'
 import { Route as OwnerJadwalRouteImport } from './routes/owner.jadwal'
 import { Route as OwnerInventoryRouteImport } from './routes/owner.inventory'
+import { Route as OwnerFotoRouteImport } from './routes/owner.foto'
 import { Route as OwnerBonusRouteImport } from './routes/owner.bonus'
 import { Route as OwnerBeauticianRouteImport } from './routes/owner.beautician'
 import { Route as OwnerAkunRouteImport } from './routes/owner.akun'
@@ -50,6 +51,7 @@ import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiBootstrapOwnerRouteImport } from './routes/api/bootstrap-owner'
 import { Route as AkunProfilRouteImport } from './routes/akun.profil'
 import { Route as AkunPrivilegeRouteImport } from './routes/akun.privilege'
+import { Route as AdminFotoRouteImport } from './routes/admin.foto'
 import { Route as OwnerPasienIndexRouteImport } from './routes/owner.pasien.index'
 import { Route as OwnerDokterIndexRouteImport } from './routes/owner.dokter.index'
 import { Route as DokterPasienIndexRouteImport } from './routes/dokter.pasien.index'
@@ -206,6 +208,11 @@ const OwnerInventoryRoute = OwnerInventoryRouteImport.update({
   path: '/inventory',
   getParentRoute: () => OwnerRoute,
 } as any)
+const OwnerFotoRoute = OwnerFotoRouteImport.update({
+  id: '/foto',
+  path: '/foto',
+  getParentRoute: () => OwnerRoute,
+} as any)
 const OwnerBonusRoute = OwnerBonusRouteImport.update({
   id: '/bonus',
   path: '/bonus',
@@ -265,6 +272,11 @@ const AkunPrivilegeRoute = AkunPrivilegeRouteImport.update({
   id: '/privilege',
   path: '/privilege',
   getParentRoute: () => AkunRoute,
+} as any)
+const AdminFotoRoute = AdminFotoRouteImport.update({
+  id: '/foto',
+  path: '/foto',
+  getParentRoute: () => AdminRoute,
 } as any)
 const OwnerPasienIndexRoute = OwnerPasienIndexRouteImport.update({
   id: '/pasien/',
@@ -331,6 +343,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/skincare': typeof SkincareRoute
   '/tentang': typeof TentangRoute
+  '/admin/foto': typeof AdminFotoRoute
   '/akun/privilege': typeof AkunPrivilegeRoute
   '/akun/profil': typeof AkunProfilRoute
   '/api/bootstrap-owner': typeof ApiBootstrapOwnerRoute
@@ -343,6 +356,7 @@ export interface FileRoutesByFullPath {
   '/owner/akun': typeof OwnerAkunRoute
   '/owner/beautician': typeof OwnerBeauticianRoute
   '/owner/bonus': typeof OwnerBonusRoute
+  '/owner/foto': typeof OwnerFotoRoute
   '/owner/inventory': typeof OwnerInventoryRoute
   '/owner/jadwal': typeof OwnerJadwalRoute
   '/owner/laporan': typeof OwnerLaporanRoute
@@ -380,6 +394,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/skincare': typeof SkincareRoute
   '/tentang': typeof TentangRoute
+  '/admin/foto': typeof AdminFotoRoute
   '/akun/privilege': typeof AkunPrivilegeRoute
   '/akun/profil': typeof AkunProfilRoute
   '/api/bootstrap-owner': typeof ApiBootstrapOwnerRoute
@@ -392,6 +407,7 @@ export interface FileRoutesByTo {
   '/owner/akun': typeof OwnerAkunRoute
   '/owner/beautician': typeof OwnerBeauticianRoute
   '/owner/bonus': typeof OwnerBonusRoute
+  '/owner/foto': typeof OwnerFotoRoute
   '/owner/inventory': typeof OwnerInventoryRoute
   '/owner/jadwal': typeof OwnerJadwalRoute
   '/owner/laporan': typeof OwnerLaporanRoute
@@ -434,6 +450,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/skincare': typeof SkincareRoute
   '/tentang': typeof TentangRoute
+  '/admin/foto': typeof AdminFotoRoute
   '/akun/privilege': typeof AkunPrivilegeRoute
   '/akun/profil': typeof AkunProfilRoute
   '/api/bootstrap-owner': typeof ApiBootstrapOwnerRoute
@@ -446,6 +463,7 @@ export interface FileRoutesById {
   '/owner/akun': typeof OwnerAkunRoute
   '/owner/beautician': typeof OwnerBeauticianRoute
   '/owner/bonus': typeof OwnerBonusRoute
+  '/owner/foto': typeof OwnerFotoRoute
   '/owner/inventory': typeof OwnerInventoryRoute
   '/owner/jadwal': typeof OwnerJadwalRoute
   '/owner/laporan': typeof OwnerLaporanRoute
@@ -489,6 +507,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/skincare'
     | '/tentang'
+    | '/admin/foto'
     | '/akun/privilege'
     | '/akun/profil'
     | '/api/bootstrap-owner'
@@ -501,6 +520,7 @@ export interface FileRouteTypes {
     | '/owner/akun'
     | '/owner/beautician'
     | '/owner/bonus'
+    | '/owner/foto'
     | '/owner/inventory'
     | '/owner/jadwal'
     | '/owner/laporan'
@@ -538,6 +558,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/skincare'
     | '/tentang'
+    | '/admin/foto'
     | '/akun/privilege'
     | '/akun/profil'
     | '/api/bootstrap-owner'
@@ -550,6 +571,7 @@ export interface FileRouteTypes {
     | '/owner/akun'
     | '/owner/beautician'
     | '/owner/bonus'
+    | '/owner/foto'
     | '/owner/inventory'
     | '/owner/jadwal'
     | '/owner/laporan'
@@ -591,6 +613,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/skincare'
     | '/tentang'
+    | '/admin/foto'
     | '/akun/privilege'
     | '/akun/profil'
     | '/api/bootstrap-owner'
@@ -603,6 +626,7 @@ export interface FileRouteTypes {
     | '/owner/akun'
     | '/owner/beautician'
     | '/owner/bonus'
+    | '/owner/foto'
     | '/owner/inventory'
     | '/owner/jadwal'
     | '/owner/laporan'
@@ -861,6 +885,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OwnerInventoryRouteImport
       parentRoute: typeof OwnerRoute
     }
+    '/owner/foto': {
+      id: '/owner/foto'
+      path: '/foto'
+      fullPath: '/owner/foto'
+      preLoaderRoute: typeof OwnerFotoRouteImport
+      parentRoute: typeof OwnerRoute
+    }
     '/owner/bonus': {
       id: '/owner/bonus'
       path: '/bonus'
@@ -945,6 +976,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AkunPrivilegeRouteImport
       parentRoute: typeof AkunRoute
     }
+    '/admin/foto': {
+      id: '/admin/foto'
+      path: '/foto'
+      fullPath: '/admin/foto'
+      preLoaderRoute: typeof AdminFotoRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/owner/pasien/': {
       id: '/owner/pasien/'
       path: '/pasien'
@@ -1019,10 +1057,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
+  AdminFotoRoute: typeof AdminFotoRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminFotoRoute: AdminFotoRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 
@@ -1069,6 +1109,7 @@ interface OwnerRouteChildren {
   OwnerAkunRoute: typeof OwnerAkunRoute
   OwnerBeauticianRoute: typeof OwnerBeauticianRoute
   OwnerBonusRoute: typeof OwnerBonusRoute
+  OwnerFotoRoute: typeof OwnerFotoRoute
   OwnerInventoryRoute: typeof OwnerInventoryRoute
   OwnerJadwalRoute: typeof OwnerJadwalRoute
   OwnerLaporanRoute: typeof OwnerLaporanRoute
@@ -1090,6 +1131,7 @@ const OwnerRouteChildren: OwnerRouteChildren = {
   OwnerAkunRoute: OwnerAkunRoute,
   OwnerBeauticianRoute: OwnerBeauticianRoute,
   OwnerBonusRoute: OwnerBonusRoute,
+  OwnerFotoRoute: OwnerFotoRoute,
   OwnerInventoryRoute: OwnerInventoryRoute,
   OwnerJadwalRoute: OwnerJadwalRoute,
   OwnerLaporanRoute: OwnerLaporanRoute,

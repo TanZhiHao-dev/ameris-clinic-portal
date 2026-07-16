@@ -12,6 +12,7 @@ import {
   loyaltyTransactions,
   medicalRecords,
   notifications,
+  patientPhotoSets,
   products,
   transactions,
   treatments as treatmentsTbl,
@@ -55,6 +56,7 @@ const productSeed = [
 
 export async function seedDatabase() {
   // FK-safe wipe
+  await db.delete(patientPhotoSets)
   await db.delete(vouchers) // cascades voucher_treatments/users/redemptions
   await db.delete(closings)
   await db.delete(assists)
@@ -360,6 +362,41 @@ export async function seedDatabase() {
       createdAt: staggered(i),
     })),
   )
+
+  // ── Before/After demo (Sarah / p1): a Before set + a later After set under
+  // one label so the compare view is populated. Placeholder SVG "photos". ──
+  const demoPhoto = (caption: string, hue: number) =>
+    'data:image/svg+xml,' +
+    encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400"><rect width="300" height="400" fill="hsl(${hue} 42% 90%)"/><circle cx="150" cy="150" r="72" fill="hsl(${hue} 46% 74%)"/><rect x="86" y="235" width="128" height="120" rx="16" fill="hsl(${hue} 46% 74%)"/><text x="150" y="392" font-family="sans-serif" font-size="15" fill="hsl(${hue} 45% 32%)" text-anchor="middle">${caption}</text></svg>`,
+    )
+  const photoDate = (daysAgo: number) => new Date(Date.now() - daysAgo * 86_400_000)
+  await db.insert(patientPhotoSets).values([
+    {
+      id: 'ph-demo-before',
+      userId: 'p1',
+      phase: 'before',
+      label: 'Wajah — Acne',
+      frontImage: demoPhoto('Before · Depan', 8),
+      leftImage: demoPhoto('Before · Kiri', 8),
+      rightImage: demoPhoto('Before · Kanan', 8),
+      note: 'Kondisi awal sebelum rangkaian acne treatment.',
+      takenById: 'admin-ameris',
+      createdAt: photoDate(35),
+    },
+    {
+      id: 'ph-demo-after',
+      userId: 'p1',
+      phase: 'after',
+      label: 'Wajah — Acne',
+      frontImage: demoPhoto('After · Depan', 148),
+      leftImage: demoPhoto('After · Kiri', 148),
+      rightImage: demoPhoto('After · Kanan', 148),
+      note: 'Kontrol setelah 4 sesi.',
+      takenById: 'admin-ameris',
+      createdAt: photoDate(2),
+    },
+  ])
 
   return {
     users: patients.length + 1 + doctors.length,

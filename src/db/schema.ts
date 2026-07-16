@@ -215,6 +215,33 @@ export const medicalRecords = pgTable('medical_records', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
+// ── Before/After photo documentation ──
+// A lightweight, admin-accessible photo log (kept separate from the EMR
+// medical_records above, which stays owner/doctor-only). One row = one capture
+// session: a patient's up-to-3 standard angles (front / left-3/4 / right-3/4)
+// tagged 'before' or 'after', with a label so a before and its later after can
+// be paired for comparison. Images are stored as compressed data-URLs.
+export type PhotoPhase = 'before' | 'after'
+
+export const patientPhotoSets = pgTable('patient_photo_sets', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  phase: text('phase').notNull(), // 'before' | 'after'
+  // Treatment / area this set documents (e.g. "Wajah — Acne"). Groups a before
+  // set with its matching after set in the gallery. Null = ungrouped.
+  label: text('label'),
+  frontImage: text('front_image'), // depan
+  leftImage: text('left_image'), // serong kiri
+  rightImage: text('right_image'), // serong kanan
+  note: text('note'),
+  // Staff/admin who captured it (plain text user.id, no FK — keeps history if
+  // the capturing account is later removed).
+  takenById: text('taken_by_id'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
 export const loyaltyTransactions = pgTable('loyalty_transactions', {
   id: text('id').primaryKey(),
   userId: text('user_id')

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createFileRoute, Link, Outlet, useNavigate } from '@tanstack/react-router'
 import {
   CalendarDays,
+  Camera,
   CircleUser,
   CreditCard,
   Crown,
@@ -37,6 +38,7 @@ const NAV = [
   { to: '/owner/bonus', label: 'Bonus Staf', icon: Wallet, exact: false },
   { to: '/owner/inventory', label: 'Inventory', icon: Boxes, exact: false },
   { to: '/owner/pasien', label: 'Pasien & ERM', icon: Users, exact: false },
+  { to: '/owner/foto', label: 'Before/After', icon: Camera, exact: false },
   { to: '/owner/dokter', label: 'Dokter', icon: Stethoscope, exact: false },
   { to: '/owner/beautician', label: 'Staf', icon: HandHeart, exact: false },
   { to: '/owner/skincare', label: 'Skincare', icon: Package, exact: false },

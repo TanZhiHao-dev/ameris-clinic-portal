@@ -1,0 +1,4 @@
+import { createFileRoute } from '@tanstack/react-router'
+import { BeforeAfterStudio } from '#/components/clinic/BeforeAfterStudio'
+
+export const Route = createFileRoute('/admin/foto')({ component: BeforeAfterStudio })
