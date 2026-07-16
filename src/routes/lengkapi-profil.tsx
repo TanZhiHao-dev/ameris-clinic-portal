@@ -51,6 +51,7 @@ function CompleteProfilePage() {
     // Staff go to their own console
     const role = userExt?.role
     if (role === 'owner') { navigate({ to: '/owner' }); return }
+    if (role === 'admin') { navigate({ to: '/admin' }); return }
     if (role === 'dokter') { navigate({ to: '/dokter' }); return }
     // Already complete → no need to onboard.
     if (!profileNeedsCompletion(session.user)) {

@@ -32,6 +32,7 @@ function PostLogin() {
     }
     const role = (session.user as { role?: string }).role
     if (role === 'owner') { navigate({ to: '/owner', replace: true }); return }
+    if (role === 'admin') { navigate({ to: '/admin', replace: true }); return }
     if (role === 'dokter') { navigate({ to: '/dokter', replace: true }); return }
     // Patient: onboarding first if name / WhatsApp / birth date missing — the
     // redirect target rides along so they still land back (e.g. on /booking).

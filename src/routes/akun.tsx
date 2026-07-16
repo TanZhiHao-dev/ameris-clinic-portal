@@ -28,7 +28,7 @@ function AccountLayout() {
   // Read profile from DB (not session cache) so the onboarding check is always
   // fresh — session additionalFields are cached at login time and don't update
   // when updateProfile() writes to the DB mid-session.
-  const isPatient = !!session && role !== 'owner' && role !== 'dokter'
+  const isPatient = !!session && role !== 'owner' && role !== 'dokter' && role !== 'admin'
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ['my-profile'],
     queryFn: () => myProfile(),
@@ -36,13 +36,14 @@ function AccountLayout() {
   })
   const needsOnboarding = isPatient && !profileLoading && profileNeedsCompletion(profile)
 
-  // Patient area. Send staff (owner/dokter) to their own console instead of
-  // stranding them here — otherwise a freshly promoted doctor still sees the
-  // patient dashboard. Mirrors the role guard in dokter.tsx / owner.tsx.
+  // Patient area. Send staff (owner/admin/dokter) to their own console instead
+  // of stranding them here — otherwise a freshly promoted staff member still
+  // sees the patient dashboard. Mirrors the role guard in dokter.tsx/owner.tsx.
   useEffect(() => {
     if (isPending) return
     if (!session) navigate({ to: '/masuk' })
     else if (role === 'owner') navigate({ to: '/owner' })
+    else if (role === 'admin') navigate({ to: '/admin' })
     else if (role === 'dokter') navigate({ to: '/dokter' })
     else if (needsOnboarding) navigate({ to: '/lengkapi-profil' })
   }, [isPending, session, role, needsOnboarding, navigate])
@@ -52,7 +53,7 @@ function AccountLayout() {
 
   // Avoid flashing the patient dashboard before auth + profile resolves,
   // or while any redirect is pending.
-  if (isPending || !session || role === 'owner' || role === 'dokter' || profileLoading || needsOnboarding) {
+  if (isPending || !session || role === 'owner' || role === 'admin' || role === 'dokter' || profileLoading || needsOnboarding) {
     return (
       <PageShell>
         <div className="grid min-h-[60vh] place-items-center">
