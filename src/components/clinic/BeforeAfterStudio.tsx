@@ -5,12 +5,7 @@ import { createPhotoPatient, deletePhotoSet, listPatientPhotoSets, photoPatients
 import { fileToCompressedDataUrl } from '#/lib/image'
 
 type Patient = { id: string; name: string; phone: string }
-type AngleKey = 'front' | 'left' | 'right'
-const ANGLES: { key: AngleKey; label: string; hint: string }[] = [
-  { key: 'front', label: 'Depan', hint: 'Hadap kamera' },
-  { key: 'left', label: 'Serong Kiri', hint: '¾ kiri' },
-  { key: 'right', label: 'Serong Kanan', hint: '¾ kanan' },
-]
+const MAX_PHOTOS = 5
 
 const inp = 'w-full rounded-xl border bg-[var(--color-cream)] border-[var(--color-line)] px-3 py-2.5 text-sm outline-none focus:border-[var(--color-gold)]'
 
@@ -29,7 +24,7 @@ export function BeforeAfterStudio() {
           <span className="eyebrow">Dokumentasi</span>
           <h1 className="mt-2 text-[2rem]">Before / After</h1>
           <p className="mt-1 max-w-2xl text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-            Pilih pasien, ambil 3 angle (depan · serong kiri · serong kanan) — <b>kamera</b> atau <b>galeri HP</b> — tandai <b>Before</b> atau <b>After</b>. Otomatis tercatat tanggalnya.
+            Pilih pasien, tambah sampai <b>{MAX_PHOTOS} foto</b> per set — <b>kamera</b> atau <b>galeri HP</b> (bisa pilih beberapa sekaligus) — tandai <b>Before</b> atau <b>After</b>. Otomatis tercatat tanggalnya.
           </p>
         </div>
       </div>
@@ -147,56 +142,52 @@ function PatientPicker({ patient, onPick }: { patient: Patient | null; onPick: (
 }
 
 // ── Step 2 — capture ──
-type Shots = Record<AngleKey, string | null>
-const EMPTY_SHOTS: Shots = { front: null, left: null, right: null }
-
 function CapturePanel({ patient, onSaved }: { patient: Patient; onSaved: () => void }) {
   const [phase, setPhase] = useState<'before' | 'after'>('before')
   const [label, setLabel] = useState('')
   const [note, setNote] = useState('')
-  const [shots, setShots] = useState<Shots>(EMPTY_SHOTS)
-  const [busyAngle, setBusyAngle] = useState<AngleKey | null>(null)
+  const [shots, setShots] = useState<string[]>([])
+  const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [flash, setFlash] = useState('')
+  // Two inputs: camera (one shot at a time) and gallery (multi-select up to the
+  // remaining slots) — so a whole set of older phone photos goes in at once.
+  const camRef = useRef<HTMLInputElement>(null)
+  const galRef = useRef<HTMLInputElement>(null)
 
-  const filled = ANGLES.filter((a) => shots[a.key]).length
+  const room = MAX_PHOTOS - shots.length
 
   const save = useMutation({
-    mutationFn: () =>
-      savePhotoSet({
-        data: {
-          patientId: patient.id,
-          phase,
-          label: label.trim() || undefined,
-          note: note.trim() || undefined,
-          frontImage: shots.front ?? undefined,
-          leftImage: shots.left ?? undefined,
-          rightImage: shots.right ?? undefined,
-        },
-      }),
+    mutationFn: () => savePhotoSet({ data: { patientId: patient.id, phase, label: label.trim() || undefined, note: note.trim() || undefined, images: shots } }),
     onSuccess: () => {
       setFlash(`Foto ${phase === 'before' ? 'Before' : 'After'} tersimpan.`)
-      setShots(EMPTY_SHOTS); setNote('')
+      setShots([]); setNote('')
       onSaved()
       setTimeout(() => setFlash(''), 3500)
     },
     onError: (e) => setErr((e as Error)?.message || 'Gagal menyimpan foto.'),
   })
 
-  const onPick = async (angle: AngleKey, e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+  const onPick = async (e: ChangeEvent<HTMLInputElement>) => {
+    const files = [...(e.target.files ?? [])]
     e.target.value = ''
-    if (!file) return
-    setErr(''); setBusyAngle(angle)
+    if (files.length === 0) return
+    setErr('')
+    if (files.length > room) setErr(`Maksimal ${MAX_PHOTOS} foto per set — ${files.length - room} foto terakhir dilewati.`)
+    const take = files.slice(0, room)
+    if (take.length === 0) { setErr(`Sudah ${MAX_PHOTOS} foto. Hapus salah satu dulu.`); return }
+    setBusy(true)
     try {
-      const dataUrl = await fileToCompressedDataUrl(file)
-      setShots((s) => ({ ...s, [angle]: dataUrl }))
-    } catch (ex) {
-      setErr((ex as Error)?.message || 'Gagal memproses gambar.')
+      const urls: string[] = []
+      for (const f of take) {
+        try { urls.push(await fileToCompressedDataUrl(f)) } catch (ex) { setErr((ex as Error)?.message || 'Ada gambar gagal diproses.') }
+      }
+      if (urls.length) setShots((s) => [...s, ...urls].slice(0, MAX_PHOTOS))
     } finally {
-      setBusyAngle(null)
+      setBusy(false)
     }
   }
+  const removeAt = (i: number) => setShots((s) => s.filter((_, idx) => idx !== i))
 
   return (
     <div className="card-soft p-5">
@@ -217,68 +208,44 @@ function CapturePanel({ patient, onSaved }: { patient: Patient; onSaved: () => v
         ))}
       </div>
 
-      {/* Label + note */}
+      {/* Label */}
       <input className={`${inp} mt-3`} placeholder="Area / treatment — mis. Wajah — Acne (opsional)" value={label} onChange={(e) => setLabel(e.target.value)} />
       <p className="mt-1 text-[0.7rem]" style={{ color: 'var(--color-ink-muted)' }}>Pakai label sama untuk Before & After biar otomatis berpasangan di riwayat.</p>
 
-      {/* 3 angles */}
-      <div className="mt-4 grid grid-cols-3 gap-2.5">
-        {ANGLES.map((a) => (
-          <AngleSlot key={a.key} angle={a} value={shots[a.key]} busy={busyAngle === a.key}
-            onPick={(e) => onPick(a.key, e)} onClear={() => setShots((s) => ({ ...s, [a.key]: null }))} />
-        ))}
+      {/* Photos (up to 5) */}
+      <div className="mt-4 flex items-center justify-between">
+        <span className="text-sm font-semibold">Foto <span style={{ color: 'var(--color-ink-muted)' }}>({shots.length}/{MAX_PHOTOS})</span></span>
+        {busy && <span className="flex items-center gap-1 text-[0.72rem]" style={{ color: 'var(--color-ink-muted)' }}><Loader2 size={12} className="animate-spin" /> Memproses…</span>}
       </div>
+      <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
+        {shots.map((src, i) => (
+          <div key={i} className="relative aspect-[3/4] overflow-hidden rounded-xl" style={{ border: '1.5px solid var(--color-gold)' }}>
+            <img src={src} alt={`Foto ${i + 1}`} className="h-full w-full object-cover" />
+            <button type="button" aria-label={`Hapus foto ${i + 1}`} onClick={() => removeAt(i)} className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full" style={{ background: 'rgba(20,16,12,0.6)', color: '#fff' }}><X size={12} /></button>
+            <span className="absolute bottom-1 left-1 rounded-md px-1.5 py-0.5 text-[0.6rem] font-bold" style={{ background: 'rgba(20,16,12,0.55)', color: '#fff' }}>{i + 1}</span>
+          </div>
+        ))}
+        {room > 0 && (
+          <div className="flex aspect-[3/4] flex-col items-stretch justify-center gap-1.5 rounded-xl p-1.5" style={{ background: 'var(--color-cream)', border: '1.5px dashed var(--color-line)' }}>
+            <button type="button" onClick={() => camRef.current?.click()} disabled={busy} className="flex items-center justify-center gap-1 rounded-lg py-1.5 text-[0.68rem] font-semibold transition disabled:opacity-50" style={{ background: 'var(--grad-gold)', color: '#3a2c0f' }}><Camera size={13} /> Kamera</button>
+            <button type="button" onClick={() => galRef.current?.click()} disabled={busy} className="flex items-center justify-center gap-1 rounded-lg py-1.5 text-[0.68rem] font-semibold transition hover:bg-[var(--color-muted)] disabled:opacity-50" style={{ border: '1px solid var(--color-line)', color: 'var(--color-ink-soft)' }}><ImageUp size={13} /> Galeri</button>
+          </div>
+        )}
+      </div>
+      <p className="mt-1.5 text-[0.7rem]" style={{ color: 'var(--color-ink-muted)' }}>Maks {MAX_PHOTOS} foto. <b>Galeri</b> bisa pilih beberapa sekaligus; <b>Kamera</b> ambil satu per satu.</p>
 
       <textarea className={`${inp} mt-3 h-16 resize-none`} placeholder="Catatan (opsional) — mis. sesi ke-2, area dahi" value={note} onChange={(e) => setNote(e.target.value)} />
 
       {err && <p className="mt-3 flex items-start gap-1.5 text-sm font-medium" style={{ color: 'var(--color-destructive)' }}><AlertTriangle size={15} className="mt-0.5 shrink-0" /> {err}</p>}
       {flash && <p className="mt-3 flex items-center gap-1.5 text-sm font-semibold" style={{ color: '#2c5848' }}><Check size={15} /> {flash}</p>}
 
-      <button type="button" className="btn btn-gold mt-4 w-full disabled:opacity-50" disabled={filled === 0 || save.isPending || !!busyAngle}
+      <button type="button" className="btn btn-gold mt-4 w-full disabled:opacity-50" disabled={shots.length === 0 || save.isPending || busy}
         onClick={() => { setErr(''); save.mutate() }}>
-        {save.isPending ? 'Menyimpan…' : `Simpan ${phase === 'before' ? 'Before' : 'After'}${filled ? ` · ${filled} foto` : ''}`}
+        {save.isPending ? 'Menyimpan…' : `Simpan ${phase === 'before' ? 'Before' : 'After'}${shots.length ? ` · ${shots.length} foto` : ''}`}
       </button>
-    </div>
-  )
-}
 
-function AngleSlot({ angle, value, busy, onPick, onClear }: { angle: { key: AngleKey; label: string; hint: string }; value: string | null; busy: boolean; onPick: (e: ChangeEvent<HTMLInputElement>) => void; onClear: () => void }) {
-  // Two inputs so the user can either shoot fresh (capture=camera) OR pick an
-  // existing photo from the gallery — e.g. before/after shots the patient took
-  // on their phone before this system existed. capture="environment" forces the
-  // camera; omitting it opens the photo library / file picker.
-  const camRef = useRef<HTMLInputElement>(null)
-  const galRef = useRef<HTMLInputElement>(null)
-  return (
-    <div>
-      <div className="relative aspect-[3/4] overflow-hidden rounded-xl" style={{ background: 'var(--color-cream)', border: value ? '1.5px solid var(--color-gold)' : '1.5px dashed var(--color-line)' }}>
-        {value ? (
-          <>
-            <img src={value} alt={angle.label} className="h-full w-full object-cover" />
-            <button type="button" aria-label={`Hapus ${angle.label}`} onClick={onClear} className="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-full" style={{ background: 'rgba(20,16,12,0.6)', color: '#fff' }}><X size={14} /></button>
-            <div className="absolute inset-x-1.5 bottom-1.5 flex gap-1">
-              <button type="button" aria-label={`Foto ulang ${angle.label} dengan kamera`} onClick={() => camRef.current?.click()} className="flex flex-1 items-center justify-center gap-1 rounded-lg py-1 text-[0.66rem] font-semibold" style={{ background: 'rgba(20,16,12,0.6)', color: '#fff' }}><Camera size={12} /> Kamera</button>
-              <button type="button" aria-label={`Ganti ${angle.label} dari galeri`} onClick={() => galRef.current?.click()} className="flex flex-1 items-center justify-center gap-1 rounded-lg py-1 text-[0.66rem] font-semibold" style={{ background: 'rgba(20,16,12,0.6)', color: '#fff' }}><ImageUp size={12} /> Galeri</button>
-            </div>
-          </>
-        ) : busy ? (
-          <div className="grid h-full w-full place-items-center gap-1">
-            <Loader2 size={22} className="animate-spin" style={{ color: 'var(--color-gold-deep)' }} />
-            <span className="text-[0.68rem]" style={{ color: 'var(--color-ink-muted)' }}>Memproses…</span>
-          </div>
-        ) : (
-          <div className="flex h-full w-full flex-col items-stretch justify-center gap-1.5 p-2">
-            <button type="button" onClick={() => camRef.current?.click()} className="flex items-center justify-center gap-1.5 rounded-lg py-2 text-[0.72rem] font-semibold transition" style={{ background: 'var(--grad-gold)', color: '#3a2c0f' }}><Camera size={15} /> Kamera</button>
-            <button type="button" onClick={() => galRef.current?.click()} className="flex items-center justify-center gap-1.5 rounded-lg py-2 text-[0.72rem] font-semibold transition hover:bg-[var(--color-muted)]" style={{ border: '1px solid var(--color-line)', color: 'var(--color-ink-soft)' }}><ImageUp size={15} /> Galeri</button>
-          </div>
-        )}
-      </div>
-      <div className="mt-1 text-center">
-        <div className="text-[0.76rem] font-semibold">{angle.label}</div>
-        <div className="text-[0.64rem]" style={{ color: 'var(--color-ink-muted)' }}>{angle.hint}</div>
-      </div>
       <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onPick} />
-      <input ref={galRef} type="file" accept="image/*" className="hidden" onChange={onPick} />
+      <input ref={galRef} type="file" accept="image/*" multiple className="hidden" onChange={onPick} />
     </div>
   )
 }
@@ -365,30 +332,34 @@ function SetCard({ set, onZoom, onDelete, deleting }: { set: PhotoSet; onZoom: (
         </div>
         <button type="button" aria-label="Hapus set" onClick={onDelete} disabled={deleting} style={{ color: 'var(--color-rose)' }}><Trash2 size={15} /></button>
       </div>
-      <div className="mt-2 grid grid-cols-3 gap-2">
-        {ANGLES.map((a) => <Thumb key={a.key} src={set[a.key]} caption={`${a.label} — ${cap}`} onZoom={onZoom} />)}
+      <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
+        {set.images.map((src, i) => <Thumb key={i} src={src} caption={`Foto ${i + 1} — ${cap}`} onZoom={onZoom} />)}
       </div>
       {set.note && <p className="mt-2 text-[0.74rem] italic" style={{ color: 'var(--color-ink-muted)' }}>{set.note}</p>}
     </div>
   )
 }
 
-// Side-by-side: latest Before vs latest After per angle, for one label.
+// Side-by-side: latest Before vs latest After, aligned photo-by-photo, one label.
 function CompareGroup({ group, onZoom }: { group: { label: string; before: PhotoSet[]; after: PhotoSet[] }; onZoom: (v: { src: string; caption: string }) => void }) {
   const before = group.before[0] // sets are newest-first
   const after = group.after[0]
+  const cols = Math.max(before?.images.length ?? 0, after?.images.length ?? 0, 1)
+  const idxs = Array.from({ length: cols }, (_, i) => i)
   return (
     <div className="rounded-xl p-3" style={{ background: 'var(--color-cream)', border: '1px solid var(--color-line)' }}>
       <div className="mb-2 text-sm font-bold">{group.label}</div>
-      <div className="grid grid-cols-[auto_1fr_1fr_1fr] items-center gap-2">
-        <div />
-        {ANGLES.map((a) => <div key={a.key} className="text-center text-[0.66rem] font-semibold" style={{ color: 'var(--color-ink-muted)' }}>{a.label}</div>)}
+      <div className="overflow-x-auto">
+        <div className="grid items-center gap-2" style={{ gridTemplateColumns: `auto repeat(${cols}, minmax(56px, 1fr))` }}>
+          <div />
+          {idxs.map((i) => <div key={i} className="text-center text-[0.64rem] font-semibold" style={{ color: 'var(--color-ink-muted)' }}>Foto {i + 1}</div>)}
 
-        <div className="flex items-center"><PhaseBadge phase="before" /></div>
-        {ANGLES.map((a) => <Thumb key={a.key} src={before?.[a.key] ?? null} caption={`Before ${a.label} · ${before?.date ?? ''}`} onZoom={onZoom} />)}
+          <div className="flex items-center"><PhaseBadge phase="before" /></div>
+          {idxs.map((i) => <Thumb key={i} src={before?.images[i] ?? null} caption={`Before · Foto ${i + 1} · ${before?.date ?? ''}`} onZoom={onZoom} />)}
 
-        <div className="flex items-center"><PhaseBadge phase="after" /></div>
-        {ANGLES.map((a) => <Thumb key={a.key} src={after?.[a.key] ?? null} caption={`After ${a.label} · ${after?.date ?? ''}`} onZoom={onZoom} />)}
+          <div className="flex items-center"><PhaseBadge phase="after" /></div>
+          {idxs.map((i) => <Thumb key={i} src={after?.images[i] ?? null} caption={`After · Foto ${i + 1} · ${after?.date ?? ''}`} onZoom={onZoom} />)}
+        </div>
       </div>
       {(!before || !after) && <p className="mt-2 text-[0.7rem]" style={{ color: 'var(--color-ink-muted)' }}>{!before ? 'Belum ada foto Before untuk label ini.' : 'Belum ada foto After — ambil saat kontrol berikutnya.'}</p>}
     </div>

@@ -6,15 +6,14 @@ import { patientPhotoSets } from '#/db/schema'
 import { user } from '#/db/auth-schema'
 import { requirePhotoAccess } from './_session'
 
-// A data-URL image, capped so a compressed 3-angle set can't bloat the DB. The
-// client downscales to ~1280px/JPEG (~200-400 KB); 3 MB is a defensive ceiling.
+// A data-URL image, capped so a compressed photo can't bloat the DB. The client
+// downscales to ~1280px/JPEG (~200-400 KB); 3 MB is a defensive ceiling.
 const MAX_IMAGE_CHARS = 3 * 1024 * 1024
-const imageField = z
+const MAX_PHOTOS = 5
+const imageUrl = z
   .string()
   .refine((s) => s.startsWith('data:image/'), 'Format gambar tidak valid.')
   .refine((s) => s.length <= MAX_IMAGE_CHARS, 'Gambar terlalu besar.')
-  .optional()
-  .nullable()
 
 // Patient picker for the photo studio — id/name/phone only, plus how many photo
 // sets each already has + the most recent capture date. Deliberately excludes
@@ -77,19 +76,30 @@ export const createPhotoPatient = createServerFn({ method: 'POST' })
     return { id: row.id, name: row.name, phone: row.phone ?? '' }
   })
 
+// The set's photos, newest storage model (`images` JSON array) with a fallback
+// to the legacy front/left/right columns for any row not covered by the 0025
+// backfill.
+function photosOf(r: typeof patientPhotoSets.$inferSelect): string[] {
+  if (r.images) {
+    try {
+      const arr = JSON.parse(r.images)
+      if (Array.isArray(arr)) return arr.filter((x): x is string => typeof x === 'string')
+    } catch { /* fall through to legacy columns */ }
+  }
+  return [r.frontImage, r.leftImage, r.rightImage].filter((x): x is string => !!x)
+}
+
 const setShape = (r: typeof patientPhotoSets.$inferSelect) => ({
   id: r.id,
   phase: (r.phase === 'after' ? 'after' : 'before') as 'before' | 'after',
   label: r.label ?? '',
-  front: r.frontImage ?? null,
-  left: r.leftImage ?? null,
-  right: r.rightImage ?? null,
+  images: photosOf(r),
   note: r.note ?? '',
   date: r.createdAt.toISOString().slice(0, 10),
   createdAt: r.createdAt.toISOString(),
 })
 
-// Save one capture session (a patient's before OR after set, up to 3 angles).
+// Save one capture session (a patient's before OR after set, up to 5 photos).
 export const savePhotoSet = createServerFn({ method: 'POST' })
   .validator(
     z.object({
@@ -97,16 +107,13 @@ export const savePhotoSet = createServerFn({ method: 'POST' })
       phase: z.enum(['before', 'after']),
       label: z.string().optional(),
       note: z.string().optional(),
-      frontImage: imageField,
-      leftImage: imageField,
-      rightImage: imageField,
+      images: z.array(imageUrl).min(1, 'Ambil minimal satu foto dulu.').max(MAX_PHOTOS, `Maksimal ${MAX_PHOTOS} foto per set.`),
     }),
   )
   .handler(async ({ data }) => {
     const staff = await requirePhotoAccess()
     const [p] = await db.select({ role: user.role }).from(user).where(eq(user.id, data.patientId)).limit(1)
     if (!p || p.role !== 'pasien') throw new Error('Pasien tidak ditemukan.')
-    if (!data.frontImage && !data.leftImage && !data.rightImage) throw new Error('Ambil minimal satu foto dulu.')
     const id = 'ph-' + crypto.randomUUID().slice(0, 10)
     const [row] = await db
       .insert(patientPhotoSets)
@@ -116,9 +123,7 @@ export const savePhotoSet = createServerFn({ method: 'POST' })
         phase: data.phase,
         label: data.label?.trim() || null,
         note: data.note?.trim() || null,
-        frontImage: data.frontImage ?? null,
-        leftImage: data.leftImage ?? null,
-        rightImage: data.rightImage ?? null,
+        images: JSON.stringify(data.images),
         takenById: staff.id,
       })
       .returning()

@@ -371,15 +371,15 @@ export async function seedDatabase() {
       `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400"><rect width="300" height="400" fill="hsl(${hue} 42% 90%)"/><circle cx="150" cy="150" r="72" fill="hsl(${hue} 46% 74%)"/><rect x="86" y="235" width="128" height="120" rx="16" fill="hsl(${hue} 46% 74%)"/><text x="150" y="392" font-family="sans-serif" font-size="15" fill="hsl(${hue} 45% 32%)" text-anchor="middle">${caption}</text></svg>`,
     )
   const photoDate = (daysAgo: number) => new Date(Date.now() - daysAgo * 86_400_000)
+  const angleCaps = ['Depan', 'Serong Kiri', 'Serong Kanan', 'Kiri', 'Kanan']
+  const demoSet = (phase: string, hue: number) => JSON.stringify(angleCaps.map((a) => demoPhoto(`${phase} · ${a}`, hue)))
   await db.insert(patientPhotoSets).values([
     {
       id: 'ph-demo-before',
       userId: 'p1',
       phase: 'before',
       label: 'Wajah — Acne',
-      frontImage: demoPhoto('Before · Depan', 8),
-      leftImage: demoPhoto('Before · Kiri', 8),
-      rightImage: demoPhoto('Before · Kanan', 8),
+      images: demoSet('Before', 8),
       note: 'Kondisi awal sebelum rangkaian acne treatment.',
       takenById: 'admin-ameris',
       createdAt: photoDate(35),
@@ -389,9 +389,7 @@ export async function seedDatabase() {
       userId: 'p1',
       phase: 'after',
       label: 'Wajah — Acne',
-      frontImage: demoPhoto('After · Depan', 148),
-      leftImage: demoPhoto('After · Kiri', 148),
-      rightImage: demoPhoto('After · Kanan', 148),
+      images: demoSet('After', 148),
       note: 'Kontrol setelah 4 sesi.',
       takenById: 'admin-ameris',
       createdAt: photoDate(2),

@@ -232,9 +232,14 @@ export const patientPhotoSets = pgTable('patient_photo_sets', {
   // Treatment / area this set documents (e.g. "Wajah — Acne"). Groups a before
   // set with its matching after set in the gallery. Null = ungrouped.
   label: text('label'),
-  frontImage: text('front_image'), // depan
-  leftImage: text('left_image'), // serong kiri
-  rightImage: text('right_image'), // serong kanan
+  // Up to 5 photos per set — JSON array of compressed data-URLs. This replaced
+  // the fixed front/left/right columns below; migration 0025 backfilled the old
+  // rows into it. The legacy columns are kept nullable (never written anymore)
+  // so the migration stays non-destructive; read path falls back to them.
+  images: text('images'),
+  frontImage: text('front_image'), // deprecated — see `images`
+  leftImage: text('left_image'), // deprecated — see `images`
+  rightImage: text('right_image'), // deprecated — see `images`
   note: text('note'),
   // Staff/admin who captured it (plain text user.id, no FK — keeps history if
   // the capturing account is later removed).
