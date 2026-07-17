@@ -51,6 +51,7 @@ import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiBootstrapOwnerRouteImport } from './routes/api/bootstrap-owner'
 import { Route as AkunProfilRouteImport } from './routes/akun.profil'
 import { Route as AkunPrivilegeRouteImport } from './routes/akun.privilege'
+import { Route as AdminPosRouteImport } from './routes/admin.pos'
 import { Route as AdminFotoRouteImport } from './routes/admin.foto'
 import { Route as OwnerPasienIndexRouteImport } from './routes/owner.pasien.index'
 import { Route as OwnerDokterIndexRouteImport } from './routes/owner.dokter.index'
@@ -273,6 +274,11 @@ const AkunPrivilegeRoute = AkunPrivilegeRouteImport.update({
   path: '/privilege',
   getParentRoute: () => AkunRoute,
 } as any)
+const AdminPosRoute = AdminPosRouteImport.update({
+  id: '/pos',
+  path: '/pos',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminFotoRoute = AdminFotoRouteImport.update({
   id: '/foto',
   path: '/foto',
@@ -344,6 +350,7 @@ export interface FileRoutesByFullPath {
   '/skincare': typeof SkincareRoute
   '/tentang': typeof TentangRoute
   '/admin/foto': typeof AdminFotoRoute
+  '/admin/pos': typeof AdminPosRoute
   '/akun/privilege': typeof AkunPrivilegeRoute
   '/akun/profil': typeof AkunProfilRoute
   '/api/bootstrap-owner': typeof ApiBootstrapOwnerRoute
@@ -395,6 +402,7 @@ export interface FileRoutesByTo {
   '/skincare': typeof SkincareRoute
   '/tentang': typeof TentangRoute
   '/admin/foto': typeof AdminFotoRoute
+  '/admin/pos': typeof AdminPosRoute
   '/akun/privilege': typeof AkunPrivilegeRoute
   '/akun/profil': typeof AkunProfilRoute
   '/api/bootstrap-owner': typeof ApiBootstrapOwnerRoute
@@ -451,6 +459,7 @@ export interface FileRoutesById {
   '/skincare': typeof SkincareRoute
   '/tentang': typeof TentangRoute
   '/admin/foto': typeof AdminFotoRoute
+  '/admin/pos': typeof AdminPosRoute
   '/akun/privilege': typeof AkunPrivilegeRoute
   '/akun/profil': typeof AkunProfilRoute
   '/api/bootstrap-owner': typeof ApiBootstrapOwnerRoute
@@ -508,6 +517,7 @@ export interface FileRouteTypes {
     | '/skincare'
     | '/tentang'
     | '/admin/foto'
+    | '/admin/pos'
     | '/akun/privilege'
     | '/akun/profil'
     | '/api/bootstrap-owner'
@@ -559,6 +569,7 @@ export interface FileRouteTypes {
     | '/skincare'
     | '/tentang'
     | '/admin/foto'
+    | '/admin/pos'
     | '/akun/privilege'
     | '/akun/profil'
     | '/api/bootstrap-owner'
@@ -614,6 +625,7 @@ export interface FileRouteTypes {
     | '/skincare'
     | '/tentang'
     | '/admin/foto'
+    | '/admin/pos'
     | '/akun/privilege'
     | '/akun/profil'
     | '/api/bootstrap-owner'
@@ -976,6 +988,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AkunPrivilegeRouteImport
       parentRoute: typeof AkunRoute
     }
+    '/admin/pos': {
+      id: '/admin/pos'
+      path: '/pos'
+      fullPath: '/admin/pos'
+      preLoaderRoute: typeof AdminPosRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/foto': {
       id: '/admin/foto'
       path: '/foto'
@@ -1058,11 +1077,13 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminFotoRoute: typeof AdminFotoRoute
+  AdminPosRoute: typeof AdminPosRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminFotoRoute: AdminFotoRoute,
+  AdminPosRoute: AdminPosRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 

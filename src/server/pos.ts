@@ -1,13 +1,13 @@
 import { createServerFn } from '@tanstack/react-start'
-import { and, eq, sql } from 'drizzle-orm'
+import { and, asc, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '#/db'
-import { bookingItems, bookings, loyaltyTransactions, transactions, voucherRedemptions } from '#/db/schema'
+import { beauticians, bookingItems, bookings, loyaltyTransactions, products, transactions, voucherRedemptions } from '#/db/schema'
 import { user } from '#/db/auth-schema'
 import { loyaltyPointsFor } from '#/data/clinic'
-import { requireStaff } from './_session'
+import { requirePos } from './_session'
 import { discountedUnit, posChargedRows } from './_pos'
-import { decrementProductStock, resolveProductItems } from './_products'
+import { decrementProductStock, effectiveStockFor, resolveProductItems } from './_products'
 import {
   cartSubtotal,
   fmtDateWIB,
@@ -39,13 +39,71 @@ const posProductSchema = z.object({
   discountValue: z.number().min(0).optional(),
 })
 
+// ── Register-scoped reads (owner | dokter | admin) ──
+// Deliberately narrow: just what the register needs to ring up a sale. The
+// owner-only fns (ownerPatients w/ visit history, ownerDoctors w/ revenue
+// share) are NOT reused here, so the admin never sees EMR or bagi-hasil.
+
+// Patient picker — name/phone only.
+export const posPatients = createServerFn({ method: 'GET' })
+  .validator(z.object({ q: z.string().optional() }).optional())
+  .handler(async ({ data }) => {
+    await requirePos()
+    const rows = await db
+      .select({ id: user.id, name: user.name, phone: user.phone })
+      .from(user)
+      .where(eq(user.role, 'pasien'))
+      .orderBy(asc(user.name))
+    const q = data?.q?.trim().toLowerCase()
+    const list = rows.map((r) => ({ id: r.id, name: r.name, phone: r.phone ?? '' }))
+    return q ? list.filter((p) => p.name.toLowerCase().includes(q) || p.phone.includes(q)) : list
+  })
+
+// Register a walk-in patient when the name isn't found (clinic record only, no
+// login credential) — same as the EMR-side createPatient but register-scoped.
+export const posCreatePatient = createServerFn({ method: 'POST' })
+  .validator(z.object({ name: z.string().min(2), phone: z.string().optional(), birthDate: z.string().optional() }))
+  .handler(async ({ data }) => {
+    await requirePos()
+    const id = 'pt-' + crypto.randomUUID().slice(0, 8)
+    const slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '.').replace(/(^\.|\.$)/g, '') || 'pasien'
+    const [row] = await db
+      .insert(user)
+      .values({
+        id,
+        name: data.name.trim(),
+        email: `${slug}.${crypto.randomUUID().slice(0, 4)}@walkin.ameris.local`,
+        emailVerified: false,
+        role: 'pasien',
+        phone: data.phone?.trim() || null,
+        birthDate: data.birthDate || null,
+        loyaltyPoints: 0,
+      })
+      .returning()
+    return { id: row.id, name: row.name }
+  })
+
+// Skincare + performer lists for the picker. Names only — no revenue share.
+export const posCatalog = createServerFn({ method: 'GET' }).handler(async () => {
+  await requirePos()
+  const prodRows = await db.select().from(products).where(eq(products.isActive, true)).orderBy(asc(products.name))
+  const stockBy = await effectiveStockFor(prodRows)
+  const docs = await db.select({ id: user.id, name: user.name }).from(user).where(eq(user.role, 'dokter')).orderBy(asc(user.name))
+  const bts = await db.select().from(beauticians).orderBy(asc(beauticians.name))
+  return {
+    products: prodRows.map((p) => ({ id: p.id, name: p.name, price: p.price, stock: stockBy.get(p.id)?.stock ?? null })),
+    doctors: docs.map((d) => ({ id: d.id, name: d.name ?? 'Dokter' })),
+    beauticians: bts.filter((b) => b.isActive).map((b) => ({ id: b.id, name: b.name })),
+  }
+})
+
 // The registered patient's usable vouchers, each priced against the CURRENT
 // POS cart so the kasir sees the real rupiah saving before applying one.
 // Empty cart is fine — discounts just come back 0 with the voucher terms shown.
 export const posPatientVouchers = createServerFn({ method: 'POST' })
   .validator(z.object({ patientId: z.string(), items: z.array(posItemSchema) }))
   .handler(async ({ data }) => {
-    await requireStaff()
+    await requirePos()
     const [u] = await db.select().from(user).where(eq(user.id, data.patientId)).limit(1)
     if (!u || u.role !== 'pasien') return []
     const usable = await listUsableVouchers(u)
@@ -113,7 +171,10 @@ export const posCreateSale = createServerFn({ method: 'POST' })
     }),
   )
   .handler(async ({ data }) => {
-    await requireStaff()
+    const staff = await requirePos()
+    // The admin is input-only: their sale is always saved as an unpaid tagihan
+    // for the owner to confirm in Transaksi. Enforced here, not just in the UI.
+    const settleNow = staff.role === 'admin' ? false : data.settleNow
 
     const [p] = await db.select().from(user).where(eq(user.id, data.patientId)).limit(1)
     if (!p || p.role !== 'pasien') throw new Error('Pasien tidak ditemukan.')
@@ -172,7 +233,7 @@ export const posCreateSale = createServerFn({ method: 'POST' })
     // skincare is added after the discount.
     const total = Math.max(0, subtotal - voucherDiscount) + productSubtotal
     const now = new Date()
-    const settled = data.settleNow
+    const settled = settleNow
 
     try {
       await db.insert(bookings).values({

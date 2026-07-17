@@ -1,12 +1,13 @@
 import { useEffect } from 'react'
 import { createFileRoute, Link, Outlet, useNavigate } from '@tanstack/react-router'
-import { Boxes, Camera, LogOut } from 'lucide-react'
+import { Boxes, Camera, LogOut, ShoppingBag } from 'lucide-react'
 import { authClient } from '#/lib/auth-client'
 
 export const Route = createFileRoute('/admin')({ component: AdminLayout })
 
 const TABS = [
   { to: '/admin', label: 'Inventory', icon: Boxes, exact: true },
+  { to: '/admin/pos', label: 'POS / Kasir', icon: ShoppingBag, exact: false },
   { to: '/admin/foto', label: 'Before / After', icon: Camera, exact: false },
 ] as const
 

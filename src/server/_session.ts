@@ -76,3 +76,18 @@ export async function requirePhotoAccess(): Promise<SessionUser> {
   }
   return u
 }
+
+// Register (POS): owner, doctor OR admin. The admin is front-desk here — they
+// may INPUT a sale, but posCreateSale forces their sales to stay an unpaid
+// tagihan (only the owner settles), and they never get editing, the
+// transactions list, reports, or doctor revenue-share. The POS server fns are
+// deliberately narrow (name/phone picker + catalog) rather than reusing the
+// owner/EMR ones.
+export async function requirePos(): Promise<SessionUser> {
+  const u = await requireUser()
+  if (u.role !== 'owner' && u.role !== 'dokter' && u.role !== 'admin') {
+    setResponseStatus(403)
+    throw new Error('Akses khusus staf klinik.')
+  }
+  return u
+}
