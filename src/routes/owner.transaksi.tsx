@@ -7,6 +7,7 @@ import { effectivePrice } from '#/data/clinic'
 import { ownerApprovePayment, ownerBookingDetail, ownerTransactions, ownerUpdateBooking } from '#/server/transactions'
 import { ownerCompleteBooking, ownerMarkUnpaid } from '#/server/bookings'
 import { listTreatments } from '#/server/treatments'
+import { ownerProducts } from '#/server/products'
 import { getPaymentInfo, ownerSetQris } from '#/server/settings'
 
 export const Route = createFileRoute('/owner/transaksi')({ component: TransactionsPage })
@@ -256,11 +257,13 @@ function TransactionsPage() {
   )
 }
 
-type EditLine = { treatmentId: string; name: string; unitPrice: number; qty: number }
+// A line is either a treatment or a skincare product (exactly one id is set).
+type EditLine = { kind: 'treatment' | 'skincare'; treatmentId: string; productId: string; name: string; unitPrice: number; qty: number }
 
 function EditTxnDialog({ bookingId, onClose, onSaved }: { bookingId: string; onClose: () => void; onSaved: (msg: string) => void }) {
   const { data: detail, isPending } = useQuery({ queryKey: ['owner-booking-detail', bookingId], queryFn: () => ownerBookingDetail({ data: { id: bookingId } }) })
   const { data: treatments = [] } = useQuery({ queryKey: ['pos-treatments'], queryFn: () => listTreatments() })
+  const { data: skincare = [] } = useQuery({ queryKey: ['pos-products'], queryFn: () => ownerProducts({ data: { activeOnly: true } }) })
 
   const [lines, setLines] = useState<EditLine[] | null>(null)
   const [payMethod, setPayMethod] = useState<'Offline' | 'Transfer'>('Offline')
@@ -273,27 +276,41 @@ function EditTxnDialog({ bookingId, onClose, onSaved }: { bookingId: string; onC
     if (!detail || lines !== null) return
     const byName = new Map(treatments.map((t) => [t.name.toLowerCase(), t.id]))
     setLines(
-      detail.items.map((i) => ({
-        treatmentId: i.treatmentId || byName.get(i.name.toLowerCase()) || '',
-        name: i.name,
-        unitPrice: i.unitPrice,
-        qty: i.qty,
-      })),
+      detail.items.map((i) =>
+        i.kind === 'skincare'
+          ? { kind: 'skincare' as const, productId: i.productId ?? '', treatmentId: '', name: i.name, unitPrice: i.unitPrice, qty: i.qty }
+          : { kind: 'treatment' as const, productId: '', treatmentId: i.treatmentId || byName.get(i.name.toLowerCase()) || '', name: i.name, unitPrice: i.unitPrice, qty: i.qty },
+      ),
     )
     setPayMethod(detail.paymentMethod === 'Transfer' ? 'Transfer' : 'Offline')
   }, [detail, treatments, lines])
 
+  // The search offers BOTH treatments and skincare — an upsell at the counter is
+  // often a product, and skincare sold here draws down stock like any sale.
   const available = useMemo(
-    () => treatments.filter((t) => t.available && t.name.toLowerCase().includes(tq.toLowerCase())).slice(0, 30),
+    () => treatments.filter((t) => t.available && t.name.toLowerCase().includes(tq.toLowerCase())).slice(0, 20),
     [treatments, tq],
+  )
+  const availableSkincare = useMemo(
+    () => skincare.filter((p) => p.name.toLowerCase().includes(tq.toLowerCase())).slice(0, 10),
+    [skincare, tq],
   )
   const addLine = (t: { id: string; name: string; price: number; isPromo: boolean; promoPrice: number | null }) => {
     const price = effectivePrice({ price: t.price, isPromo: t.isPromo, promoPrice: t.promoPrice })
     setLines((cur) => {
       const ls = cur ?? []
-      const ex = ls.find((l) => l.treatmentId === t.id)
-      if (ex) return ls.map((l) => (l.treatmentId === t.id ? { ...l, qty: l.qty + 1 } : l))
-      return [...ls, { treatmentId: t.id, name: t.name, unitPrice: price, qty: 1 }]
+      const ex = ls.find((l) => l.kind === 'treatment' && l.treatmentId === t.id)
+      if (ex) return ls.map((l) => (l.kind === 'treatment' && l.treatmentId === t.id ? { ...l, qty: l.qty + 1 } : l))
+      return [...ls, { kind: 'treatment' as const, treatmentId: t.id, productId: '', name: t.name, unitPrice: price, qty: 1 }]
+    })
+    setTq('')
+  }
+  const addSkincareLine = (p: { id: string; name: string; price: number }) => {
+    setLines((cur) => {
+      const ls = cur ?? []
+      const ex = ls.find((l) => l.kind === 'skincare' && l.productId === p.id)
+      if (ex) return ls.map((l) => (l.kind === 'skincare' && l.productId === p.id ? { ...l, qty: l.qty + 1 } : l))
+      return [...ls, { kind: 'skincare' as const, treatmentId: '', productId: p.id, name: p.name, unitPrice: p.price, qty: 1 }]
     })
     setTq('')
   }
@@ -307,7 +324,11 @@ function EditTxnDialog({ bookingId, onClose, onSaved }: { bookingId: string; onC
       ownerUpdateBooking({
         data: {
           bookingId,
-          items: (lines ?? []).map((l) => ({ treatmentId: l.treatmentId, qty: l.qty, unitPrice: l.unitPrice })),
+          items: (lines ?? []).map((l) =>
+            l.kind === 'skincare'
+              ? { productId: l.productId, qty: l.qty, unitPrice: l.unitPrice }
+              : { treatmentId: l.treatmentId, qty: l.qty, unitPrice: l.unitPrice },
+          ),
           paymentMethod: payMethod,
         },
       }),
@@ -320,10 +341,11 @@ function EditTxnDialog({ bookingId, onClose, onSaved }: { bookingId: string; onC
     onError: (e) => setErr((e as Error)?.message || 'Gagal menyimpan perubahan.'),
   })
 
-  const canSave = !!lines && lines.length > 0 && lines.every((l) => l.treatmentId) && !save.isPending
+  const lineLinked = (l: EditLine) => (l.kind === 'skincare' ? !!l.productId : !!l.treatmentId)
+  const canSave = !!lines && lines.length > 0 && lines.every(lineLinked) && !save.isPending
   const submit = () => {
     setErr(null)
-    if (lines && lines.some((l) => !l.treatmentId)) return setErr('Ada item lama tanpa treatment terkait — hapus item itu lalu tambah dari daftar.')
+    if (lines && lines.some((l) => !lineLinked(l))) return setErr('Ada item lama tanpa treatment/skincare terkait — hapus item itu lalu tambah dari daftar.')
     save.mutate()
   }
 
@@ -357,9 +379,12 @@ function EditTxnDialog({ bookingId, onClose, onSaved }: { bookingId: string; onC
 
               <div className="flex flex-col gap-2.5">
                 {lines.map((l, i) => (
-                  <div key={`${l.treatmentId}-${i}`} className="rounded-xl p-3" style={{ background: 'var(--color-cream)', border: '1px solid var(--color-line)' }}>
+                  <div key={`${l.kind}-${l.treatmentId || l.productId}-${i}`} className="rounded-xl p-3" style={{ background: 'var(--color-cream)', border: '1px solid var(--color-line)' }}>
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 text-sm font-semibold">{l.name}</div>
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <span className="min-w-0 truncate text-sm font-semibold">{l.name}</span>
+                        {l.kind === 'skincare' && <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[0.6rem] font-bold" style={{ background: 'var(--color-muted)', color: 'var(--color-gold-deep)' }}>SKINCARE</span>}
+                      </div>
                       <button type="button" aria-label={`Hapus ${l.name}`} onClick={() => removeLine(i)} style={{ color: 'var(--color-rose)' }}><Trash2 size={15} /></button>
                     </div>
                     <div className="mt-2 flex items-center gap-2">
@@ -387,17 +412,30 @@ function EditTxnDialog({ bookingId, onClose, onSaved }: { bookingId: string; onC
               <div className="mt-4">
                 <div className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: 'var(--color-cream)', border: '1px solid var(--color-line)' }}>
                   <Search size={15} style={{ color: 'var(--color-ink-muted)' }} />
-                  <input value={tq} onChange={(e) => setTq(e.target.value)} placeholder="Tambah / upsell treatment…" className="w-full bg-transparent text-sm outline-none" />
+                  <input value={tq} onChange={(e) => setTq(e.target.value)} placeholder="Tambah / upsell treatment atau skincare…" className="w-full bg-transparent text-sm outline-none" />
                 </div>
                 {tq.trim() && (
                   <div className="mt-2 grid max-h-44 grid-cols-1 gap-1.5 overflow-y-auto">
+                    {availableSkincare.map((p) => {
+                      const out = p.stock === 0
+                      return (
+                        <button key={`p-${p.id}`} type="button" disabled={out} onClick={() => addSkincareLine(p)} className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-50" style={{ border: '1px solid var(--color-line)' }}>
+                          <span className="flex min-w-0 items-center gap-1.5">
+                            <span className="truncate">{p.name}</span>
+                            <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[0.6rem] font-bold" style={{ background: 'var(--color-muted)', color: 'var(--color-gold-deep)' }}>SKINCARE</span>
+                            {p.stock != null && <span className="shrink-0 text-[0.68rem]" style={{ color: out ? 'var(--color-destructive)' : 'var(--color-ink-muted)' }}>{out ? 'habis' : `sisa ${p.stock}`}</span>}
+                          </span>
+                          <span className="mono shrink-0 font-semibold" style={{ color: 'var(--color-gold-deep)' }}>{formatRp(p.price)}</span>
+                        </button>
+                      )
+                    })}
                     {available.map((t) => (
                       <button key={t.id} type="button" onClick={() => addLine(t)} className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-[var(--color-muted)]" style={{ border: '1px solid var(--color-line)' }}>
                         <span className="min-w-0 truncate">{t.name}</span>
                         <span className="mono shrink-0 font-semibold" style={{ color: 'var(--color-gold-deep)' }}>{formatRp(effectivePrice({ price: t.price, isPromo: t.isPromo, promoPrice: t.promoPrice }))}</span>
                       </button>
                     ))}
-                    {available.length === 0 && <p className="px-3 py-2 text-sm" style={{ color: 'var(--color-ink-muted)' }}>Tidak ada treatment cocok.</p>}
+                    {available.length === 0 && availableSkincare.length === 0 && <p className="px-3 py-2 text-sm" style={{ color: 'var(--color-ink-muted)' }}>Tidak ada treatment / skincare cocok.</p>}
                   </div>
                 )}
               </div>

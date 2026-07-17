@@ -2,11 +2,12 @@ import { createServerFn } from '@tanstack/react-start'
 import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '#/db'
-import { bookingItems, bookings, loyaltyTransactions, transactions, treatments, voucherRedemptions, vouchers } from '#/db/schema'
+import { bookingItems, bookings, loyaltyTransactions, products, transactions, treatments, voucherRedemptions, vouchers } from '#/db/schema'
 import { user } from '#/db/auth-schema'
 import { loyaltyPointsFor } from '#/data/clinic'
 import { requireOwner } from './_session'
 import { assemble, attachNames } from './_appointments'
+import { applyProductSaleDelta } from './_products'
 import { voucherDiscountFor, voucherTreatmentScope } from './_vouchers'
 
 export const ownerTransactions = createServerFn({ method: 'GET' })
@@ -46,7 +47,14 @@ export const ownerBookingDetail = createServerFn({ method: 'GET' })
       voucherName: b.voucherId ? (v?.name ?? 'Voucher') : null,
       discountAmount: b.discountAmount,
       editable: b.status !== 'Batal',
-      items: items.map((i) => ({ treatmentId: i.treatmentId, name: i.nameAtBooking, unitPrice: i.priceAtBooking, qty: i.qty })),
+      items: items.map((i) => ({
+        treatmentId: i.treatmentId,
+        productId: i.productId,
+        kind: (i.productId ? 'skincare' : 'treatment') as 'skincare' | 'treatment',
+        name: i.nameAtBooking,
+        unitPrice: i.priceAtBooking,
+        qty: i.qty,
+      })),
     }
   })
 
@@ -58,8 +66,16 @@ export const ownerUpdateBooking = createServerFn({ method: 'POST' })
   .validator(
     z.object({
       bookingId: z.string(),
+      // A line is either a treatment or a skincare product.
       items: z
-        .array(z.object({ treatmentId: z.string().min(1), qty: z.number().int().positive(), unitPrice: z.number().int().min(0) }))
+        .array(
+          z.object({
+            treatmentId: z.string().optional(),
+            productId: z.string().optional(),
+            qty: z.number().int().positive(),
+            unitPrice: z.number().int().min(0),
+          }),
+        )
         .min(1),
       paymentMethod: z.enum(['Offline', 'Transfer']).optional(),
     }),
@@ -70,18 +86,37 @@ export const ownerUpdateBooking = createServerFn({ method: 'POST' })
     if (!b) throw new Error('Transaksi tidak ditemukan.')
     if (b.status === 'Batal') throw new Error('Transaksi dibatalkan — tidak bisa diedit.')
 
-    const ids = [...new Set(data.items.map((i) => i.treatmentId))]
-    const catalog = await db.select().from(treatments).where(inArray(treatments.id, ids))
+    const treatInputs = data.items.filter((i) => i.treatmentId)
+    const prodInputs = data.items.filter((i) => !i.treatmentId && i.productId)
+    if (treatInputs.length + prodInputs.length !== data.items.length) throw new Error('Ada item tanpa treatment/skincare terkait.')
+
+    // ── Treatments: price clamped to the catalog (can only be discounted) ──
+    const ids = [...new Set(treatInputs.map((i) => i.treatmentId!))]
+    const catalog = ids.length ? await db.select().from(treatments).where(inArray(treatments.id, ids)) : []
     const byId = new Map(catalog.map((t) => [t.id, t]))
     let subtotal = 0
-    const rows = data.items.map((i) => {
-      const t = byId.get(i.treatmentId)
+    const rows = treatInputs.map((i) => {
+      const t = byId.get(i.treatmentId!)
       if (!t) throw new Error('Treatment tidak ditemukan.')
       const promo = !!(t.isPromo && t.promoNow != null && t.promoNow < t.price)
       const catalogUnit = promo ? t.promoNow! : t.price
       const unit = Math.min(Math.max(0, Math.round(i.unitPrice)), catalogUnit)
       subtotal += unit * i.qty
       return { treatmentId: t.id, name: t.name, price: unit, qty: i.qty, promoApplied: promo }
+    })
+
+    // ── Skincare: same clamp, plus a stock diff against what this sale already
+    // held so adding/removing/changing qty keeps Inventory truthful. ──
+    const pids = [...new Set(prodInputs.map((i) => i.productId!))]
+    const pCatalog = pids.length ? await db.select().from(products).where(inArray(products.id, pids)) : []
+    const pById = new Map(pCatalog.map((p) => [p.id, p]))
+    let productSubtotal = 0
+    const productRows = prodInputs.map((i) => {
+      const p = pById.get(i.productId!)
+      if (!p) throw new Error('Produk skincare tidak ditemukan.')
+      const unit = Math.min(Math.max(0, Math.round(i.unitPrice)), p.price)
+      productSubtotal += unit * i.qty
+      return { productId: p.id, name: p.name, price: unit, qty: i.qty }
     })
 
     // A voucher redeemed on this booking is recomputed against the NEW items
@@ -104,13 +139,28 @@ export const ownerUpdateBooking = createServerFn({ method: 'POST' })
         .set({ amountDiscounted: discount })
         .where(and(eq(voucherRedemptions.bookingId, b.id), eq(voucherRedemptions.userId, b.userId)))
     }
-    const total = Math.max(0, subtotal - discount)
+    // Vouchers never touch skincare (same rule as checkout/POS), so it's added
+    // after the treatment discount.
+    const total = Math.max(0, subtotal - discount) + productSubtotal
+
+    // Stock diff BEFORE the item swap: compare what this sale held vs the new
+    // lines. delta > 0 = more sold (stock down), < 0 = removed (stock back).
+    const prevItems = await db.select().from(bookingItems).where(eq(bookingItems.bookingId, b.id))
+    const prevQty = new Map<string, number>()
+    for (const it of prevItems) if (it.productId) prevQty.set(it.productId, (prevQty.get(it.productId) ?? 0) + it.qty)
+    const nextQty = new Map<string, number>()
+    for (const r of productRows) nextQty.set(r.productId, (nextQty.get(r.productId) ?? 0) + r.qty)
+    const deltas = [...new Set([...prevQty.keys(), ...nextQty.keys()])]
+      .map((pid) => ({ productId: pid, delta: (nextQty.get(pid) ?? 0) - (prevQty.get(pid) ?? 0) }))
+      .filter((d) => d.delta !== 0)
+    if (deltas.length) await applyProductSaleDelta(deltas, b.id)
 
     // Swap the items out wholesale, then re-point the money at the new total.
     await db.delete(bookingItems).where(eq(bookingItems.bookingId, b.id))
-    await db.insert(bookingItems).values(
-      rows.map((r) => ({ id: crypto.randomUUID(), bookingId: b.id, treatmentId: r.treatmentId, nameAtBooking: r.name, priceAtBooking: r.price, qty: r.qty })),
-    )
+    await db.insert(bookingItems).values([
+      ...rows.map((r) => ({ id: crypto.randomUUID(), bookingId: b.id, treatmentId: r.treatmentId, productId: null, nameAtBooking: r.name, priceAtBooking: r.price, qty: r.qty })),
+      ...productRows.map((r) => ({ id: crypto.randomUUID(), bookingId: b.id, treatmentId: null, productId: r.productId, nameAtBooking: r.name, priceAtBooking: r.price, qty: r.qty })),
+    ])
     await db.update(bookings).set({ total, discountAmount: discount }).where(eq(bookings.id, b.id))
     const [txn] = await db.select().from(transactions).where(eq(transactions.bookingId, b.id)).limit(1)
     await db

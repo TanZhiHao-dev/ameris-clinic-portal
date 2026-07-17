@@ -6,7 +6,8 @@ import { bookingItems, bookings, loyaltyTransactions, transactions, voucherRedem
 import { user } from '#/db/auth-schema'
 import { loyaltyPointsFor } from '#/data/clinic'
 import { requireStaff } from './_session'
-import { posChargedRows } from './_pos'
+import { discountedUnit, posChargedRows } from './_pos'
+import { decrementProductStock, resolveProductItems } from './_products'
 import {
   cartSubtotal,
   fmtDateWIB,
@@ -26,6 +27,14 @@ const posItemSchema = z.object({
   treatmentId: z.string(),
   qty: z.number().int().positive(),
   // Manual walk-in discount off the unit: 'rp' = rupiah, 'pct' = percent.
+  discountMode: z.enum(['rp', 'pct']).optional(),
+  discountValue: z.number().min(0).optional(),
+})
+
+// Skincare sold at the register — same manual-discount options as treatments.
+const posProductSchema = z.object({
+  productId: z.string(),
+  qty: z.number().int().positive(),
   discountMode: z.enum(['rp', 'pct']).optional(),
   discountValue: z.number().min(0).optional(),
 })
@@ -89,7 +98,9 @@ export const posCreateSale = createServerFn({ method: 'POST' })
   .validator(
     z.object({
       patientId: z.string(),
-      items: z.array(posItemSchema).min(1),
+      items: z.array(posItemSchema).default([]),
+      // Skincare sold at the register — same cart, stock drawn down on sale.
+      productItems: z.array(posProductSchema).default([]),
       beauticianId: z.string().nullable().optional(),
       doctorId: z.string().nullable().optional(),
       // Tunai (cash) = Offline; QRIS/transfer = Transfer.
@@ -106,10 +117,20 @@ export const posCreateSale = createServerFn({ method: 'POST' })
 
     const [p] = await db.select().from(user).where(eq(user.id, data.patientId)).limit(1)
     if (!p || p.role !== 'pasien') throw new Error('Pasien tidak ditemukan.')
+    if (data.items.length === 0 && data.productItems.length === 0) throw new Error('Belum ada treatment atau skincare dipilih.')
 
     // Authoritative prices from the catalog — never trust client-sent amounts.
     const rows = await posChargedRows(data.items)
     const subtotal = rows.reduce((s, r) => s + r.price * r.qty, 0)
+
+    // Skincare: validated + stock-checked from the catalog, then the kasir's
+    // manual discount applied on top (same clamp as treatments).
+    const resolved = data.productItems.length ? await resolveProductItems(data.productItems.map((i) => ({ productId: i.productId, qty: i.qty }))) : []
+    const productRows = resolved.map((r, idx) => {
+      const inp = data.productItems[idx]
+      return { ...r, price: discountedUnit(r.price, inp.discountMode, inp.discountValue) }
+    })
+    const productSubtotal = productRows.reduce((s, r) => s + r.price * r.qty, 0)
 
     const id = 'AMR-' + crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()
 
@@ -147,7 +168,9 @@ export const posCreateSale = createServerFn({ method: 'POST' })
       appliedVoucherId = voucher.id
     }
 
-    const total = Math.max(0, subtotal - voucherDiscount)
+    // Vouchers apply to treatment lines only (same rule as online checkout), so
+    // skincare is added after the discount.
+    const total = Math.max(0, subtotal - voucherDiscount) + productSubtotal
     const now = new Date()
     const settled = data.settleNow
 
@@ -165,9 +188,10 @@ export const posCreateSale = createServerFn({ method: 'POST' })
         doctorId: data.doctorId ?? null,
         source: 'walkin',
       })
-      await db.insert(bookingItems).values(
-        rows.map((r) => ({ id: crypto.randomUUID(), bookingId: id, treatmentId: r.treatmentId, nameAtBooking: r.name, priceAtBooking: r.price, qty: r.qty })),
-      )
+      await db.insert(bookingItems).values([
+        ...rows.map((r) => ({ id: crypto.randomUUID(), bookingId: id, treatmentId: r.treatmentId, productId: null, nameAtBooking: r.name, priceAtBooking: r.price, qty: r.qty })),
+        ...productRows.map((r) => ({ id: crypto.randomUUID(), bookingId: id, treatmentId: null, productId: r.productId, nameAtBooking: r.name, priceAtBooking: r.price, qty: r.qty })),
+      ])
       await db.insert(transactions).values({
         id: crypto.randomUUID(),
         bookingId: id,
@@ -183,6 +207,10 @@ export const posCreateSale = createServerFn({ method: 'POST' })
       throw e
     }
 
+    // Skincare sold at the register draws down the same stock as the online
+    // shop (linked inventory item when set, else the product's own stock).
+    if (productRows.length) await decrementProductStock(productRows, id)
+
     // Points are granted only when the visit is settled — mirrors
     // ownerCompleteBooking so a later manual settle doesn't double-grant (a
     // walk-in left Pending gets its points when the owner completes it normally).
@@ -194,12 +222,13 @@ export const posCreateSale = createServerFn({ method: 'POST' })
         await db.insert(loyaltyTransactions).values({
           id: crypto.randomUUID(),
           userId: data.patientId,
-          label: rows[0]?.name ?? 'Kunjungan walk-in',
+          label: rows[0]?.name ?? productRows[0]?.name ?? 'Kunjungan walk-in',
           delta: pointsAdded,
           bookingId: id,
         })
       }
     }
 
-    return { id, total, subtotal, voucherDiscount, pointsAdded, settled }
+    // subtotal spans treatments + skincare so subtotal − voucher = total.
+    return { id, total, subtotal: subtotal + productSubtotal, voucherDiscount, pointsAdded, settled }
   })

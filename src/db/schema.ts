@@ -160,12 +160,16 @@ export const bookings = pgTable('bookings', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
+// A line is EITHER a treatment (treatmentId set) or a skincare product
+// (productId set) — both plain text, no FK, so catalog edits never rewrite
+// history. Name/price are snapshotted at sale time.
 export const bookingItems = pgTable('booking_items', {
   id: text('id').primaryKey(),
   bookingId: text('booking_id')
     .notNull()
     .references(() => bookings.id, { onDelete: 'cascade' }),
   treatmentId: text('treatment_id'),
+  productId: text('product_id'),
   nameAtBooking: text('name_at_booking').notNull(),
   priceAtBooking: integer('price_at_booking').notNull(),
   qty: integer('qty').notNull().default(1),

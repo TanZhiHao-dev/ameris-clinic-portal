@@ -41,6 +41,37 @@ export async function resolveProductItems(items: { productId: string; qty: numbe
   })
 }
 
+// Apply a signed change in SOLD quantity for products, used when an existing
+// sale's lines are edited: delta > 0 = more sold (stock goes down), delta < 0 =
+// returned/removed (stock comes back). Keeps the inventory link + movement
+// trail consistent either way. Unknown/untracked products are skipped.
+export async function applyProductSaleDelta(deltas: { productId: string; delta: number }[], orderId: string) {
+  for (const d of deltas) {
+    if (!d.delta) continue
+    const [p] = await db.select().from(products).where(eq(products.id, d.productId)).limit(1)
+    if (!p) continue
+    if (p.inventoryItemId) {
+      const [it] = await db.select().from(inventoryItems).where(eq(inventoryItems.id, p.inventoryItemId)).limit(1)
+      if (!it) continue
+      const after = Math.max(0, Math.round((it.stock - d.delta) * 100) / 100)
+      await db.update(inventoryItems).set({ stock: after, updatedAt: new Date() }).where(eq(inventoryItems.id, p.inventoryItemId))
+      await db.insert(inventoryMovements).values({
+        id: crypto.randomUUID(),
+        itemId: p.inventoryItemId,
+        delta: -d.delta,
+        reason: d.delta > 0 ? 'penjualan' : 'penyesuaian',
+        note: `Edit ${orderId}`,
+        balanceAfter: after,
+      })
+    } else if (p.stock != null) {
+      await db
+        .update(products)
+        .set({ stock: sql`GREATEST(0, ${products.stock} - ${d.delta})` })
+        .where(eq(products.id, d.productId))
+    }
+  }
+}
+
 // Decrement stock once an order is committed. A linked product draws down the
 // inventory item (and logs a 'penjualan' movement for the audit trail); an
 // unlinked product decrements its own standalone stock. Clamped at 0.
