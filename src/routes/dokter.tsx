@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createFileRoute, Link, Outlet, useNavigate } from '@tanstack/react-router'
 import { CalendarDays, LogOut, Menu, Stethoscope, Users, X } from 'lucide-react'
 import { authClient } from '#/lib/auth-client'
+import { Brand } from '#/components/landing/Brand'
 
 export const Route = createFileRoute('/dokter')({ component: DoctorLayout })
 
@@ -15,11 +16,8 @@ function SidebarContent({ onNavigate, userName, onSignOut }: { onNavigate?: () =
   return (
     <div className="flex h-full flex-col">
       <div className="px-6 py-6">
-        <Link to="/dokter/jadwal" onClick={onNavigate} className="inline-flex flex-col">
-          <span className="script gold-text text-3xl leading-none">Ameris</span>
-          <span className="mt-1 text-[0.6rem] font-semibold uppercase tracking-[0.3em]" style={{ color: 'var(--color-gold-light)' }}>
-            Doctor Console
-          </span>
+        <Link to="/dokter/jadwal" onClick={onNavigate} className="inline-flex">
+          <Brand tone="light" subtitle="Doctor Console" />
         </Link>
       </div>
 

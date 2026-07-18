@@ -6,6 +6,7 @@ import { clinic, formatRp } from '../data/clinic'
 import { getMyBooking } from '../server/bookings'
 import { useMidtransPay } from '../lib/useMidtransPay'
 import { BankTransferInstructions } from '../components/app/BankTransferInstructions'
+import { Brand } from '../components/landing/Brand'
 
 export const Route = createFileRoute('/akun/booking/$id')({ component: TicketPage })
 
@@ -99,7 +100,7 @@ function TicketPage() {
         <div className="card-soft overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-7 py-5" style={{ background: 'var(--color-espresso)', color: '#f6eddc' }}>
-            <span className="script gold-text text-3xl leading-none">Ameris</span>
+            <Brand tone="light" />
             <span className="badge" style={{ background: statusTone[appt.status as BookingStatus].bg, color: statusTone[appt.status as BookingStatus].color }}>
               {appt.status}
             </span>

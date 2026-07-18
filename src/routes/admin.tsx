@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { createFileRoute, Link, Outlet, useNavigate } from '@tanstack/react-router'
 import { Boxes, Camera, LogOut, ShoppingBag } from 'lucide-react'
 import { authClient } from '#/lib/auth-client'
+import { Brand } from '#/components/landing/Brand'
 
 export const Route = createFileRoute('/admin')({ component: AdminLayout })
 
@@ -43,11 +44,8 @@ function AdminLayout() {
         className="sticky top-0 z-30 flex items-center justify-between px-5 py-3 sm:px-8"
         style={{ background: 'rgba(247,240,230,0.85)', borderBottom: '1px solid var(--color-line)', backdropFilter: 'blur(10px)' }}
       >
-        <Link to="/admin" className="inline-flex flex-col leading-none">
-          <span className="script gold-text text-2xl">Ameris</span>
-          <span className="mt-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.3em]" style={{ color: 'var(--color-gold-light)' }}>
-            Admin Inventory
-          </span>
+        <Link to="/admin" className="inline-flex">
+          <Brand subtitle="Admin Inventory" />
         </Link>
         <div className="flex items-center gap-3">
           <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-extrabold" style={{ background: 'var(--grad-gold)', color: '#3a2c0f' }}>

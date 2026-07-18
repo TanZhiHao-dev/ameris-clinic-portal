@@ -23,6 +23,7 @@ import {
   X,
 } from 'lucide-react'
 import { authClient } from '#/lib/auth-client'
+import { Brand } from '#/components/landing/Brand'
 
 export const Route = createFileRoute('/owner')({ component: OwnerLayout })
 
@@ -58,11 +59,8 @@ function SidebarContent({
   return (
     <div className="flex h-full flex-col">
       <div className="px-6 py-6">
-        <Link to="/owner" onClick={onNavigate} className="inline-flex flex-col">
-          <span className="script gold-text text-3xl leading-none">Ameris</span>
-          <span className="mt-1 text-[0.6rem] font-semibold uppercase tracking-[0.3em]" style={{ color: 'var(--color-gold-light)' }}>
-            Owner Console
-          </span>
+        <Link to="/owner" onClick={onNavigate} className="inline-flex">
+          <Brand tone="light" subtitle="Owner Console" />
         </Link>
       </div>
 
